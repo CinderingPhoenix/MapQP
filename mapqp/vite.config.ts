@@ -12,4 +12,8 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  server: {
+    host: "0.0.0.0",
+    allowedHosts: ["cope-prior-slot.ngrok-free.dev"],
+  },
 });
