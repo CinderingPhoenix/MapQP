@@ -137,7 +137,7 @@ export default function Home() {
           <p>{error}</p>
         </section>
       ) : coordinates ? (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(280px, 0.8fr)", gap: "16px" }}>
+        <div className="location-grid">
           <section aria-label="Your location on a map">
             {LocationMap ? (
               <LocationMap
