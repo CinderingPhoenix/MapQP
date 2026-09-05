@@ -1,0 +1,148 @@
+[
+  {
+    "name": "Alden Memorial",
+    "entrances": [
+      { "latitude": 42.27343547582927, "longitude": -71.80836113993158, "name": "Main Entrance" },
+      { "latitude": 42.27339569241645, "longitude": -71.80853283101465, "name": "Sandford Riley Entrance" },
+      { "latitude": 42.27311053401765, "longitude": -71.80822438020122, "name": "West Street Entrance" }
+    ]
+  },
+  {
+    "name": "Atwater Kent Laboratories",
+    "entrances": [
+      { "latitude": 42.27510712245275, "longitude": -71.80713986762437, "name": "Front Entrance" },
+      { "latitude": 42.27505911215296, "longitude": -71.80684067212134, "name": "Fuller Labs Entrance" }
+    ]
+  },
+  {
+    "name": "Boynton Hall",
+    "entrances": [
+      { "latitude": 42.273352743741604, "longitude": -71.807164515883, "name": "South Entrance" },
+      { "latitude": 42.27359034073388, "longitude": -71.80728436881176, "name": "Washburn Entrance" }
+    ]
+  },
+  {
+    "name": "Daniels Hall",
+    "entrances": [
+      { "latitude": 42.27335464098567, "longitude": -71.8098963989195, "name": "Quad Entrance" },
+      { "latitude": 42.27318273990028, "longitude": -71.81028204364847, "name": "Institute Road Entrance" }
+    ]
+  },
+  {
+    "name": "East Hall",
+    "entrances": [
+      { "latitude": 42.27395532503894, "longitude": -71.80522383009489, "name": "Main Entrance" }
+    ]
+  },
+  {
+    "name": "Fuller Laboratories",
+    "entrances": [
+      { "latitude": 42.27490603507862, "longitude": -71.80664637248567, "name": "Main Entrance Floor 2" },
+      { "latitude": 42.27498016640975, "longitude": -71.80615227170367, "name": "Kaven Hall Entrance Basement Floor" }
+    ],
+    "indoorShortcuts": [
+      {
+        "name": "Fuller Labs",
+        "entrance": [42.274862939819116, -71.80664105825561],
+        "exit": [42.27511136458773, -71.806089660067],
+        "duration": 45
+      }
+    ]
+  },
+  {
+    "name": "Goddard Hall",
+    "entrances": [
+      { "latitude": 42.275454690095124, "longitude": -71.8078351043763, "name": "Olin Hall Entrance" },
+      { "latitude": 42.27579996667056, "longitude": -71.80770860143458, "name": "Salisbury Street Entrance" }
+    ]
+  },
+  {
+    "name": "Gordon Library",
+    "entrances": [
+      { "latitude": 42.27424818907328, "longitude": -71.80664758102117, "name": "Main Entrance" }
+    ]
+  },
+  {
+    "name": "Higgins Laboratories",
+    "entrances": [
+      { "latitude": 42.274477299192604, "longitude": -71.80815652347276, "name": "Campus Center Entrance" },
+      { "latitude": 42.274162732998946, "longitude": -71.80809374483013, "name": "Stratton Hall Entrance" },
+      { "latitude": 42.27388446053824, "longitude": -71.80828543955762, "name": "Alden Hall Entrance" },
+      { "latitude": 42.274050445331795, "longitude": -71.80850092279421, "name": "Innovation Studios Entrance" }
+    ]
+  },
+  {
+    "name": "Innovation Studios",
+    "entrances": [
+      { "latitude": 42.274190590356554, "longitude": -71.80902902169986, "name": "Quad Entrance" },
+      { "latitude": 42.27442516757421, "longitude": -71.8085548240773, "name": "Campus Center Entrance" }
+    ]
+  },
+  {
+    "name": "Kaven Hall",
+    "entrances": [
+      { "latitude": 42.27470704365281, "longitude": -71.80569507116078, "name": "Boynton Lot Floor 1 Entrance" },
+      { "latitude": 42.27496808722864, "longitude": -71.80604258630531, "name": "Fuller Labs Floor 2 Entrance" },
+      { "latitude": 42.274948692695894, "longitude": -71.80573773625943, "name": "Salisbury Street Floor 1 Entrance" }
+    ]
+  },
+  {
+    "name": "Morgan Hall",
+    "entrances": [
+      { "latitude": 42.273469608002394, "longitude": -71.8103591869278, "name": "Quad Entrance" },
+      { "latitude": 42.27318273990028, "longitude": -71.81028204364847, "name": "Institute Road Entrance" }
+    ]
+  },
+  {
+    "name": "Olin Hall",
+    "entrances": [
+      { "latitude": 42.27504471419883, "longitude": -71.80778161528256, "name": "Main Entrance" }
+    ]
+  },
+  {
+    "name": "Salisbury Laboratories",
+    "entrances": [
+      { "latitude": 42.2744971750912, "longitude": -71.80721060662572, "name": "Washburn Entrance" },
+      { "latitude": 42.274519431072676, "longitude": -71.80687430906737, "name": "Gordon Library Entrance" },
+      { "latitude": 42.274681946591, "longitude": -71.80684229493913, "name": "Gordon Library Basement Entrance" },
+      { "latitude": 42.27489563437783, "longitude": -71.80696316348232, "name": "Atwater Kent Basement Entrance" },
+      { "latitude": 42.27472833044776, "longitude": -71.8073856224048, "name": "Olin Hall Entrance" }
+    ]
+  },
+  {
+    "name": "Sandford Riley Hall",
+    "entrances": [
+      { "latitude": 42.27331088041913, "longitude": -71.80902896893292, "name": "Main Entrance" },
+      { "latitude": 42.27323971827136, "longitude": -71.80936852131316, "name": "Daniels Hall Entrance" },
+      { "latitude": 42.27316042443675, "longitude": -71.80926630728821, "name": "Institute Road Entrance" },
+      { "latitude": 42.27310871142448, "longitude": -71.80881888001198, "name": "Alden Hall Entrance" }
+    ]
+  },
+  {
+    "name": "Stratton Hall",
+    "entrances": [
+      { "latitude": 42.273910118305906, "longitude": -71.80778256215709, "name": "Higgins Laboratory Entrance" }
+    ]
+  },
+  {
+    "name": "Unity Hall",
+    "entrances": [
+      { "latitude": 42.27364722241174, "longitude": -71.80572195096049, "name": "Boynton Street 1st Floor Entrance" },
+      { "latitude": 42.273804417329, "longitude": -71.80676008810927, "name": "Washburn Shops 5th Floor Entrance" }
+    ],
+    "indoorShortcuts": [
+      {
+        "name": "Unity Hall",
+        "entrance": [42.27379806882368, -71.80676653564187],
+        "exit": [42.27364405179721, -71.80576137065076],
+        "duration": 60
+      }
+    ]
+  },
+  {
+    "name": "Washburn Shops",
+    "entrances": [
+      { "latitude": 42.274230288126496, "longitude": -71.80704152771598, "name": "Salisbury Laboratories Entrance" }
+    ]
+  }
+]
