@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
 import buildingData from "../data/wpi-buildings.json";
-import type { WalkingRoute } from "../utils/routing";
-import { distanceBetween, routeBetween } from "../utils/routing";
+import type { WalkwayDebugOverlay, WalkingRoute } from "../utils/routing";
+import { distanceBetween, getWalkwayDebugOverlay, routeBetween } from "../utils/routing";
 import type { Route } from "./+types/home";
 
 type LocationMapProps = {
@@ -10,6 +10,7 @@ type LocationMapProps = {
   longitude: number;
   accuracy: number;
   route?: RoutePlan | null;
+  walkwayDebug?: WalkwayDebugOverlay;
 };
 
 type Point = {
@@ -32,20 +33,6 @@ type RouteCandidate = WalkingRoute & {
   destination: Point;
 };
 
-type IndoorShortcut = {
-  name: string;
-  entrance: readonly [number, number];
-  exit: readonly [number, number];
-  duration: number;
-};
-
-type ShortcutDirection = {
-  buildingId: string;
-  shortcut: IndoorShortcut;
-  entrance: readonly [number, number];
-  exit: readonly [number, number];
-};
-
 type Building = {
   id: string;
   name: string;
@@ -54,7 +41,6 @@ type Building = {
     longitude: number;
     name: string;
   }[];
-  indoorShortcuts?: readonly IndoorShortcut[];
 };
 
 type Coordinates = {
@@ -70,19 +56,11 @@ type Coordinates = {
 
 const SAMPLE_COUNT = 5;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
+const WALKWAY_DEBUG = import.meta.env.DEV ? getWalkwayDebugOverlay() : undefined;
 const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"),
   name: building.name,
   entrances: building.entrances,
-  ...(building.indoorShortcuts
-    ? {
-        indoorShortcuts: building.indoorShortcuts.map((shortcut) => ({
-          ...shortcut,
-          entrance: [shortcut.entrance[0], shortcut.entrance[1]] as [number, number],
-          exit: [shortcut.exit[0], shortcut.exit[1]] as [number, number],
-        })),
-      }
-    : {}),
 }));
 
 export function meta({}: Route.MetaArgs) {
@@ -279,36 +257,7 @@ export default function Home() {
       }
       const outdoorRoute = fastestRoute(availableOutdoorRoutes);
       setRoute(outdoorRoute);
-
-      const relevantShortcutBuildings = new Set([
-        "fuller-laboratories",
-        "unity-hall",
-        "innovation-studios",
-      ]);
-      const shortcutDirections = WPI_BUILDINGS.filter((building) =>
-        relevantShortcutBuildings.has(building.id),
-      ).flatMap((building) => (building.indoorShortcuts ?? []).flatMap((shortcut) => [
-        { buildingId: building.id, shortcut, entrance: shortcut.entrance, exit: shortcut.exit },
-        { buildingId: building.id, shortcut, entrance: shortcut.exit, exit: shortcut.entrance },
-      ]));
-      const shortcutChains = buildShortcutChains(shortcutDirections, 1);
-      const shortcutCandidates = await Promise.all(
-        shortcutChains.flatMap((chain) =>
-          [outdoorRoute.destination].map((destination) => buildShortcutRoute(
-            origin,
-            destination,
-            destinationSelection.id,
-            originSelection?.id,
-            chain,
-          )),
-        ),
-      );
-      const routes = shortcutCandidates.filter(
-        (candidate): candidate is RouteCandidate => candidate !== null,
-      );
-      const selectedRoute = fastestRoute([outdoorRoute, ...routes]);
-
-      setRoute(selectedRoute);
+      setRoute(outdoorRoute);
     } catch (routeRequestError) {
       autoRouteKeyRef.current = "";
       setRouteError(
@@ -330,6 +279,7 @@ export default function Home() {
             longitude={coordinates?.longitude ?? route?.origin.longitude ?? CAMPUS_CENTER.longitude}
             accuracy={coordinates?.accuracy ?? 0}
             route={route}
+            walkwayDebug={WALKWAY_DEBUG}
           />
         ) : (
           <div className="map-loading">
@@ -456,120 +406,10 @@ function buildingPoint(building: Building, entranceIndex: number): Point {
   };
 }
 
-function shortcutPoint(
-  direction: ShortcutDirection,
-  side: "entrance" | "exit",
-): Point {
-  const [latitude, longitude] = direction[side];
-
-  return {
-    latitude,
-    longitude,
-    label: `${direction.shortcut.name} ${side}`,
-  };
-}
-
-function buildShortcutChains(
-  directions: ShortcutDirection[],
-  maximumLength: number,
-) {
-  const chains: ShortcutDirection[][] = [];
-
-  function extendChain(
-    chain: ShortcutDirection[],
-    remaining: ShortcutDirection[],
-  ) {
-    for (const direction of remaining) {
-      if (chain.some((item) => item.buildingId === direction.buildingId)) {
-        continue;
-      }
-
-      const nextChain = [...chain, direction];
-      chains.push(nextChain);
-      if (nextChain.length === maximumLength) {
-        continue;
-      }
-      extendChain(
-        nextChain,
-        remaining.filter((item) => item.buildingId !== direction.buildingId),
-      );
-    }
-  }
-
-  extendChain([], directions);
-  return chains;
-}
-
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
   return routes.reduce(
     (fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest,
   );
-}
-
-async function buildShortcutRoute(
-  origin: Point,
-  destination: Point,
-  destinationBuildingId: string,
-  originBuildingId: string | undefined,
-  chain: ShortcutDirection[],
-): Promise<RouteCandidate | null> {
-  try {
-    const geometry: [number, number][] = [];
-    let distance = 0;
-    let duration = 0;
-    let previousExit: Point | null = null;
-
-    for (let index = 0; index < chain.length; index += 1) {
-      const direction = chain[index];
-      const entrance = shortcutPoint(direction, "entrance");
-      const exit = shortcutPoint(direction, "exit");
-      const startsAtShortcut = index === 0 && originBuildingId === direction.buildingId;
-      const approach = startsAtShortcut
-        ? {
-            geometry: [[entrance.latitude, entrance.longitude] as [number, number]],
-            distance: 0,
-            duration: 0,
-          }
-        : await routeBetween(previousExit ?? origin, entrance);
-
-      geometry.push(...approach.geometry);
-      geometry.push(
-        [entrance.latitude, entrance.longitude],
-        [exit.latitude, exit.longitude],
-      );
-      distance += approach.distance + distanceBetween(
-        direction.entrance[0],
-        direction.entrance[1],
-        direction.exit[0],
-        direction.exit[1],
-      );
-      duration += approach.duration + direction.shortcut.duration * 60;
-      previousExit = exit;
-    }
-
-    const endsAtShortcut = chain[chain.length - 1].buildingId === destinationBuildingId;
-    const finalLeg = endsAtShortcut
-      ? {
-          geometry: [[previousExit!.latitude, previousExit!.longitude] as [number, number]],
-          distance: 0,
-          duration: 0,
-        }
-      : await routeBetween(previousExit!, destination);
-    geometry.push(...finalLeg.geometry);
-
-    return {
-      geometry,
-      distance: distance + finalLeg.distance,
-      duration: duration + finalLeg.duration,
-      via: chain.map(({ shortcut }) => shortcut.name).join(" -> "),
-      origin: originBuildingId === chain[0].buildingId
-        ? shortcutPoint(chain[0], "entrance")
-        : origin,
-      destination: endsAtShortcut ? previousExit! : destination,
-    };
-  } catch {
-    return null;
-  }
 }
 
 async function closestRouteEntranceIndex(building: Building, point: Point) {

@@ -13,6 +13,11 @@ export type WalkingRoute = {
   via?: string;
 };
 
+export type WalkwayDebugOverlay = {
+  nodes: [number, number][];
+  connections: [[number, number], [number, number]][];
+};
+
 const routeCache = new Map<string, WalkingRoute>();
 const WALKING_SPEED_METERS_PER_SECOND = 1.4;
 
@@ -28,25 +33,64 @@ type GraphEdge = {
 };
 
 const walkwayNodes: GraphNode[] = [
-  { id: "walkway-quad-west", latitude: 42.2733, longitude: -71.8103 },
-  { id: "walkway-quad-east", latitude: 42.27335, longitude: -71.8089 },
-  { id: "walkway-alden-west", latitude: 42.2731, longitude: -71.8083 },
-  { id: "walkway-alden-east", latitude: 42.2735, longitude: -71.8078 },
-  { id: "walkway-boynton-west", latitude: 42.2738, longitude: -71.8072 },
-  { id: "walkway-boynton-east", latitude: 42.2738, longitude: -71.8058 },
-  { id: "walkway-campus-center", latitude: 42.27435, longitude: -71.8083 },
-  { id: "walkway-higgins-south", latitude: 42.27405, longitude: -71.8085 },
-  { id: "walkway-higgins-east", latitude: 42.2741, longitude: -71.8078 },
-  { id: "walkway-salisbury-west", latitude: 42.2747, longitude: -71.8081 },
-  { id: "walkway-salisbury-center", latitude: 42.2748, longitude: -71.8074 },
-  { id: "walkway-salisbury-east", latitude: 42.2749, longitude: -71.8064 },
-  { id: "walkway-kaven-south", latitude: 42.2747, longitude: -71.8058 },
-  { id: "walkway-kaven-north", latitude: 42.2752, longitude: -71.8059 },
-  { id: "walkway-atwater-south", latitude: 42.27505, longitude: -71.8067 },
-  { id: "walkway-olin-north", latitude: 42.2755, longitude: -71.8078 },
-  { id: "walkway-salisbury-north", latitude: 42.2758, longitude: -71.8077 },
-  { id: "walkway-salisbury-far-east", latitude: 42.2758, longitude: -71.8053 },
+  { id: "quad-center", latitude: 42.27384471336243, longitude: -71.80980835945334 },
+  { id: "quad-rec-harrington", latitude: 42.274121688625264, longitude: -71.81002343271793 },
+  { id: "quad-rec-morgan", latitude: 42.27367674431656, longitude: -71.81017884187825 },
+  { id: "quad-daniels", latitude: 42.27350068349751, longitude: -71.80987764371383 },
+  { id: "quad-daniels-sanford", latitude: 42.27342544146955, longitude: -71.80927006530047 },
+  { id: "quad-bartlett", latitude: 42.27375952485588, longitude: -71.80909815489579 },
+  { id: "quad-innovation", latitude: 42.274137165180576, longitude: -71.80916415517422 },
+  { id: "innovation-higgins", latitude: 42.274051139670256, longitude: -71.80860200379927 },
+  { id: "innovation-higgins-campus-center", latitude: 42.274546454307426, longitude: -71.80846455903826 },
+  { id: "innovation-messenger", latitude: 42.27462961522782, longitude: -71.80916564593984 },
+  { id: "fountain-campus-center", latitude: 42.2744811806659, longitude: -71.80784022450472},
+  { id: "fountain-olin", latitude: 42.27452438750855, longitude: -71.80777394152985},
+  { id: "fountain-straton", latitude: 42.27443060956069, longitude: -71.80779361398845},
+  { id: "fountain-salisbury", latitude: 42.27446588941587, longitude: -71.80769572430522},
+  { id: "olin-main-entrance", latitude: 42.27488688555022, longitude: -71.80770650286598},
+  { id: "olin-atwater", latitude: 42.27516296985081, longitude: -71.80761375217321},
+  { id: "olin-salisbury-street", latitude: 42.27590323467943, longitude: -71.80738325177589},
+  { id: "fuller-upper", latitude: 42.27485364088761, longitude: -71.80671842923698 },
+  { id: "fuller-lower", latitude: 42.2750742912282, longitude: -71.80618504820738 },
+  { id: "boynton", latitude: 42.273548072025385, longitude: -71.80695060715583 },
+  { id: "boynton-corner", latitude: 42.27331347937322, longitude: -71.80711913166509 },
+  { id: "alden", latitude: 42.27348011861333, longitude: -71.80835755945768 },
+  { id: "straton-higgins", latitude: 42.27379454864059, longitude: -71.80793139030013 },
+  { id: "gordon", latitude: 42.27426762142964, longitude: -71.80672682883 },
+  { id: "unity-lower", latitude: 42.273620333825455, longitude: -71.80563798917942 },
+  { id: "unity-upper", latitude: 42.27380426934777, longitude: -71.80674716196235 },
+  { id: "unity-upper-washburn", latitude: 42.27381042504417, longitude: -71.80690773830483 },
+  { id: "institute-park-salisbury-street", latitude: 42.27523469928868, longitude: -71.80515083178038},
+  { id: "institute-park-humbolt-ave", latitude: 42.275616076067635, longitude: -71.80304302434887},
 ];
+
+const walkwayConnections: Record<string, string[]> = {
+  "quad-center": ["quad-rec-harrington", "quad-rec-morgan", "quad-daniels", "quad-daniels-sanford", "quad-innovation"],
+  "quad-rec-harrington": ["quad-innovation"],
+  "quad-rec-morgan": ["quad-daniels", "quad-rec-harrington"],
+  "quad-daniels": ["quad-daniels-sanford"],
+  "quad-daniels-sanford": ["quad-bartlett"],
+  "quad-bartlett": ["quad-innovation"],
+  "quad-innovation": ["innovation-higgins", "innovation-messenger", "innovation-higgins-campus-center"],
+  "innovation-higgins": ["innovation-higgins-campus-center"],
+  "innovation-higgins-campus-center": ["fountain-campus-center"],
+  "innovation-messenger": ["innovation-higgins-campus-center"],
+  "fountain-campus-center": ["fountain-olin", "fountain-straton"],
+  "fountain-olin": ["olin-main-entrance", "fountain-salisbury"],
+  "fountain-salisbury": ["fountain-straton", "gordon"],
+  "fountain-straton" : ["straton-higgins"],
+  "olin-main-entrance": ["olin-atwater"],
+  "olin-salisbury-street": ["olin-atwater"],
+  "olin-atwater": ["fuller-upper"],
+  "fuller-lower": ["fuller-upper"],
+  "fuller-upper": ["gordon"],
+  "gordon": ["unity-upper-washburn"],
+  "unity-upper-washburn": ["boynton"],
+  "boynton": ["boynton-corner"],
+  "boynton-corner": ["alden"],
+  "unity-lower": ["unity-upper"],
+  "unity-upper": ["unity-upper-washburn"],
+};
 
 const campusNodes: GraphNode[] = [
   ...walkwayNodes,
@@ -56,18 +100,6 @@ const campusNodes: GraphNode[] = [
     latitude: entrance.latitude,
     longitude: entrance.longitude,
   })),
-  ...(building.indoorShortcuts ?? []).flatMap((shortcut, index) => [
-    {
-      id: `${building.name}-shortcut-${index}-entrance`,
-      latitude: shortcut.entrance[0],
-      longitude: shortcut.entrance[1],
-    },
-    {
-      id: `${building.name}-shortcut-${index}-exit`,
-      latitude: shortcut.exit[0],
-      longitude: shortcut.exit[1],
-    },
-  ]),
   ]),
 ];
 
@@ -75,9 +107,38 @@ const graphEdges = new Map<string, GraphEdge[]>();
 for (const node of walkwayNodes) {
   graphEdges.set(node.id, []);
 }
-for (let index = 0; index < walkwayNodes.length - 1; index += 1) {
-  connectWalkwayNodes(walkwayNodes[index], walkwayNodes[index + 1]);
+const walkwayNodesById = new Map(walkwayNodes.map((node) => [node.id, node]));
+for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
+  const fromNode = walkwayNodesById.get(fromId);
+  if (!fromNode) {
+    throw new Error(`Unknown walkway node: ${fromId}`);
+  }
+
+  for (const toId of toIds) {
+    const toNode = walkwayNodesById.get(toId);
+    if (!toNode) {
+      throw new Error(`Unknown walkway node: ${toId}`);
+    }
+    connectWalkwayNodes(fromNode, toNode);
+  }
 }
+
+export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
+  return {
+    nodes: walkwayNodes.map((node) => [node.latitude, node.longitude]),
+    connections: Object.entries(walkwayConnections).flatMap(([fromId, toIds]) => {
+      const fromNode = walkwayNodesById.get(fromId)!;
+      return toIds.map((toId) => {
+        const toNode = walkwayNodesById.get(toId)!;
+        return [
+          [fromNode.latitude, fromNode.longitude] as [number, number],
+          [toNode.latitude, toNode.longitude] as [number, number],
+        ] as [[number, number], [number, number]];
+      });
+    }),
+  };
+}
+
 for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
   const nearest = nearestEdges(node, walkwayNodes).slice(0, 2);
   graphEdges.set(node.id, nearest);
