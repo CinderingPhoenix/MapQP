@@ -10,12 +10,17 @@ type GraphNode = {
   longitude: number;
 };
 
-type Connections = Record<string, string[]>;
+type ConnectionDetail = {
+  to: string;
+  accessible?: boolean;
+};
+
+type Connections = Record<string, (string | ConnectionDetail)[]>;
 
 export type EditorMapProps = {
   nodes: GraphNode[];
   connections: Connections;
-  mode: "add" | "connect" | "disconnect" | "delete";
+  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility";
   selectedNodeId: string | null;
   onMapClick: (lat: number, lng: number) => void;
   onNodeClick: (id: string) => void;
@@ -28,7 +33,6 @@ export async function action({ request }: ActionFunctionArgs) {
   const path = await import("node:path");
   const data = await request.json();
 
-  // Round to 6 decimal places
   if (data.nodes) {
     data.nodes = data.nodes.map((node: any) => ({
       ...node,
@@ -37,7 +41,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }));
   }
 
-  // Compact to single line formatting
+  // Safely format output json string without dumping `[object Object]` directly into subEntries
   const rootKeys = Object.keys(data);
   let jsonString = "{\n";
   rootKeys.forEach((key, i) => {
@@ -50,9 +54,10 @@ export async function action({ request }: ActionFunctionArgs) {
       jsonString += "\n  ]";
     } else if (val !== null && typeof val === "object") {
       jsonString += "{\n";
-      const subEntries = Object.entries(val).map(
-        ([subK, subV]) => `    ${JSON.stringify(subK)}: ${JSON.stringify(subV)}`
-      );
+      const subEntries = Object.entries(val).map(([subK, subV]) => {
+        const formattedVal = JSON.stringify(subV, null, 2).replace(/\n/g, "\n    ");
+        return `    ${JSON.stringify(subK)}: ${formattedVal}`;
+      });
       jsonString += subEntries.join(",\n");
       jsonString += "\n  }";
     } else {
@@ -76,16 +81,16 @@ export default function Editor() {
   const [error, setError] = useState("");
 
   const [nodes, setNodes] = useState<GraphNode[]>(routePointsData.nodes);
-  const [connections, setConnections] = useState<Connections>(routePointsData.connections);
-  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete">("add");
+  const [connections, setConnections] = useState<Connections>(routePointsData.connections as Connections);
+  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility">("add");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const handleNodeDragEnd = (id: string, latitude: number, longitude: number) => {
-  const nextNodes = nodes.map((node) =>
+    const nextNodes = nodes.map((node) =>
       node.id === id ? { ...node, latitude, longitude } : node
-  );
-  setNodes(nextNodes);
-  saveToDisk(nextNodes, connections);
+    );
+    setNodes(nextNodes);
+    saveToDisk(nextNodes, connections);
   };
   
   useEffect(() => {
@@ -119,7 +124,6 @@ export default function Editor() {
     const roundedLng = Number(longitude.toFixed(6));
 
     const nextNodes = [...nodes, { id, latitude: roundedLat, longitude: roundedLng }];
-    
     const nextConnections = { ...connections };
 
     setNodes(nextNodes);
@@ -130,11 +134,48 @@ export default function Editor() {
   const removeConnection = (fromId: string, toId: string) => {
     const nextConnections = { ...connections };
     if (nextConnections[fromId]) {
-      nextConnections[fromId] = nextConnections[fromId].filter((id) => id !== toId);
+      nextConnections[fromId] = nextConnections[fromId].filter((item) => {
+        const target = typeof item === "string" ? item : item?.to;
+        return target && target !== toId;
+      });
     }
     if (nextConnections[toId]) {
-      nextConnections[toId] = nextConnections[toId].filter((id) => id !== fromId);
+      nextConnections[toId] = nextConnections[toId].filter((item) => {
+        const target = typeof item === "string" ? item : item?.to;
+        return target && target !== fromId;
+      });
     }
+    setConnections(nextConnections);
+    saveToDisk(nodes, nextConnections);
+  };
+
+  const toggleAccessibility = (fromId: string, toId: string) => {
+    const nextConnections = { ...connections };
+
+    const updateListForPair = (fId: string, tId: string) => {
+      const list = nextConnections[fId] || [];
+      const index = list.findIndex((item) => {
+        const target = typeof item === "string" ? item : item?.to;
+        return target === tId;
+      });
+
+      if (index !== -1) {
+        const current = list[index];
+        const isCurrentlyAccessible = typeof current === "string" || current.accessible !== false;
+        if (isCurrentlyAccessible) {
+          list[index] = { to: tId, accessible: false };
+        } else {
+          list[index] = tId;
+        }
+      } else {
+        list.push({ to: tId, accessible: false });
+      }
+      nextConnections[fId] = list;
+    };
+
+    updateListForPair(fromId, toId);
+    updateListForPair(toId, fromId);
+
     setConnections(nextConnections);
     saveToDisk(nodes, nextConnections);
   };
@@ -145,7 +186,10 @@ export default function Editor() {
       const nextConnections = { ...connections };
       delete nextConnections[nodeId];
       Object.keys(nextConnections).forEach((key) => {
-        nextConnections[key] = nextConnections[key].filter((connectedId) => connectedId !== nodeId);
+        nextConnections[key] = nextConnections[key].filter((item) => {
+          const target = typeof item === "string" ? item : item?.to;
+          return target && target !== nodeId;
+        });
       });
 
       setNodes(nextNodes);
@@ -167,11 +211,14 @@ export default function Editor() {
 
       const nextConnections = { ...connections };
       const listA = nextConnections[selectedNodeId] || [];
-      const listB = nextConnections[nodeId] || [];
 
-      if (!listA.includes(nodeId)) {
+      const existsA = listA.some((item) => {
+        const target = typeof item === "string" ? item : item?.to;
+        return target === nodeId;
+      });
+
+      if (!existsA) {
         nextConnections[selectedNodeId] = [...listA, nodeId];
-
         setConnections(nextConnections);
         saveToDisk(nodes, nextConnections);
       }
@@ -180,7 +227,7 @@ export default function Editor() {
       return;
     }
 
-    if (mode === "disconnect") {
+    if (mode === "disconnect" || mode === "accessibility") {
       if (!selectedNodeId) {
         setSelectedNodeId(nodeId);
         return;
@@ -192,8 +239,17 @@ export default function Editor() {
       }
 
       const listA = connections[selectedNodeId] || [];
-      if (listA.includes(nodeId)) {
-        removeConnection(selectedNodeId, nodeId);
+      const exists = listA.some((item) => {
+        const target = typeof item === "string" ? item : item?.to;
+        return target === nodeId;
+      });
+
+      if (exists) {
+        if (mode === "disconnect") {
+          removeConnection(selectedNodeId, nodeId);
+        } else if (mode === "accessibility") {
+          toggleAccessibility(selectedNodeId, nodeId);
+        }
       }
 
       setSelectedNodeId(null);
@@ -202,19 +258,26 @@ export default function Editor() {
   };
 
   const handleConnectionClick = (fromId: string, toId: string) => {
-    if (mode === "disconnect" || mode === "delete") {
+    if (mode === "disconnect") {
       removeConnection(fromId, toId);
+    } else if (mode === "accessibility") {
+      toggleAccessibility(fromId, toId);
     }
   };
 
-  const activeConnectionList: [string, string][] = [];
+  const activeConnectionList: { from: string; to: string; accessible: boolean }[] = [];
   const seen = new Set<string>();
+
   Object.entries(connections).forEach(([from, toArray]) => {
-    toArray.forEach((to) => {
+    if (!Array.isArray(toArray)) return;
+    toArray.forEach((item) => {
+      const to = typeof item === "string" ? item : item?.to;
+      if (!to) return;
+      const accessible = typeof item === "string" ? true : item.accessible !== false;
       const key = [from, to].sort().join("::");
       if (!seen.has(key)) {
         seen.add(key);
-        activeConnectionList.push([from, to]);
+        activeConnectionList.push({ from, to, accessible });
       }
     });
   });
@@ -234,7 +297,7 @@ export default function Editor() {
             onNodeClick={handleNodeClick}
             onConnectionClick={handleConnectionClick}
             onNodeDragEnd={handleNodeDragEnd}
-            />
+          />
         ) : (
           <div className="map-loading">
             <span>{error || "Loading map..."}</span>
@@ -250,7 +313,7 @@ export default function Editor() {
             </span>
           </div>
 
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
             <button
               style={{ fontWeight: mode === "add" ? "bold" : "normal" }}
               onClick={() => { setMode("add"); setSelectedNodeId(null); }}
@@ -262,6 +325,12 @@ export default function Editor() {
               onClick={() => { setMode("connect"); setSelectedNodeId(null); }}
             >
               Connect
+            </button>
+            <button
+              style={{ fontWeight: mode === "accessibility" ? "bold" : "normal", color: "#8e44ad" }}
+              onClick={() => { setMode("accessibility"); setSelectedNodeId(null); }}
+            >
+              Toggle Accessibility
             </button>
             <button
               style={{ fontWeight: mode === "disconnect" ? "bold" : "normal", color: "#d35400" }}
@@ -282,6 +351,9 @@ export default function Editor() {
             {mode === "connect" && (!selectedNodeId
               ? "Click the first node to select it."
               : `Selected "${selectedNodeId}". Click a second node to connect.`)}
+            {mode === "accessibility" && (!selectedNodeId
+              ? "Click first node of a connection to toggle accessibility."
+              : `Selected "${selectedNodeId}". Click connected node or line to toggle accessible/stairs.`)}
             {mode === "disconnect" && (!selectedNodeId
               ? "Click two connected nodes (or click line directly) to disconnect."
               : `Selected "${selectedNodeId}". Click connected node to remove edge.`)}
@@ -293,15 +365,27 @@ export default function Editor() {
           <div>
             <h4 style={{ margin: "0 0 0.5rem 0" }}>Active Connections ({activeConnectionList.length})</h4>
             <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              {activeConnectionList.map(([from, to]) => (
+              {activeConnectionList.map(({ from, to, accessible }) => (
                 <div key={`${from}::${to}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", background: "#f5f5f5", padding: "0.25rem 0.5rem", borderRadius: "3px" }}>
-                  <span>{from} ↔ {to}</span>
-                  <button
-                    onClick={() => removeConnection(from, to)}
-                    style={{ color: "#c0392b", border: "none", background: "none", cursor: "pointer", fontWeight: "bold" }}
-                  >
-                    ✕
-                  </button>
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    {from} ↔ {to}
+                    {!accessible && <span style={{ color: "#c0392b", fontSize: "0.7rem", fontWeight: "bold", background: "#fadbd8", padding: "1px 4px", borderRadius: "3px" }}>Not Accessible</span>}
+                  </span>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      onClick={() => toggleAccessibility(from, to)}
+                      style={{ color: accessible ? "#8e44ad" : "#27ae60", border: "none", background: "none", cursor: "pointer", fontSize: "0.75rem" }}
+                      title="Toggle accessibility"
+                    >
+                      {accessible ? "Mark Stairs/Steep" : "Mark Accessible"}
+                    </button>
+                    <button
+                      onClick={() => removeConnection(from, to)}
+                      style={{ color: "#c0392b", border: "none", background: "none", cursor: "pointer", fontWeight: "bold" }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

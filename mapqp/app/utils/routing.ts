@@ -34,7 +34,9 @@ type GraphEdge = {
 };
 
 const walkwayNodes: GraphNode[] = routePointsData.nodes;
-const walkwayConnections: Record<string, string[]> = routePointsData.connections;
+
+type WalkwayConnectionItem = string | { to: string; accessible?: boolean };
+const walkwayConnections: Record<string, WalkwayConnectionItem[]> = routePointsData.connections;
 
 const campusNodes: GraphNode[] = [
   ...walkwayNodes,
@@ -58,7 +60,8 @@ for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
     throw new Error(`Unknown walkway node: ${fromId}`);
   }
 
-  for (const toId of toIds) {
+  for (const item of toIds) {
+    const toId = typeof item === "string" ? item : item.to;
     const toNode = walkwayNodesById.get(toId);
     if (!toNode) {
       throw new Error(`Unknown walkway node: ${toId}`);
@@ -72,7 +75,8 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
     nodes: walkwayNodes.map((node) => [node.latitude, node.longitude]),
     connections: Object.entries(walkwayConnections).flatMap(([fromId, toIds]) => {
       const fromNode = walkwayNodesById.get(fromId)!;
-      return toIds.map((toId) => {
+      return toIds.map((item) => {
+        const toId = typeof item === "string" ? item : item.to;
         const toNode = walkwayNodesById.get(toId)!;
         return [
           [fromNode.latitude, fromNode.longitude] as [number, number],
@@ -238,9 +242,12 @@ function nearestEdges(
     const fromNode = walkwayNodesById.get(fromId);
     if (!fromNode) continue;
 
-    for (const toId of toIds) {
+    for (const item of toIds) {
+      const toId = typeof item === "string" ? item : item.to;
       const toNode = walkwayNodesById.get(toId);
-      if (!toNode) continue;
+      if (!toNode) {
+        throw new Error(`Unknown walkway node: ${toId}`);
+      }
 
       const edgeKey = [fromId, toId].sort().join("::");
       if (seenEdges.has(edgeKey)) continue;

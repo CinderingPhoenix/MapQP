@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { divIcon } from "leaflet";
 import {
   MapContainer,
@@ -22,17 +22,19 @@ export default function EditorMap({
   onConnectionClick,
   onNodeDragEnd,
 }: EditorMapProps) {
-  const lines: { key: string; fromId: string; toId: string; positions: [[number, number], [number, number]] }[] = [];
+  const lines: { key: string; fromId: string; toId: string; accessible: boolean; positions: [[number, number], [number, number]] }[] = [];
   const seenEdges = new Set<string>();
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
-  const isLineClickable = mode === "disconnect" || mode === "delete";
+  const isLineClickable = mode === "disconnect" || mode === "delete" || mode === "accessibility";
 
   Object.entries(connections).forEach(([fromId, toIds]) => {
     const fromNode = nodeMap.get(fromId);
     if (!fromNode) return;
 
-    toIds.forEach((toId) => {
+    toIds.forEach((item) => {
+      const toId = typeof item === "string" ? item : item.to;
+      const accessible = typeof item === "string" ? true : item.accessible !== false;
       const toNode = nodeMap.get(toId);
       if (!toNode) return;
 
@@ -43,6 +45,7 @@ export default function EditorMap({
           key: edgeKey,
           fromId,
           toId,
+          accessible,
           positions: [
             [fromNode.latitude, fromNode.longitude],
             [toNode.latitude, toNode.longitude],
@@ -69,37 +72,52 @@ export default function EditorMap({
 
       <MapEventCatcher onMapClick={onMapClick} />
 
-      {lines.map((line) => (
-        <React.Fragment key={line.key}>
-          {isLineClickable && (
+      {lines.map((line) => {
+        const lineColor = line.accessible ? "#d46b3f" : "#8e44ad"; // purple for non-accessible/stairs
+
+        return (
+          <React.Fragment key={line.key}>
+            {isLineClickable && (
+              <Polyline
+                positions={line.positions}
+                interactive={true}
+                pathOptions={{ color: "transparent", weight: 20 }}
+                eventHandlers={{
+                  click: (e: { originalEvent: { stopPropagation: () => void; }; }) => {
+                    e.originalEvent.stopPropagation();
+                    onConnectionClick(line.fromId, line.toId);
+                  },
+                }}
+              />
+            )}
+            
             <Polyline
               positions={line.positions}
-              interactive={true}
-              pathOptions={{ color: "transparent", weight: 20 }}
+              interactive={isLineClickable}
+              pathOptions={{
+                color: lineColor,
+                weight: 4,
+                opacity: 0.8,
+                dashArray: line.accessible ? undefined : "6, 6" // dashed line for non-accessible segments
+              }}
               eventHandlers={{
                 click: (e: { originalEvent: { stopPropagation: () => void; }; }) => {
-                  e.originalEvent.stopPropagation();
-                  onConnectionClick(line.fromId, line.toId);
+                  if (isLineClickable) {
+                    e.originalEvent.stopPropagation();
+                    onConnectionClick(line.fromId, line.toId);
+                  }
                 },
               }}
-            />
-          )}
-          
-          <Polyline
-            positions={line.positions}
-            interactive={isLineClickable}
-            pathOptions={{ color: "#d46b3f", weight: 4, opacity: 0.8 }}
-            eventHandlers={{
-              click: (e: { originalEvent: { stopPropagation: () => void; }; }) => {
-                if (isLineClickable) {
-                  e.originalEvent.stopPropagation();
-                  onConnectionClick(line.fromId, line.toId);
-                }
-              },
-            }}
-          />
-        </React.Fragment>
-      ))}
+            >
+              {!line.accessible && (
+                <Tooltip permanent={false} direction="center">
+                  Not Accessibility Friendly (Stairs/Steep)
+                </Tooltip>
+              )}
+            </Polyline>
+          </React.Fragment>
+        );
+      })}
 
       {nodes.map((node) => {
         const isSelected = node.id === selectedNodeId;
