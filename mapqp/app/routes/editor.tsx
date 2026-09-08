@@ -27,8 +27,46 @@ export async function action({ request }: ActionFunctionArgs) {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
   const data = await request.json();
+
+  // Round to 6 decimal places
+  if (data.nodes) {
+    data.nodes = data.nodes.map((node: any) => ({
+      ...node,
+      latitude: typeof node.latitude === "number" ? Number(node.latitude.toFixed(6)) : node.latitude,
+      longitude: typeof node.longitude === "number" ? Number(node.longitude.toFixed(6)) : node.longitude,
+    }));
+  }
+
+  // Compact to single line formatting
+  const rootKeys = Object.keys(data);
+  let jsonString = "{\n";
+  rootKeys.forEach((key, i) => {
+    const val = data[key];
+    jsonString += `  "${key}": `;
+    if (Array.isArray(val)) {
+      jsonString += "[\n";
+      const items = val.map((item) => `    ${JSON.stringify(item)}`);
+      jsonString += items.join(",\n");
+      jsonString += "\n  ]";
+    } else if (val !== null && typeof val === "object") {
+      jsonString += "{\n";
+      const subEntries = Object.entries(val).map(
+        ([subK, subV]) => `    ${JSON.stringify(subK)}: ${JSON.stringify(subV)}`
+      );
+      jsonString += subEntries.join(",\n");
+      jsonString += "\n  }";
+    } else {
+      jsonString += JSON.stringify(val);
+    }
+    if (i < rootKeys.length - 1) {
+      jsonString += ",";
+    }
+    jsonString += "\n";
+  });
+  jsonString += "}";
+
   const filePath = path.join(process.cwd(), "app", "data", "route-points.json");
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  await fs.writeFile(filePath, jsonString, "utf-8");
   return { success: true };
 }
 
@@ -77,9 +115,12 @@ export default function Editor() {
     if (mode !== "add") return;
 
     const id = `node_${Math.random().toString(36).substring(2, 9)}`;
+    const roundedLat = Number(latitude.toFixed(6));
+    const roundedLng = Number(longitude.toFixed(6));
 
-    const nextNodes = [...nodes, { id, latitude, longitude }];
-    const nextConnections = { ...connections, [id]: [] };
+    const nextNodes = [...nodes, { id, latitude: roundedLat, longitude: roundedLng }];
+    
+    const nextConnections = { ...connections };
 
     setNodes(nextNodes);
     setConnections(nextConnections);
@@ -124,12 +165,13 @@ export default function Editor() {
         return;
       }
 
-      const listA = connections[selectedNodeId] || [];
+      const nextConnections = { ...connections };
+      const listA = nextConnections[selectedNodeId] || [];
+      const listB = nextConnections[nodeId] || [];
+
       if (!listA.includes(nodeId)) {
-        const nextConnections = { ...connections };
-        const listB = nextConnections[nodeId] || [];
         nextConnections[selectedNodeId] = [...listA, nodeId];
-        nextConnections[nodeId] = [...listB, selectedNodeId];
+
         setConnections(nextConnections);
         saveToDisk(nodes, nextConnections);
       }
