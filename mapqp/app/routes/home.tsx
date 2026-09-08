@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
 import buildingData from "../data/wpi-buildings.json";
 import type { WalkwayDebugOverlay, WalkingRoute } from "../utils/routing";
-import { distanceBetween, getWalkwayDebugOverlay, routeBetween } from "../utils/routing";
+import { getWalkwayDebugOverlay, routeBetween } from "../utils/routing";
 import type { Route } from "./+types/home";
 
 type LocationMapProps = {

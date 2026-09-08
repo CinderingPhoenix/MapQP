@@ -7,7 +7,6 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
-import type { WalkwayDebugOverlay } from "../utils/routing";
 
 type LocationMapProps = {
   latitude: number;
@@ -18,7 +17,6 @@ type LocationMapProps = {
     destination: { latitude: number; longitude: number };
     geometry: [number, number][];
   } | null;
-  walkwayDebug?: WalkwayDebugOverlay;
 };
 
 export default function LocationMap({
@@ -26,7 +24,6 @@ export default function LocationMap({
   longitude,
   accuracy,
   route,
-  walkwayDebug,
 }: LocationMapProps) {
   const position: [number, number] = [latitude, longitude];
 
@@ -34,33 +31,16 @@ export default function LocationMap({
     <MapContainer
       center={position}
       zoom={16}
+      maxZoom={19}
       scrollWheelZoom
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        maxZoom={19}
+        maxNativeZoom={19}
       />
-      {walkwayDebug?.connections.map((connection, index) => (
-        <Polyline
-          key={`walkway-connection-${index}`}
-          positions={connection}
-          pathOptions={{ color: "#d46b3f", weight: 3, opacity: 0.65 }}
-        />
-      ))}
-      {walkwayDebug?.nodes.map((node, index) => (
-        <CircleMarker
-          key={`walkway-node-${index}`}
-          center={node}
-          radius={4}
-          pathOptions={{
-            color: "#fffdf8",
-            fillColor: "#d46b3f",
-            fillOpacity: 1,
-            weight: 1,
-          }}
-        />
-      ))}
       <MapPosition position={position} />
       {route && <RouteBounds route={route} />}
       <Circle
@@ -148,12 +128,12 @@ function RouteBounds({
 
   useEffect(() => {
     map.fitBounds(
-      [
-        [route.origin.latitude, route.origin.longitude],
-        [route.destination.latitude, route.destination.longitude],
-      ],
-      { padding: [36, 36], maxZoom: 17, animate: true },
-    );
+    [
+      [route.origin.latitude, route.origin.longitude],
+      [route.destination.latitude, route.destination.longitude],
+    ],
+    { padding: [36, 36], maxZoom: 19, animate: true }
+  );
   }, [map, route]);
 
   return null;

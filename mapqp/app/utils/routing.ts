@@ -1,4 +1,5 @@
 import buildingData from "../data/wpi-buildings.json";
+import routePointsData from "../data/route-points.json";
 
 export type RoutePoint = {
   latitude: number;
@@ -32,74 +33,17 @@ type GraphEdge = {
   distance: number;
 };
 
-const walkwayNodes: GraphNode[] = [
-  { id: "quad-center", latitude: 42.27384471336243, longitude: -71.80980835945334 },
-  { id: "quad-rec-harrington", latitude: 42.274121688625264, longitude: -71.81002343271793 },
-  { id: "quad-rec-morgan", latitude: 42.27367674431656, longitude: -71.81017884187825 },
-  { id: "quad-daniels", latitude: 42.27350068349751, longitude: -71.80987764371383 },
-  { id: "quad-daniels-sanford", latitude: 42.27342544146955, longitude: -71.80927006530047 },
-  { id: "quad-bartlett", latitude: 42.27375952485588, longitude: -71.80909815489579 },
-  { id: "quad-innovation", latitude: 42.274137165180576, longitude: -71.80916415517422 },
-  { id: "innovation-higgins", latitude: 42.274051139670256, longitude: -71.80860200379927 },
-  { id: "innovation-higgins-campus-center", latitude: 42.274546454307426, longitude: -71.80846455903826 },
-  { id: "innovation-messenger", latitude: 42.27462961522782, longitude: -71.80916564593984 },
-  { id: "fountain-campus-center", latitude: 42.2744811806659, longitude: -71.80784022450472},
-  { id: "fountain-olin", latitude: 42.27452438750855, longitude: -71.80777394152985},
-  { id: "fountain-straton", latitude: 42.27443060956069, longitude: -71.80779361398845},
-  { id: "fountain-salisbury", latitude: 42.27446588941587, longitude: -71.80769572430522},
-  { id: "olin-main-entrance", latitude: 42.27488688555022, longitude: -71.80770650286598},
-  { id: "olin-atwater", latitude: 42.27516296985081, longitude: -71.80761375217321},
-  { id: "olin-salisbury-street", latitude: 42.27590323467943, longitude: -71.80738325177589},
-  { id: "fuller-upper", latitude: 42.27485364088761, longitude: -71.80671842923698 },
-  { id: "fuller-lower", latitude: 42.2750742912282, longitude: -71.80618504820738 },
-  { id: "boynton", latitude: 42.273548072025385, longitude: -71.80695060715583 },
-  { id: "boynton-corner", latitude: 42.27331347937322, longitude: -71.80711913166509 },
-  { id: "alden", latitude: 42.27348011861333, longitude: -71.80835755945768 },
-  { id: "straton-higgins", latitude: 42.27379454864059, longitude: -71.80793139030013 },
-  { id: "gordon", latitude: 42.27426762142964, longitude: -71.80672682883 },
-  { id: "unity-lower", latitude: 42.273620333825455, longitude: -71.80563798917942 },
-  { id: "unity-upper", latitude: 42.27380426934777, longitude: -71.80674716196235 },
-  { id: "unity-upper-washburn", latitude: 42.27381042504417, longitude: -71.80690773830483 },
-  { id: "institute-park-salisbury-street", latitude: 42.27523469928868, longitude: -71.80515083178038},
-  { id: "institute-park-humbolt-ave", latitude: 42.275616076067635, longitude: -71.80304302434887},
-];
-
-const walkwayConnections: Record<string, string[]> = {
-  "quad-center": ["quad-rec-harrington", "quad-rec-morgan", "quad-daniels", "quad-daniels-sanford", "quad-innovation"],
-  "quad-rec-harrington": ["quad-innovation"],
-  "quad-rec-morgan": ["quad-daniels", "quad-rec-harrington"],
-  "quad-daniels": ["quad-daniels-sanford"],
-  "quad-daniels-sanford": ["quad-bartlett"],
-  "quad-bartlett": ["quad-innovation"],
-  "quad-innovation": ["innovation-higgins", "innovation-messenger", "innovation-higgins-campus-center"],
-  "innovation-higgins": ["innovation-higgins-campus-center"],
-  "innovation-higgins-campus-center": ["fountain-campus-center"],
-  "innovation-messenger": ["innovation-higgins-campus-center"],
-  "fountain-campus-center": ["fountain-olin", "fountain-straton"],
-  "fountain-olin": ["olin-main-entrance", "fountain-salisbury"],
-  "fountain-salisbury": ["fountain-straton", "gordon"],
-  "fountain-straton" : ["straton-higgins"],
-  "olin-main-entrance": ["olin-atwater"],
-  "olin-salisbury-street": ["olin-atwater"],
-  "olin-atwater": ["fuller-upper"],
-  "fuller-lower": ["fuller-upper"],
-  "fuller-upper": ["gordon"],
-  "gordon": ["unity-upper-washburn"],
-  "unity-upper-washburn": ["boynton"],
-  "boynton": ["boynton-corner"],
-  "boynton-corner": ["alden"],
-  "unity-lower": ["unity-upper"],
-  "unity-upper": ["unity-upper-washburn"],
-};
+const walkwayNodes: GraphNode[] = routePointsData.nodes;
+const walkwayConnections: Record<string, string[]> = routePointsData.connections;
 
 const campusNodes: GraphNode[] = [
   ...walkwayNodes,
   ...buildingData.flatMap((building) => [
-  ...building.entrances.map((entrance, index) => ({
-    id: `${building.name}-entrance-${index}`,
-    latitude: entrance.latitude,
-    longitude: entrance.longitude,
-  })),
+    ...building.entrances.map((entrance, index) => ({
+      id: `${building.name}-entrance-${index}`,
+      latitude: entrance.latitude,
+      longitude: entrance.longitude,
+    })),
   ]),
 ];
 
@@ -140,7 +84,7 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
 }
 
 for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
-  const nearest = nearestEdges(node, walkwayNodes).slice(0, 2);
+  const nearest = nearestEdges(node);
   graphEdges.set(node.id, nearest);
   for (const edge of nearest) {
     graphEdges.set(edge.nodeId, [
@@ -154,6 +98,7 @@ export async function routeBetween(
   origin: RoutePoint,
   destination: RoutePoint,
 ): Promise<WalkingRoute> {
+  routeCache.clear();
   const cacheKey = [
     origin.longitude,
     origin.latitude,
@@ -170,6 +115,41 @@ export async function routeBetween(
   return route;
 }
 
+function smoothPolyline(
+  points: [number, number][],
+  iterations = 2,
+  tension = 0.25
+): [number, number][] {
+  if (points.length <= 2 || iterations <= 0) return points;
+
+  let current = points;
+
+  for (let i = 0; i < iterations; i++) {
+    const smoothed: [number, number][] = [current[0]];
+
+    for (let j = 0; j < current.length - 1; j++) {
+      const p0 = current[j];
+      const p1 = current[j + 1];
+
+      const q: [number, number] = [
+        (1 - tension) * p0[0] + tension * p1[0],
+        (1 - tension) * p0[1] + tension * p1[1],
+      ];
+      const r: [number, number] = [
+        tension * p0[0] + (1 - tension) * p1[0],
+        tension * p0[1] + (1 - tension) * p1[1],
+      ];
+
+      smoothed.push(q, r);
+    }
+
+    smoothed.push(current[current.length - 1]);
+    current = smoothed;
+  }
+
+  return current;
+}
+
 function findLocalWalkingRoute(
   origin: RoutePoint,
   destination: RoutePoint,
@@ -182,9 +162,9 @@ function findLocalWalkingRoute(
     { id: destinationId, latitude: destination.latitude, longitude: destination.longitude },
   ];
   const edges = new Map(graphEdges);
-  edges.set(startId, nearestEdges(origin, walkwayNodes));
+  edges.set(startId, nearestEdges(origin));
   edges.set(destinationId, []);
-  for (const edge of nearestEdges(destination, walkwayNodes)) {
+  for (const edge of nearestEdges(destination)) {
     edges.set(edge.nodeId, [
       ...(edges.get(edge.nodeId) ?? []),
       { nodeId: destinationId, distance: edge.distance },
@@ -230,10 +210,14 @@ function findLocalWalkingRoute(
     path.unshift(parent);
   }
 
-  const geometry = path.map((nodeId) => {
+  const rawGeometry = path.map((nodeId) => {
     const node = nodes.find((candidate) => candidate.id === nodeId)!;
     return [node.latitude, node.longitude] as [number, number];
   });
+
+  // Smooth the path geometry (adjust '2' for more or fewer passes)
+  const geometry = smoothPolyline(rawGeometry, 0.25);
+
   const distance = distances.get(destinationId)!;
 
   return {
@@ -245,15 +229,69 @@ function findLocalWalkingRoute(
 
 function nearestEdges(
   point: Pick<RoutePoint, "latitude" | "longitude">,
-  nodes: GraphNode[],
 ): GraphEdge[] {
-  return nodes
-    .map((node) => ({
-      nodeId: node.id,
-      distance: distanceBetween(point.latitude, point.longitude, node.latitude, node.longitude),
-    }))
-    .sort((first, second) => first.distance - second.distance)
-    .slice(0, 4);
+  let bestEdges: GraphEdge[] = [];
+  let minDistanceToSegment = Number.POSITIVE_INFINITY;
+  const seenEdges = new Set<string>();
+
+  for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
+    const fromNode = walkwayNodesById.get(fromId);
+    if (!fromNode) continue;
+
+    for (const toId of toIds) {
+      const toNode = walkwayNodesById.get(toId);
+      if (!toNode) continue;
+
+      const edgeKey = [fromId, toId].sort().join("::");
+      if (seenEdges.has(edgeKey)) continue;
+      seenEdges.add(edgeKey);
+
+      const { distToSegment, distToFrom, distToTo } = projectPointToSegment(
+        point.latitude,
+        point.longitude,
+        fromNode,
+        toNode
+      );
+
+      if (distToSegment < minDistanceToSegment) {
+        minDistanceToSegment = distToSegment;
+        bestEdges = [
+          { nodeId: fromNode.id, distance: distToSegment + distToFrom },
+          { nodeId: toNode.id, distance: distToSegment + distToTo },
+        ];
+      }
+    }
+  }
+
+  return bestEdges;
+}
+
+function projectPointToSegment(
+  pLat: number,
+  pLng: number,
+  a: GraphNode,
+  b: GraphNode
+) {
+  const latScale = Math.cos(((a.latitude + b.latitude) / 2) * (Math.PI / 180));
+
+  const dxAB = (b.longitude - a.longitude) * 111_320 * latScale;
+  const dyAB = (b.latitude - a.latitude) * 111_320;
+
+  const dxAP = (pLng - a.longitude) * 111_320 * latScale;
+  const dyAP = (pLat - a.latitude) * 111_320;
+
+  const ab2 = dxAB * dxAB + dyAB * dyAB;
+  let t = ab2 === 0 ? 0 : (dxAP * dxAB + dyAP * dyAB) / ab2;
+  t = Math.max(0, Math.min(1, t));
+
+  const projX = t * dxAB;
+  const projY = t * dyAB;
+
+  const distToSegment = Math.hypot(dxAP - projX, dyAP - projY);
+  const distToFrom = Math.hypot(projX, projY);
+  const distToTo = Math.hypot(dxAB - projX, dyAB - projY);
+
+  return { distToSegment, distToFrom, distToTo };
 }
 
 function connectWalkwayNodes(first: GraphNode, second: GraphNode) {

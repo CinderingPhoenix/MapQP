@@ -1,0 +1,5527 @@
+{
+  "nodes": [
+    {
+      "id": "quad-center",
+      "latitude": 42.27383272162987,
+      "longitude": -71.8097995966673
+    },
+    {
+      "id": "quad-rec-harrington",
+      "latitude": 42.274121688625264,
+      "longitude": -71.81002343271793
+    },
+    {
+      "id": "quad-rec-morgan",
+      "latitude": 42.27367097086544,
+      "longitude": -71.81016370654106
+    },
+    {
+      "id": "quad-daniels",
+      "latitude": 42.27348738820651,
+      "longitude": -71.80986966937782
+    },
+    {
+      "id": "quad-daniels-sanford",
+      "latitude": 42.27340750477444,
+      "longitude": -71.80926986038685
+    },
+    {
+      "id": "quad-bartlett",
+      "latitude": 42.27375234246754,
+      "longitude": -71.80909015238285
+    },
+    {
+      "id": "quad-innovation",
+      "latitude": 42.27412967709071,
+      "longitude": -71.80914212018253
+    },
+    {
+      "id": "innovation-higgins",
+      "latitude": 42.274050538721205,
+      "longitude": -71.80857650935651
+    },
+    {
+      "id": "innovation-higgins-campus-center",
+      "latitude": 42.274547446648405,
+      "longitude": -71.8084752559662
+    },
+    {
+      "id": "innovation-messenger",
+      "latitude": 42.27462961522782,
+      "longitude": -71.80916564593984
+    },
+    {
+      "id": "fountain-campus-center",
+      "latitude": 42.27447624740054,
+      "longitude": -71.80780101567508
+    },
+    {
+      "id": "fountain-olin",
+      "latitude": 42.27449262075386,
+      "longitude": -71.80777385830879
+    },
+    {
+      "id": "fountain-straton",
+      "latitude": 42.27446037020539,
+      "longitude": -71.80777955800296
+    },
+    {
+      "id": "fountain-salisbury",
+      "latitude": 42.27447227810212,
+      "longitude": -71.80775340646507
+    },
+    {
+      "id": "olin-main-entrance",
+      "latitude": 42.27488688555022,
+      "longitude": -71.80770650286598
+    },
+    {
+      "id": "olin-atwater",
+      "latitude": 42.275164420734285,
+      "longitude": -71.80760018527509
+    },
+    {
+      "id": "olin-salisbury-street",
+      "latitude": 42.275895255563896,
+      "longitude": -71.80733062326908
+    },
+    {
+      "id": "fuller-upper",
+      "latitude": 42.27484315834316,
+      "longitude": -71.80671539157629
+    },
+    {
+      "id": "boynton",
+      "latitude": 42.273565534944254,
+      "longitude": -71.80703122168781
+    },
+    {
+      "id": "boynton-corner",
+      "latitude": 42.27334275446482,
+      "longitude": -71.80717069655658
+    },
+    {
+      "id": "alden",
+      "latitude": 42.27348011861333,
+      "longitude": -71.80835755945768
+    },
+    {
+      "id": "straton-higgins",
+      "latitude": 42.27380295158169,
+      "longitude": -71.80791333317758
+    },
+    {
+      "id": "gordon",
+      "latitude": 42.274262153010405,
+      "longitude": -71.80668555200101
+    },
+    {
+      "id": "unity-lower",
+      "latitude": 42.273621850152324,
+      "longitude": -71.80562306195499
+    },
+    {
+      "id": "unity-upper",
+      "latitude": 42.27380295158169,
+      "longitude": -71.80671840906145
+    },
+    {
+      "id": "unity-upper-washburn",
+      "latitude": 42.27381833277502,
+      "longitude": -71.8068813532591
+    },
+    {
+      "id": "institute-park-salisbury-street",
+      "latitude": 42.27522768070328,
+      "longitude": -71.8051439523697
+    },
+    {
+      "id": "institute-park-humbolt-ave",
+      "latitude": 42.27563055838832,
+      "longitude": -71.80300556123258
+    },
+    {
+      "id": "bartlett-higgins",
+      "latitude": 42.2738545529896,
+      "longitude": -71.80862076580524
+    },
+    {
+      "id": "bartlett-sanford-alden",
+      "latitude": 42.273512692875045,
+      "longitude": -71.80868513882162
+    },
+    {
+      "id": "boynton-straton",
+      "latitude": 42.27362854843364,
+      "longitude": -71.8075666576624
+    },
+    {
+      "id": "straton-higgins-entrance",
+      "latitude": 42.27414530628675,
+      "longitude": -71.80782716705792
+    },
+    {
+      "id": "higgins-entrance",
+      "latitude": 42.27450651329274,
+      "longitude": -71.80814892212682
+    },
+    {
+      "id": "sanford-riley-entrance",
+      "latitude": 42.27337326898683,
+      "longitude": -71.80898420512678
+    },
+    {
+      "id": "alden-side-entrance",
+      "latitude": 42.27339510050571,
+      "longitude": -71.80855653344274
+    },
+    {
+      "id": "alden-west-street-entrance",
+      "latitude": 42.273101366709064,
+      "longitude": -71.8081167422861
+    },
+    {
+      "id": "washburn-entrance",
+      "latitude": 42.274307303915634,
+      "longitude": -71.80702585726978
+    },
+    {
+      "id": "salisbury-entrance",
+      "latitude": 42.274384953473756,
+      "longitude": -71.8072608858347
+    },
+    {
+      "id": "higgins-olin-cut",
+      "latitude": 42.2746573463748,
+      "longitude": -71.80775038897991
+    },
+    {
+      "id": "salisbury-side-1",
+      "latitude": 42.27441918871178,
+      "longitude": -71.80747881531717
+    },
+    {
+      "id": "salisbury-side-2",
+      "latitude": 42.27459086078445,
+      "longitude": -71.80775910615922
+    },
+    {
+      "id": "salisbury-side-3",
+      "latitude": 42.2751249762509,
+      "longitude": -71.80764377117158
+    },
+    {
+      "id": "salisbury-side-entrance",
+      "latitude": 42.274732762780474,
+      "longitude": -71.80742181837559
+    },
+    {
+      "id": "olin-atwater-cut",
+      "latitude": 42.27510488188196,
+      "longitude": -71.80750899016859
+    },
+    {
+      "id": "salisbury-side-4-1",
+      "latitude": 42.27488979730927,
+      "longitude": -71.80737756192686
+    },
+    {
+      "id": "gordon-washburn-cut",
+      "latitude": 42.274107101578515,
+      "longitude": -71.80683106184007
+    },
+    {
+      "id": "kaven-stairs",
+      "latitude": 42.274892030024866,
+      "longitude": -71.80616185069084
+    },
+    {
+      "id": "kaven-stairs-bottom",
+      "latitude": 42.27460475330166,
+      "longitude": -71.8059452623129
+    },
+    {
+      "id": "kaven-boynton-street",
+      "latitude": 42.274651888605106,
+      "longitude": -71.80541552603245
+    },
+    {
+      "id": "kaven-boynton-street-salisbury-street",
+      "latitude": 42.27509446257703,
+      "longitude": -71.80532567203046
+    },
+    {
+      "id": "kaven-side-entrance",
+      "latitude": 42.274943134382475,
+      "longitude": -71.80573403835298
+    },
+    {
+      "id": "fuller-side-stairs",
+      "latitude": 42.2747235838149,
+      "longitude": -71.80659972131252
+    },
+    {
+      "id": "skull-institute",
+      "latitude": 42.27262776769618,
+      "longitude": -71.80583663284779
+    },
+    {
+      "id": "institute-road-coombs",
+      "latitude": 42.27251339883118,
+      "longitude": -71.80689275264741
+    },
+    {
+      "id": "west-street-institute",
+      "latitude": 42.27277984571368,
+      "longitude": -71.80802062153818
+    },
+    {
+      "id": "sanford-quad-institute",
+      "latitude": 42.27295946103983,
+      "longitude": -71.8094488978386
+    },
+    {
+      "id": "morgan-daniels-institute",
+      "latitude": 42.27304281825487,
+      "longitude": -71.81029848754407
+    },
+    {
+      "id": "institute-morgan",
+      "latitude": 42.27317480028656,
+      "longitude": -71.81162282824518
+    },
+    {
+      "id": "alumni-field",
+      "latitude": 42.27331670547092,
+      "longitude": -71.81300014257432
+    },
+    {
+      "id": "alumni-field-park-ave",
+      "latitude": 42.27353700519408,
+      "longitude": -71.81315168738367
+    },
+    {
+      "id": "park-ave-salisbury-street",
+      "latitude": 42.27748738437899,
+      "longitude": -71.80931277573109
+    },
+    {
+      "id": "boynton-alden-stairs",
+      "latitude": 42.273219455798625,
+      "longitude": -71.80768668651582
+    },
+    {
+      "id": "boynton-alden-stairs-1",
+      "latitude": 42.272979308005795,
+      "longitude": -71.80785834789278
+    },
+    {
+      "id": "boynton-alden-stairs-2",
+      "latitude": 42.2729540031231,
+      "longitude": -71.80798709392549
+    },
+    {
+      "id": "boynton-coombs-1",
+      "latitude": 42.2733603685403,
+      "longitude": -71.80732157081366
+    },
+    {
+      "id": "boynton-coombs-2",
+      "latitude": 42.2729162938673,
+      "longitude": -71.80737152695657
+    },
+    {
+      "id": "boynton-coombs-3",
+      "latitude": 42.27284583703939,
+      "longitude": -71.80733833462001
+    },
+    {
+      "id": "boynton-coombs-4",
+      "latitude": 42.27277041837579,
+      "longitude": -71.80716264992954
+    },
+    {
+      "id": "boynton-coombs-5",
+      "latitude": 42.27271484667117,
+      "longitude": -71.80711470544338
+    },
+    {
+      "id": "bridge",
+      "latitude": 42.27341643584638,
+      "longitude": -71.807853654027
+    },
+    {
+      "id": "boynton-straton-walkway",
+      "latitude": 42.273500288627034,
+      "longitude": -71.8077101558447
+    },
+    {
+      "id": "institute-park-1",
+      "latitude": 42.275252736594986,
+      "longitude": -71.80493742227556
+    },
+    {
+      "id": "institute-park-2",
+      "latitude": 42.27520138441016,
+      "longitude": -71.80454682558776
+    },
+    {
+      "id": "institute-park-3",
+      "latitude": 42.27521354024515,
+      "longitude": -71.80413510650398
+    },
+    {
+      "id": "institute-park-4",
+      "latitude": 42.27527357515083,
+      "longitude": -71.8038695678115
+    },
+    {
+      "id": "institute-park-5",
+      "latitude": 42.27557474112875,
+      "longitude": -71.80327847599983
+    },
+    {
+      "id": "atwater-fuller-stairs",
+      "latitude": 42.27546136992048,
+      "longitude": -71.80627953261138
+    },
+    {
+      "id": "fuller-salisbury-street-stairs",
+      "latitude": 42.275249263501685,
+      "longitude": -71.80572967976333
+    },
+    {
+      "id": "kaven-entrance",
+      "latitude": 42.2746295613605,
+      "longitude": -71.80565491318703
+    },
+    {
+      "id": "straton-entrance",
+      "latitude": 42.2739111160228,
+      "longitude": -71.80787444114686
+    },
+    {
+      "id": "node_hee3l4b",
+      "latitude": 42.27378905888775,
+      "longitude": -71.8102089688182
+    },
+    {
+      "id": "node_hbq0rz0",
+      "latitude": 42.27401803986355,
+      "longitude": -71.81014493107797
+    },
+    {
+      "id": "node_3v8ec98",
+      "latitude": 42.27417854932571,
+      "longitude": -71.80986229330303
+    },
+    {
+      "id": "node_22typhd",
+      "latitude": 42.274188968782084,
+      "longitude": -71.80966079235078
+    },
+    {
+      "id": "node_q79zhty",
+      "latitude": 42.27417160302052,
+      "longitude": -71.80948778986932
+    },
+    {
+      "id": "node_jb50j5g",
+      "latitude": 42.27342437457598,
+      "longitude": -71.80938184261323
+    },
+    {
+      "id": "node_a18hyvk",
+      "latitude": 42.27358562980402,
+      "longitude": -71.8100805580616
+    },
+    {
+      "id": "node_3p4ghcj",
+      "latitude": 42.27353799753343,
+      "longitude": -71.80999338626863
+    },
+    {
+      "id": "node_zp5k7dm",
+      "latitude": 42.273719595371986,
+      "longitude": -71.81029547005893
+    },
+    {
+      "id": "node_gqs2k2b",
+      "latitude": 42.27374241910704,
+      "longitude": -71.81051909923555
+    },
+    {
+      "id": "node_8vkanxe",
+      "latitude": 42.27373398424941,
+      "longitude": -71.81070484220983
+    },
+    {
+      "id": "node_zkusfj9",
+      "latitude": 42.27366898619089,
+      "longitude": -71.81087851524354
+    },
+    {
+      "id": "node_zk4go50",
+      "latitude": 42.27349284607704,
+      "longitude": -71.81117355823518
+    },
+    {
+      "id": "node_5l94nm5",
+      "latitude": 42.273303805012816,
+      "longitude": -71.81128285825254
+    },
+    {
+      "id": "node_j6jv8xp",
+      "latitude": 42.27324029502675,
+      "longitude": -71.8113123625517
+    },
+    {
+      "id": "node_zhddnit",
+      "latitude": 42.27325518018548,
+      "longitude": -71.81146189570428
+    },
+    {
+      "id": "node_8tth6zp",
+      "latitude": 42.273220944315135,
+      "longitude": -71.81154236197472
+    },
+    {
+      "id": "node_uwbtr3l",
+      "latitude": 42.27472879349823,
+      "longitude": -71.81008458137514
+    },
+    {
+      "id": "node_qwnzoag",
+      "latitude": 42.27501656581406,
+      "longitude": -71.8098532408476
+    },
+    {
+      "id": "node_8jppe5t",
+      "latitude": 42.27474863990703,
+      "longitude": -71.80965542793275
+    },
+    {
+      "id": "node_8qpxnld",
+      "latitude": 42.274673223520345,
+      "longitude": -71.80951595306398
+    },
+    {
+      "id": "node_0dgf1d7",
+      "latitude": 42.274388426614685,
+      "longitude": -71.81016236543657
+    },
+    {
+      "id": "node_op0emm6",
+      "latitude": 42.27433980262414,
+      "longitude": -71.8100966513157
+    },
+    {
+      "id": "node_ipi0m0c",
+      "latitude": 42.27323235627398,
+      "longitude": -71.81116282939912
+    },
+    {
+      "id": "node_73sl55y",
+      "latitude": 42.27318869311592,
+      "longitude": -71.81107699871065
+    },
+    {
+      "id": "node_o9lgtgb",
+      "latitude": 42.273111290170476,
+      "longitude": -71.81100457906724
+    },
+    {
+      "id": "node_1q5p6cx",
+      "latitude": 42.273079535088435,
+      "longitude": -71.81065052747728
+    },
+    {
+      "id": "node_59pfkcz",
+      "latitude": 42.27270790020464,
+      "longitude": -71.80783756077291
+    },
+    {
+      "id": "node_tefblys",
+      "latitude": 42.27263744314379,
+      "longitude": -71.80764243006708
+    },
+    {
+      "id": "node_r4ihqj9",
+      "latitude": 42.27257765381559,
+      "longitude": -71.8074442818761
+    },
+    {
+      "id": "node_30hln1l",
+      "latitude": 42.27253374211519,
+      "longitude": -71.80720657110216
+    },
+    {
+      "id": "node_lqzozlf",
+      "latitude": 42.2725166239864,
+      "longitude": -71.80669896304607
+    },
+    {
+      "id": "node_r9l6gx1",
+      "latitude": 42.27255408539261,
+      "longitude": -71.8064347654581
+    },
+    {
+      "id": "node_r2wh5gt",
+      "latitude": 42.27259377957358,
+      "longitude": -71.80620945990086
+    },
+    {
+      "id": "node_802ap4p",
+      "latitude": 42.272620573131626,
+      "longitude": -71.80595967918636
+    },
+    {
+      "id": "node_zjwkw0c",
+      "latitude": 42.273642193078565,
+      "longitude": -71.8075653165579
+    },
+    {
+      "id": "node_nzgyw34",
+      "latitude": 42.274160439314116,
+      "longitude": -71.80746339261532
+    },
+    {
+      "id": "node_lfw5lpl",
+      "latitude": 42.27426885122365,
+      "longitude": -71.80740807205439
+    },
+    {
+      "id": "node_rgeb0go",
+      "latitude": 42.274307303915634,
+      "longitude": -71.8073906376958
+    },
+    {
+      "id": "node_5wn2t79",
+      "latitude": 42.2755722603605,
+      "longitude": -71.80284060537817
+    },
+    {
+      "id": "node_ibx0g3x",
+      "latitude": 42.27539414094572,
+      "longitude": -71.80236015468836
+    },
+    {
+      "id": "node_eken83e",
+      "latitude": 42.27535519276148,
+      "longitude": -71.80224414914846
+    },
+    {
+      "id": "node_2hdp633",
+      "latitude": 42.27530408873798,
+      "longitude": -71.80207081139089
+    },
+    {
+      "id": "node_d8ij4b6",
+      "latitude": 42.275110835769716,
+      "longitude": -71.80203426629306
+    },
+    {
+      "id": "node_52zjs3s",
+      "latitude": 42.275066925834224,
+      "longitude": -71.80171608924867
+    },
+    {
+      "id": "node_vtr2tpd",
+      "latitude": 42.27567347562537,
+      "longitude": -71.80276684463026
+    },
+    {
+      "id": "node_97yu309",
+      "latitude": 42.27545516798851,
+      "longitude": -71.8021807819605
+    },
+    {
+      "id": "node_o1cuzmc",
+      "latitude": 42.275398606341085,
+      "longitude": -71.80209226906301
+    },
+    {
+      "id": "node_ttc0h3j",
+      "latitude": 42.27466330030485,
+      "longitude": -71.80365264415742
+    },
+    {
+      "id": "node_gei4ndh",
+      "latitude": 42.275166901518595,
+      "longitude": -71.8050292879343
+    },
+    {
+      "id": "node_w1dxdn7",
+      "latitude": 42.27503293902701,
+      "longitude": -71.8051228299737
+    },
+    {
+      "id": "node_yub1zin",
+      "latitude": 42.27395130551555,
+      "longitude": -71.80522710084917
+    },
+    {
+      "id": "node_t8dx956",
+      "latitude": 42.27407633932908,
+      "longitude": -71.80530622601509
+    },
+    {
+      "id": "node_bd085mo",
+      "latitude": 42.27409420128219,
+      "longitude": -71.8053736165166
+    },
+    {
+      "id": "node_91wx4c4",
+      "latitude": 42.2738478547323,
+      "longitude": -71.80542390793563
+    },
+    {
+      "id": "node_fqu3g30",
+      "latitude": 42.273855049156786,
+      "longitude": -71.80533237755299
+    },
+    {
+      "id": "node_kncuyu5",
+      "latitude": 42.27387911326025,
+      "longitude": -71.80527638643981
+    },
+    {
+      "id": "node_kid1bbv",
+      "latitude": 42.27500341762482,
+      "longitude": -71.80519860237838
+    },
+    {
+      "id": "node_z7labb6",
+      "latitude": 42.27338393666179,
+      "longitude": -71.8055197969079
+    },
+    {
+      "id": "node_2dbrj35",
+      "latitude": 42.27310955356482,
+      "longitude": -71.80557746440174
+    },
+    {
+      "id": "node_re5j7af",
+      "latitude": 42.27318869311592,
+      "longitude": -71.80545106530191
+    },
+    {
+      "id": "node_q6836m6",
+      "latitude": 42.27329487392489,
+      "longitude": -71.80543262511493
+    },
+    {
+      "id": "node_chykcv5",
+      "latitude": 42.27262131739697,
+      "longitude": -71.8056780472398
+    },
+    {
+      "id": "node_3b0dzuo",
+      "latitude": 42.27360473231907,
+      "longitude": -71.80547520518304
+    },
+    {
+      "id": "node_1zy5gb1",
+      "latitude": 42.273474983953506,
+      "longitude": -71.80436443537475
+    },
+    {
+      "id": "node_mvxorkn",
+      "latitude": 42.27420385371675,
+      "longitude": -71.80221766233446
+    },
+    {
+      "id": "node_xou06c4",
+      "latitude": 42.27426339342032,
+      "longitude": -71.80241748690607
+    },
+    {
+      "id": "node_gryoui0",
+      "latitude": 42.27503293902701,
+      "longitude": -71.80203359574081
+    },
+    {
+      "id": "node_vbtl4d1",
+      "latitude": 42.27473871670339,
+      "longitude": -71.80214926600456
+    },
+    {
+      "id": "node_ar2z161",
+      "latitude": 42.27436957241871,
+      "longitude": -71.80286340415478
+    },
+    {
+      "id": "node_535ubn6",
+      "latitude": 42.276031200822686,
+      "longitude": -71.80721160024406
+    },
+    {
+      "id": "node_7gcgnl4",
+      "latitude": 42.276146555602466,
+      "longitude": -71.80741745978595
+    },
+    {
+      "id": "node_4gkzhj9",
+      "latitude": 42.27602747969724,
+      "longitude": -71.80753313004972
+    },
+    {
+      "id": "node_vsk10ty",
+      "latitude": 42.275186251632725,
+      "longitude": -71.80768635123968
+    },
+    {
+      "id": "node_orxruho",
+      "latitude": 42.27760844207621,
+      "longitude": -71.8092017993331
+    },
+    {
+      "id": "node_uap1r47",
+      "latitude": 42.274661067581164,
+      "longitude": -71.80412538349628
+    },
+    {
+      "id": "node_s6njde5",
+      "latitude": 42.27254763508584,
+      "longitude": -71.80455654859544
+    },
+    {
+      "id": "node_6iop1fz",
+      "latitude": 42.27281507417435,
+      "longitude": -71.8081896007061
+    },
+    {
+      "id": "node_9zpnuup",
+      "latitude": 42.2728512949655,
+      "longitude": -71.80840015411378
+    },
+    {
+      "id": "node_27y9pvw",
+      "latitude": 42.27509396641958,
+      "longitude": -71.80986464023592
+    },
+    {
+      "id": "node_0et65xg",
+      "latitude": 42.275147551398504,
+      "longitude": -71.80990152060987
+    },
+    {
+      "id": "node_oyc3qjo",
+      "latitude": 42.27487962604832,
+      "longitude": -71.81004703044893
+    },
+    {
+      "id": "node_reyam7q",
+      "latitude": 42.274895503137856,
+      "longitude": -71.81015968322755
+    },
+    {
+      "id": "node_hyl5hs8",
+      "latitude": 42.274943134382475,
+      "longitude": -71.81024551391603
+    },
+    {
+      "id": "node_xqidz7d",
+      "latitude": 42.27499225406577,
+      "longitude": -71.81028239428998
+    },
+    {
+      "id": "node_9q88fjk",
+      "latitude": 42.275117781971396,
+      "longitude": -71.81028306484224
+    },
+    {
+      "id": "node_sp6s7k3",
+      "latitude": 42.27516392457743,
+      "longitude": -71.81035548448564
+    },
+    {
+      "id": "node_2ajm8fw",
+      "latitude": 42.275891286354856,
+      "longitude": -71.80962391197681
+    },
+    {
+      "id": "node_6a1ic09",
+      "latitude": 42.275858044219305,
+      "longitude": -71.80956691503526
+    },
+    {
+      "id": "node_zk3z248",
+      "latitude": 42.275993493408045,
+      "longitude": -71.80932953953743
+    },
+    {
+      "id": "node_x5k1n82",
+      "latitude": 42.27589376711054,
+      "longitude": -71.8095226585865
+    },
+    {
+      "id": "node_cnfipvu",
+      "latitude": 42.27603814692292,
+      "longitude": -71.80932082235815
+    },
+    {
+      "id": "node_digypf3",
+      "latitude": 42.27610611943488,
+      "longitude": -71.80926382541658
+    },
+    {
+      "id": "node_0dr4gu8",
+      "latitude": 42.27613191920123,
+      "longitude": -71.80920615792274
+    },
+    {
+      "id": "node_ggamkj0",
+      "latitude": 42.27647723813419,
+      "longitude": -71.80885612964632
+    },
+    {
+      "id": "node_n4a5t3s",
+      "latitude": 42.27670893813908,
+      "longitude": -71.80851817131044
+    },
+    {
+      "id": "node_7eph337",
+      "latitude": 42.27675706415743,
+      "longitude": -71.80847458541395
+    },
+    {
+      "id": "node_r613m6t",
+      "latitude": 42.27491386101766,
+      "longitude": -71.80993303656578
+    },
+    {
+      "id": "node_w2l6w1o",
+      "latitude": 42.274926761146205,
+      "longitude": -71.81036889553071
+    },
+    {
+      "id": "node_4orn4w9",
+      "latitude": 42.27455761796294,
+      "longitude": -71.81070752441883
+    },
+    {
+      "id": "node_lizr19j",
+      "latitude": 42.27499473485685,
+      "longitude": -71.81151486933231
+    },
+    {
+      "id": "node_oiq953e",
+      "latitude": 42.27474566294609,
+      "longitude": -71.81176699697973
+    },
+    {
+      "id": "node_48u9iwg",
+      "latitude": 42.27463055368267,
+      "longitude": -71.81194067001344
+    },
+    {
+      "id": "node_clewoq5",
+      "latitude": 42.273887300015026,
+      "longitude": -71.81266486644746
+    },
+    {
+      "id": "node_ue4c4hc",
+      "latitude": 42.27385157598645,
+      "longitude": -71.8126165866852
+    },
+    {
+      "id": "node_37c1iaj",
+      "latitude": 42.27360845358756,
+      "longitude": -71.81275874376298
+    },
+    {
+      "id": "node_af6rb9j",
+      "latitude": 42.27347448778334,
+      "longitude": -71.81297197937967
+    },
+    {
+      "id": "node_lw603tl",
+      "latitude": 42.27341842052889,
+      "longitude": -71.81313827633859
+    },
+    {
+      "id": "node_tza73pb",
+      "latitude": 42.27331968249936,
+      "longitude": -71.812402009964
+    },
+    {
+      "id": "node_trp00tj",
+      "latitude": 42.273276019401784,
+      "longitude": -71.8121659755707
+    },
+    {
+      "id": "node_f14l5ra",
+      "latitude": 42.27326808065354,
+      "longitude": -71.81195676326753
+    },
+    {
+      "id": "node_301m8vx",
+      "latitude": 42.27334746809113,
+      "longitude": -71.81174755096437
+    },
+    {
+      "id": "node_k1t32ov",
+      "latitude": 42.27450254399623,
+      "longitude": -71.81063175201417
+    },
+    {
+      "id": "node_si2bgw1",
+      "latitude": 42.27471638948954,
+      "longitude": -71.81056201457979
+    },
+    {
+      "id": "node_aonc5ww",
+      "latitude": 42.274768486309576,
+      "longitude": -71.81032061576845
+    },
+    {
+      "id": "node_uxddq5w",
+      "latitude": 42.2747843634271,
+      "longitude": -71.81019723415376
+    },
+    {
+      "id": "node_df0636c",
+      "latitude": 42.2747699747895,
+      "longitude": -71.81004971265794
+    },
+    {
+      "id": "node_44y8g76",
+      "latitude": 42.275300863725406,
+      "longitude": -71.80787578225137
+    },
+    {
+      "id": "node_obkjm7x",
+      "latitude": 42.27527357515083,
+      "longitude": -71.80766925215721
+    },
+    {
+      "id": "node_6k6gix3",
+      "latitude": 42.278460304623636,
+      "longitude": -71.80857315659524
+    },
+    {
+      "id": "node_zqrw6mj",
+      "latitude": 42.278832401715,
+      "longitude": -71.80844977498055
+    },
+    {
+      "id": "node_aclfzeo",
+      "latitude": 42.27874061796994,
+      "longitude": -71.80755391716959
+    },
+    {
+      "id": "node_0hayt91",
+      "latitude": 42.278763687950885,
+      "longitude": -71.80737420916557
+    },
+    {
+      "id": "node_z67yd2v",
+      "latitude": 42.27859550015429,
+      "longitude": -71.8073507398367
+    },
+    {
+      "id": "node_cx2cktd",
+      "latitude": 42.27874905215749,
+      "longitude": -71.80743992328645
+    },
+    {
+      "id": "node_w143iqx",
+      "latitude": 42.27869447798273,
+      "longitude": -71.80710364133121
+    },
+    {
+      "id": "node_aa6fuaf",
+      "latitude": 42.27879419984815,
+      "longitude": -71.80701076984407
+    },
+    {
+      "id": "node_d6egan5",
+      "latitude": 42.27879196727082,
+      "longitude": -71.80684782564641
+    },
+    {
+      "id": "node_4a44tzz",
+      "latitude": 42.27899637180246,
+      "longitude": -71.80620409548283
+    },
+    {
+      "id": "node_zldxa9t",
+      "latitude": 42.278985208950736,
+      "longitude": -71.8058453500271
+    },
+    {
+      "id": "node_2oagz8p",
+      "latitude": 42.27867140797647,
+      "longitude": -71.80522240698338
+    },
+    {
+      "id": "node_texwq15",
+      "latitude": 42.278552584907175,
+      "longitude": -71.80496659129858
+    },
+    {
+      "id": "node_85o72ak",
+      "latitude": 42.27827400718781,
+      "longitude": -71.80460080504419
+    },
+    {
+      "id": "node_3gpwgnz",
+      "latitude": 42.27797955192833,
+      "longitude": -71.80436745285989
+    },
+    {
+      "id": "node_2tdexvl",
+      "latitude": 42.27793713239677,
+      "longitude": -71.80429503321649
+    },
+    {
+      "id": "node_ah7w4ip",
+      "latitude": 42.27793117877601,
+      "longitude": -71.80420249700548
+    },
+    {
+      "id": "node_webx3dq",
+      "latitude": 42.27820405248245,
+      "longitude": -71.80360101163389
+    },
+    {
+      "id": "node_wqjgtsv",
+      "latitude": 42.27847047530667,
+      "longitude": -71.80790394544603
+    },
+    {
+      "id": "node_pghw3s1",
+      "latitude": 42.27840870698683,
+      "longitude": -71.80802397429945
+    },
+    {
+      "id": "node_5reduqb",
+      "latitude": 42.277916542789285,
+      "longitude": -71.8082556501031
+    },
+    {
+      "id": "node_cj7a1xz",
+      "latitude": 42.27764912534847,
+      "longitude": -71.8083404749632
+    },
+    {
+      "id": "node_zj24m5r",
+      "latitude": 42.277483663339524,
+      "longitude": -71.80833578109743
+    },
+    {
+      "id": "node_1nowm59",
+      "latitude": 42.2773611169839,
+      "longitude": -71.80829420685768
+    },
+    {
+      "id": "node_vvjm8w9",
+      "latitude": 42.2770765802958,
+      "longitude": -71.80856343358757
+    },
+    {
+      "id": "node_vsv48oy",
+      "latitude": 42.27728049425153,
+      "longitude": -71.80819898843767
+    },
+    {
+      "id": "node_qpdtt45",
+      "latitude": 42.27710287580648,
+      "longitude": -71.80814098566772
+    },
+    {
+      "id": "node_iruk5p4",
+      "latitude": 42.277041850359225,
+      "longitude": -71.80805247277023
+    },
+    {
+      "id": "node_5bzfqek",
+      "latitude": 42.27678881738654,
+      "longitude": -71.80796563625337
+    },
+    {
+      "id": "node_dz607nw",
+      "latitude": 42.27654322558848,
+      "longitude": -71.80794283747674
+    },
+    {
+      "id": "node_out8vym",
+      "latitude": 42.27724526828685,
+      "longitude": -71.80806823074818
+    },
+    {
+      "id": "node_729gnpk",
+      "latitude": 42.27721872476527,
+      "longitude": -71.80796865373851
+    },
+    {
+      "id": "node_bwj5yvb",
+      "latitude": 42.277201855979364,
+      "longitude": -71.80759482085706
+    },
+    {
+      "id": "node_2vvpeb0",
+      "latitude": 42.277282974952534,
+      "longitude": -71.80732760578395
+    },
+    {
+      "id": "node_2l2s2zw",
+      "latitude": 42.27731472791663,
+      "longitude": -71.8071334809065
+    },
+    {
+      "id": "node_8so2u1x",
+      "latitude": 42.277312247216884,
+      "longitude": -71.80687632411718
+    },
+    {
+      "id": "node_iaows3s",
+      "latitude": 42.27714008641603,
+      "longitude": -71.80644549429417
+    },
+    {
+      "id": "node_gpe4qes",
+      "latitude": 42.27672679934606,
+      "longitude": -71.80605858564378
+    },
+    {
+      "id": "node_90nt0uu",
+      "latitude": 42.27647723813419,
+      "longitude": -71.80581483989955
+    },
+    {
+      "id": "node_z89mfb1",
+      "latitude": 42.27614060181254,
+      "longitude": -71.8053722754121
+    },
+    {
+      "id": "node_hg56var",
+      "latitude": 42.27585928459779,
+      "longitude": -71.8050028011203
+    },
+    {
+      "id": "node_ovyxtf7",
+      "latitude": 42.27584390390261,
+      "longitude": -71.80462159216405
+    },
+    {
+      "id": "node_oe6one1",
+      "latitude": 42.27580520407224,
+      "longitude": -71.80452872067691
+    },
+    {
+      "id": "node_7rk3129",
+      "latitude": 42.27558441612394,
+      "longitude": -71.80443182587624
+    },
+    {
+      "id": "node_p0ouxf5",
+      "latitude": 42.275512721893456,
+      "longitude": -71.80424071848394
+    },
+    {
+      "id": "node_mo83bdg",
+      "latitude": 42.275678685230204,
+      "longitude": -71.80386185646059
+    },
+    {
+      "id": "node_40b3qo9",
+      "latitude": 42.275991012656284,
+      "longitude": -71.80366739630699
+    },
+    {
+      "id": "node_nexhzqm",
+      "latitude": 42.27623635853214,
+      "longitude": -71.80341962724926
+    },
+    {
+      "id": "node_oe7t7uj",
+      "latitude": 42.27630085779493,
+      "longitude": -71.80313766002656
+    },
+    {
+      "id": "node_tx2tesu",
+      "latitude": 42.27632244022582,
+      "longitude": -71.80291403084995
+    },
+    {
+      "id": "node_o4lpo3s",
+      "latitude": 42.276294655945605,
+      "longitude": -71.80272024124862
+    },
+    {
+      "id": "node_weao2ri",
+      "latitude": 42.2763244248168,
+      "longitude": -71.80243793874979
+    },
+    {
+      "id": "node_4vh4dvn",
+      "latitude": 42.276374535718205,
+      "longitude": -71.8023118749261
+    },
+    {
+      "id": "node_mo4nufy",
+      "latitude": 42.27717928156767,
+      "longitude": -71.80253550410272
+    },
+    {
+      "id": "node_2168xrc",
+      "latitude": 42.27730306862699,
+      "longitude": -71.8026039004326
+    },
+    {
+      "id": "node_vdzecmb",
+      "latitude": 42.27738046642428,
+      "longitude": -71.80263843387365
+    },
+    {
+      "id": "node_x9v50uv",
+      "latitude": 42.27750648571141,
+      "longitude": -71.80276952683926
+    },
+    {
+      "id": "node_5thzuyf",
+      "latitude": 42.277506981849854,
+      "longitude": -71.8028412759304
+    },
+    {
+      "id": "node_y35ffux",
+      "latitude": 42.27748788051756,
+      "longitude": -71.8028885498643
+    },
+    {
+      "id": "node_oiiokod",
+      "latitude": 42.27755609953484,
+      "longitude": -71.80295325815678
+    },
+    {
+      "id": "node_78snb5d",
+      "latitude": 42.2775905811191,
+      "longitude": -71.80290699005128
+    },
+    {
+      "id": "node_4lu6j3v",
+      "latitude": 42.27767095538618,
+      "longitude": -71.8029110133648
+    },
+    {
+      "id": "node_g0opp30",
+      "latitude": 42.27810557001739,
+      "longitude": -71.80336765944958
+    },
+    {
+      "id": "node_ha7duyy",
+      "latitude": 42.27811921369303,
+      "longitude": -71.80345684289934
+    },
+    {
+      "id": "node_81j392u",
+      "latitude": 42.27810110481382,
+      "longitude": -71.80349506437778
+    },
+    {
+      "id": "node_ltpwu2c",
+      "latitude": 42.27619964353768,
+      "longitude": -71.80264346301557
+    },
+    {
+      "id": "node_biyca0k",
+      "latitude": 42.27628324454125,
+      "longitude": -71.80252678692341
+    },
+    {
+      "id": "node_3j5i9aa",
+      "latitude": 42.274232631247166,
+      "longitude": -71.80703759193422
+    },
+    {
+      "id": "node_f3hubup",
+      "latitude": 42.27421228851151,
+      "longitude": -71.8068900704384
+    },
+    {
+      "id": "node_a2gsuto",
+      "latitude": 42.274292915169134,
+      "longitude": -71.80689409375191
+    },
+    {
+      "id": "node_asqoh7a",
+      "latitude": 42.274517428856846,
+      "longitude": -71.80682502686979
+    },
+    {
+      "id": "node_5srbb6n",
+      "latitude": 42.27479527894309,
+      "longitude": -71.80676870048048
+    },
+    {
+      "id": "node_kwkop3p",
+      "latitude": 42.274831994755715,
+      "longitude": -71.80716633796693
+    },
+    {
+      "id": "node_hagy750",
+      "latitude": 42.27339013879754,
+      "longitude": -71.80759616196156
+    },
+    {
+      "id": "node_plt0mr7",
+      "latitude": 42.27337178047391,
+      "longitude": -71.80742181837559
+    },
+    {
+      "id": "node_l4ztgly",
+      "latitude": 42.2734060162623,
+      "longitude": -71.807763800025
+    },
+    {
+      "id": "node_sgefad9",
+      "latitude": 42.2733792230382,
+      "longitude": -71.8088346719742
+    },
+    {
+      "id": "node_o2fksn0",
+      "latitude": 42.27344967926981,
+      "longitude": -71.80872604250908
+    },
+    {
+      "id": "node_bepy5nn",
+      "latitude": 42.27359356851227,
+      "longitude": -71.80866837501527
+    },
+    {
+      "id": "node_47yaxjm",
+      "latitude": 42.27353799753343,
+      "longitude": -71.80858790874483
+    },
+    {
+      "id": "node_t66s9bp",
+      "latitude": 42.273513189044905,
+      "longitude": -71.80843066424133
+    },
+    {
+      "id": "node_3fj9c74",
+      "latitude": 42.27350649075133,
+      "longitude": -71.80828247219324
+    },
+    {
+      "id": "node_drua9fa",
+      "latitude": 42.27354196689068,
+      "longitude": -71.80820167064668
+    },
+    {
+      "id": "node_79r85s4",
+      "latitude": 42.27356677536788,
+      "longitude": -71.80817753076555
+    },
+    {
+      "id": "node_j39sulo",
+      "latitude": 42.27368014998434,
+      "longitude": -71.80814735591413
+    },
+    {
+      "id": "node_jnicz76",
+      "latitude": 42.273708679669696,
+      "longitude": -71.80806688964368
+    },
+    {
+      "id": "node_sgbqmqm",
+      "latitude": 42.273705206491314,
+      "longitude": -71.80798240005971
+    },
+    {
+      "id": "node_99ksl3w",
+      "latitude": 42.2737602811548,
+      "longitude": -71.8081694841385
+    },
+    {
+      "id": "node_70d8cjy",
+      "latitude": 42.2737999745761,
+      "longitude": -71.80821239948274
+    },
+    {
+      "id": "node_4nrt18t",
+      "latitude": 42.27395577101315,
+      "longitude": -71.8090908229351
+    },
+    {
+      "id": "node_f49xh9k",
+      "latitude": 42.27314205289094,
+      "longitude": -71.80776245892048
+    },
+    {
+      "id": "node_soofc5j",
+      "latitude": 42.27295846869138,
+      "longitude": -71.80791467428209
+    },
+    {
+      "id": "node_zmd4mc7",
+      "latitude": 42.27319812050024,
+      "longitude": -71.81157184420312
+    },
+    {
+      "id": "node_dyoqi4e",
+      "latitude": 42.27323979896371,
+      "longitude": -71.81150747118677
+    },
+    {
+      "id": "node_5nl0lhd",
+      "latitude": 42.27340849711582,
+      "longitude": -71.81123860180378
+    },
+    {
+      "id": "node_c71heo8",
+      "latitude": 42.273709175838036,
+      "longitude": -71.81078664958478
+    },
+    {
+      "id": "node_4akev87",
+      "latitude": 42.27374688461945,
+      "longitude": -71.81061096489431
+    },
+    {
+      "id": "node_6yuuubd",
+      "latitude": 42.273624827166344,
+      "longitude": -71.81013084948063
+    },
+    {
+      "id": "node_qkgksnv",
+      "latitude": 42.2735067388363,
+      "longitude": -71.80992566049099
+    },
+    {
+      "id": "node_z0wpa4j",
+      "latitude": 42.273446206077146,
+      "longitude": -71.80927455425264
+    },
+    {
+      "id": "node_yw35r3q",
+      "latitude": 42.273368307276954,
+      "longitude": -71.80890172719957
+    },
+    {
+      "id": "node_v7id44b",
+      "latitude": 42.273404527750166,
+      "longitude": -71.80878639221193
+    },
+    {
+      "id": "node_fgrpb4y",
+      "latitude": 42.27347994565499,
+      "longitude": -71.80869720876217
+    },
+    {
+      "id": "node_bnxhiti",
+      "latitude": 42.27418748028842,
+      "longitude": -71.80921789258718
+    },
+    {
+      "id": "node_pmrkqln",
+      "latitude": 42.27414183313241,
+      "longitude": -71.80922962725163
+    },
+    {
+      "id": "node_vohp78g",
+      "latitude": 42.274077827825366,
+      "longitude": -71.80925980210306
+    },
+    {
+      "id": "node_mth37uv",
+      "latitude": 42.27453280987578,
+      "longitude": -71.8091505020857
+    },
+    {
+      "id": "node_72aykmt",
+      "latitude": 42.274582426040354,
+      "longitude": -71.80911161005497
+    },
+    {
+      "id": "node_z5ob5zv",
+      "latitude": 42.274544221597104,
+      "longitude": -71.80876493453981
+    },
+    {
+      "id": "node_ip2k9ds",
+      "latitude": 42.274572006649045,
+      "longitude": -71.80868044495583
+    },
+    {
+      "id": "node_09a917s",
+      "latitude": 42.27349731160714,
+      "longitude": -71.8092242628336
+    },
+    {
+      "id": "node_jorxvoq",
+      "latitude": 42.273558340486716,
+      "longitude": -71.80917330086231
+    },
+    {
+      "id": "node_bn8jsvn",
+      "latitude": 42.273652612623586,
+      "longitude": -71.80912166833879
+    },
+    {
+      "id": "node_zdiikry",
+      "latitude": 42.27383421013193,
+      "longitude": -71.80908143520357
+    },
+    {
+      "id": "node_o974n9c",
+      "latitude": 42.27403863074476,
+      "longitude": -71.80910825729372
+    },
+    {
+      "id": "node_ymky5u7",
+      "latitude": 42.2737275340634,
+      "longitude": -71.80815573781729
+    },
+    {
+      "id": "node_ug4vxmg",
+      "latitude": 42.273522120101916,
+      "longitude": -71.80824123322965
+    },
+    {
+      "id": "node_tryf9dn",
+      "latitude": 42.273779879784705,
+      "longitude": -71.80785533040762
+    },
+    {
+      "id": "node_dy81aa5",
+      "latitude": 42.27373720934216,
+      "longitude": -71.80782917886972
+    },
+    {
+      "id": "node_u2psdyl",
+      "latitude": 42.27358538171935,
+      "longitude": -71.80766053497793
+    },
+    {
+      "id": "node_210xmnf",
+      "latitude": 42.273342506379215,
+      "longitude": -71.80712375789882
+    },
+    {
+      "id": "node_gwvnjmi",
+      "latitude": 42.2733603685403,
+      "longitude": -71.80708386003971
+    },
+    {
+      "id": "node_oyoxve0",
+      "latitude": 42.27297757139653,
+      "longitude": -71.80814065039158
+    },
+    {
+      "id": "node_3e9wsuc",
+      "latitude": 42.27491931876468,
+      "longitude": -71.80609345436098
+    },
+    {
+      "id": "node_igws1hk",
+      "latitude": 42.27510810690456,
+      "longitude": -71.80609412491323
+    },
+    {
+      "id": "node_21fkjot",
+      "latitude": 42.27524479809571,
+      "longitude": -71.80616050958635
+    },
+    {
+      "id": "node_xh5m26h",
+      "latitude": 42.27531872533147,
+      "longitude": -71.80622622370721
+    },
+    {
+      "id": "node_xu19r2d",
+      "latitude": 42.27537528705061,
+      "longitude": -71.80629260838032
+    },
+    {
+      "id": "node_rcmt8zs",
+      "latitude": 42.27541225060279,
+      "longitude": -71.8063009902835
+    },
+    {
+      "id": "node_9ngit6i",
+      "latitude": 42.27536139470324,
+      "longitude": -71.80644415318966
+    },
+    {
+      "id": "node_lzhi9a2",
+      "latitude": 42.27505923539041,
+      "longitude": -71.80669091641904
+    },
+    {
+      "id": "node_kuwf96m",
+      "latitude": 42.274996719489636,
+      "longitude": -71.8067452311516
+    },
+    {
+      "id": "node_0dv9bei",
+      "latitude": 42.27488458763925,
+      "longitude": -71.80666945874692
+    },
+    {
+      "id": "node_7x2h2f6",
+      "latitude": 42.274927257304945,
+      "longitude": -71.80674221366645
+    },
+    {
+      "id": "node_zc23uht",
+      "latitude": 42.27493966127211,
+      "longitude": -71.8068712949753
+    },
+    {
+      "id": "node_mrtsh89",
+      "latitude": 42.275009619601214,
+      "longitude": -71.80715292692186
+    },
+    {
+      "id": "node_fpqmuk8",
+      "latitude": 42.27504583913118,
+      "longitude": -71.80712945759298
+    },
+    {
+      "id": "node_8lkr0p8",
+      "latitude": 42.27508255479783,
+      "longitude": -71.80720925331117
+    },
+    {
+      "id": "node_98ruz7p",
+      "latitude": 42.275123983936545,
+      "longitude": -71.80726323276758
+    },
+    {
+      "id": "node_i02r4f6",
+      "latitude": 42.27516516496958,
+      "longitude": -71.80735409259798
+    },
+    {
+      "id": "node_h7baatk",
+      "latitude": 42.27514308598535,
+      "longitude": -71.80740606039764
+    },
+    {
+      "id": "node_0nr3ojf",
+      "latitude": 42.2751249762509,
+      "longitude": -71.80743087083103
+    },
+    {
+      "id": "node_gaz4s9p",
+      "latitude": 42.275161691871446,
+      "longitude": -71.80752910673618
+    },
+    {
+      "id": "node_7v9ru73",
+      "latitude": 42.27522420760858,
+      "longitude": -71.8075116723776
+    },
+    {
+      "id": "node_5cmr9fw",
+      "latitude": 42.27604707762213,
+      "longitude": -71.80756732821466
+    },
+    {
+      "id": "node_e6gldl7",
+      "latitude": 42.27606096981833,
+      "longitude": -71.80760823190214
+    },
+    {
+      "id": "node_noapuhm",
+      "latitude": 42.27615275746636,
+      "longitude": -71.80775173008442
+    },
+    {
+      "id": "node_7unuxon",
+      "latitude": 42.275110835769716,
+      "longitude": -71.80722903460266
+    },
+    {
+      "id": "node_ngx7whc",
+      "latitude": 42.27495132099901,
+      "longitude": -71.80695578455926
+    },
+    {
+      "id": "node_4x153s8",
+      "latitude": 42.275048071841255,
+      "longitude": -71.80761795490982
+    },
+    {
+      "id": "node_plhkfpm",
+      "latitude": 42.275052289182284,
+      "longitude": -71.80766154080631
+    },
+    {
+      "id": "node_1szi5s1",
+      "latitude": 42.2747717113494,
+      "longitude": -71.80743254721165
+    },
+    {
+      "id": "node_y1c24ar",
+      "latitude": 42.27442563882701,
+      "longitude": -71.80755827575923
+    },
+    {
+      "id": "node_azcybt8",
+      "latitude": 42.27470969132385,
+      "longitude": -71.80744595825672
+    },
+    {
+      "id": "node_f6zoakj",
+      "latitude": 42.27456059493276,
+      "longitude": -71.80813897401096
+    },
+    {
+      "id": "node_57ukh3n",
+      "latitude": 42.274596566640085,
+      "longitude": -71.80809974670412
+    },
+    {
+      "id": "node_fh4rxmj",
+      "latitude": 42.274604505221035,
+      "longitude": -71.80808767676355
+    },
+    {
+      "id": "node_obn6opa",
+      "latitude": 42.27462112662159,
+      "longitude": -71.8080558255315
+    },
+    {
+      "id": "node_jvz2lar",
+      "latitude": 42.27465585789221,
+      "longitude": -71.80796295404436
+    },
+    {
+      "id": "node_ayn82at",
+      "latitude": 42.274660075259476,
+      "longitude": -71.80784761905672
+    },
+    {
+      "id": "node_6626j9r",
+      "latitude": 42.27464246154724,
+      "longitude": -71.80780336260797
+    },
+    {
+      "id": "node_v6gpby8",
+      "latitude": 42.27461045915607,
+      "longitude": -71.80777184665205
+    },
+    {
+      "id": "node_hqwo2yn",
+      "latitude": 42.27448592256438,
+      "longitude": -71.80788181722166
+    },
+    {
+      "id": "node_ntq97gy",
+      "latitude": 42.27465040012238,
+      "longitude": -71.80816244333984
+    },
+    {
+      "id": "node_177odxa",
+      "latitude": 42.274652384766014,
+      "longitude": -71.80811014026403
+    },
+    {
+      "id": "node_5zk3m8v",
+      "latitude": 42.27464146922527,
+      "longitude": -71.80808063596488
+    },
+    {
+      "id": "node_sr6h759",
+      "latitude": 42.27463179408533,
+      "longitude": -71.80803101509811
+    },
+    {
+      "id": "node_kuh803t",
+      "latitude": 42.27466330030485,
+      "longitude": -71.80802699178457
+    },
+    {
+      "id": "node_ift8oi8",
+      "latitude": 42.27467620048469,
+      "longitude": -71.80806487798692
+    },
+    {
+      "id": "node_uyt0lmq",
+      "latitude": 42.274703985478446,
+      "longitude": -71.80809572339058
+    },
+    {
+      "id": "node_qw8wjlr",
+      "latitude": 42.274686371778465,
+      "longitude": -71.80821843445301
+    },
+    {
+      "id": "node_3erx9g5",
+      "latitude": 42.27475757078893,
+      "longitude": -71.80815875530244
+    },
+    {
+      "id": "node_zy8a13m",
+      "latitude": 42.27530185603699,
+      "longitude": -71.8080484494567
+    },
+    {
+      "id": "node_wxtxsy6",
+      "latitude": 42.27531376377475,
+      "longitude": -71.80802430957556
+    },
+    {
+      "id": "node_zzw9yu7",
+      "latitude": 42.274616909251705,
+      "longitude": -71.80814635008575
+    },
+    {
+      "id": "node_vu9wwu0",
+      "latitude": 42.27459185310721,
+      "longitude": -71.80814132094385
+    },
+    {
+      "id": "node_h9at3bk",
+      "latitude": 42.27490567439624,
+      "longitude": -71.80736280977726
+    },
+    {
+      "id": "node_qys0o1p",
+      "latitude": 42.27491981492345,
+      "longitude": -71.80733866989613
+    },
+    {
+      "id": "node_60cu9mh",
+      "latitude": 42.27494561517548,
+      "longitude": -71.80726960301399
+    },
+    {
+      "id": "node_273q4b0",
+      "latitude": 42.274980346267284,
+      "longitude": -71.80720388889314
+    },
+    {
+      "id": "node_ycelv86",
+      "latitude": 42.27479081350495,
+      "longitude": -71.80670030415058
+    },
+    {
+      "id": "node_h65mlhu",
+      "latitude": 42.274732762780474,
+      "longitude": -71.80662889033557
+    },
+    {
+      "id": "node_ndit8t0",
+      "latitude": 42.27478684422634,
+      "longitude": -71.80659938603641
+    },
+    {
+      "id": "node_u2bqxjm",
+      "latitude": 42.27433012743787,
+      "longitude": -71.80721797049047
+    },
+    {
+      "id": "node_9s661s1",
+      "latitude": 42.27420955960744,
+      "longitude": -71.8074245005846
+    },
+    {
+      "id": "node_4l04df4",
+      "latitude": 42.27424627576131,
+      "longitude": -71.80741846561433
+    },
+    {
+      "id": "node_9vomlnc",
+      "latitude": 42.27439686138476,
+      "longitude": -71.80735979229213
+    },
+    {
+      "id": "node_b5o8vmk",
+      "latitude": 42.27431896375956,
+      "longitude": -71.80744260549547
+    },
+    {
+      "id": "node_q2ylbrr",
+      "latitude": 42.2744087692935,
+      "longitude": -71.80742651224138
+    },
+    {
+      "id": "node_l7c028b",
+      "latitude": 42.27429961337912,
+      "longitude": -71.8072682619095
+    },
+    {
+      "id": "node_y2l71hr",
+      "latitude": 42.274350222053855,
+      "longitude": -71.80685553699733
+    },
+    {
+      "id": "node_8rzwzf7",
+      "latitude": 42.27432863894754,
+      "longitude": -71.8068813532591
+    },
+    {
+      "id": "node_rzwcnms",
+      "latitude": 42.27400488334548,
+      "longitude": -71.80672947851264
+    },
+    {
+      "id": "node_xv8pb3v",
+      "latitude": 42.273807417089834,
+      "longitude": -71.80676266551019
+    },
+    {
+      "id": "node_8usiaom",
+      "latitude": 42.27365211645482,
+      "longitude": -71.80679082870485
+    },
+    {
+      "id": "node_rsse5lo",
+      "latitude": 42.273658566648564,
+      "longitude": -71.80684681981803
+    },
+    {
+      "id": "node_uswdty3",
+      "latitude": 42.273811882597634,
+      "longitude": -71.80681966245176
+    },
+    {
+      "id": "node_n8l1pcj",
+      "latitude": 42.27396172500948,
+      "longitude": -71.80673718452455
+    },
+    {
+      "id": "node_r9lt83i",
+      "latitude": 42.273958499928206,
+      "longitude": -71.80669426918031
+    },
+    {
+      "id": "node_e17wwaa",
+      "latitude": 42.27408328564478,
+      "longitude": -71.80681329220535
+    },
+    {
+      "id": "node_omia147",
+      "latitude": 42.27361688846201,
+      "longitude": -71.80761795490982
+    },
+    {
+      "id": "node_adwvoj8",
+      "latitude": 42.27350698692127,
+      "longitude": -71.80769238620998
+    },
+    {
+      "id": "node_ax367z4",
+      "latitude": 42.27340229498188,
+      "longitude": -71.80770378559829
+    },
+    {
+      "id": "node_k767ddn",
+      "latitude": 42.27356652728314,
+      "longitude": -71.80694807320835
+    },
+    {
+      "id": "node_37ji0er",
+      "latitude": 42.273476224681886,
+      "longitude": -71.80635599454664
+    },
+    {
+      "id": "node_df56n4p",
+      "latitude": 42.27345786638332,
+      "longitude": -71.80624602397704
+    },
+    {
+      "id": "node_x3vrw3f",
+      "latitude": 42.27342387870837,
+      "longitude": -71.80608106812261
+    },
+    {
+      "id": "node_ms8krwf",
+      "latitude": 42.27343082479301,
+      "longitude": -71.80581148713829
+    },
+    {
+      "id": "node_bbw3mcz",
+      "latitude": 42.27352038350759,
+      "longitude": -71.8058041110635
+    },
+    {
+      "id": "node_1illzq6",
+      "latitude": 42.273658070479826,
+      "longitude": -71.80578399449588
+    },
+    {
+      "id": "node_ojkup50",
+      "latitude": 42.27364591434485,
+      "longitude": -71.80568542331459
+    },
+    {
+      "id": "node_cfaomhy",
+      "latitude": 42.273634006291964,
+      "longitude": -71.8056582659483
+    },
+    {
+      "id": "node_ybdusqm",
+      "latitude": 42.27350822734604,
+      "longitude": -71.80568475276233
+    },
+    {
+      "id": "node_l0pt5l6",
+      "latitude": 42.27345861033582,
+      "longitude": -71.80569380521776
+    },
+    {
+      "id": "node_mcqd34i",
+      "latitude": 42.27345240820679,
+      "longitude": -71.80565625429155
+    },
+    {
+      "id": "node_u1758nb",
+      "latitude": 42.272822563865994,
+      "longitude": -71.80578345446914
+    },
+    {
+      "id": "node_a2gf1u1",
+      "latitude": 42.27278460644375,
+      "longitude": -71.80584682165711
+    },
+    {
+      "id": "node_tzit9kf",
+      "latitude": 42.27265783344951,
+      "longitude": -71.80597724407046
+    },
+    {
+      "id": "node_xmt47re",
+      "latitude": 42.27263917976243,
+      "longitude": -71.8059965595603
+    },
+    {
+      "id": "node_lz7r6zo",
+      "latitude": 42.27282375724263,
+      "longitude": -71.80604752153158
+    },
+    {
+      "id": "node_ypa65hk",
+      "latitude": 42.2728612184663,
+      "longitude": -71.80606294423343
+    },
+    {
+      "id": "node_43ro1vp",
+      "latitude": 42.27292621735787,
+      "longitude": -71.80602774024011
+    },
+    {
+      "id": "node_f06j0q3",
+      "latitude": 42.272880569288354,
+      "longitude": -71.80596973747015
+    },
+    {
+      "id": "node_n67c1ii",
+      "latitude": 42.27285278349071,
+      "longitude": -71.80590469390155
+    },
+    {
+      "id": "node_c2u79yo",
+      "latitude": 42.27282797473248,
+      "longitude": -71.8058329448104
+    },
+    {
+      "id": "node_i3u1z49",
+      "latitude": 42.27265059182663,
+      "longitude": -71.8061685562134
+    },
+    {
+      "id": "node_vil74wc",
+      "latitude": 42.272655553593026,
+      "longitude": -71.80624566972256
+    },
+    {
+      "id": "node_9t9vmuh",
+      "latitude": 42.27267267168406,
+      "longitude": -71.80649377405643
+    },
+    {
+      "id": "node_0v3rd3b",
+      "latitude": 42.27292026326371,
+      "longitude": -71.80733866989613
+    },
+    {
+      "id": "node_lhf5b4f",
+      "latitude": 42.27297484243901,
+      "longitude": -71.80744227021933
+    },
+    {
+      "id": "node_30millj",
+      "latitude": 42.2730197461796,
+      "longitude": -71.80750731378794
+    },
+    {
+      "id": "node_fwrfjvr",
+      "latitude": 42.27306936353533,
+      "longitude": -71.8075693398714
+    },
+    {
+      "id": "node_9pnxquz",
+      "latitude": 42.273119973197936,
+      "longitude": -71.80762030184269
+    },
+    {
+      "id": "node_q3wo9t2",
+      "latitude": 42.273169590474765,
+      "longitude": -71.80766053497793
+    },
+    {
+      "id": "node_2fyb6lg",
+      "latitude": 42.272954499297384,
+      "longitude": -71.80604115128517
+    },
+    {
+      "id": "node_khumbm2",
+      "latitude": 42.27332638081279,
+      "longitude": -71.8061112239957
+    },
+    {
+      "id": "node_eusr7vc",
+      "latitude": 42.273317201642364,
+      "longitude": -71.80613536387683
+    },
+    {
+      "id": "node_v3ytg38",
+      "latitude": 42.27333109444032,
+      "longitude": -71.80609982460739
+    },
+    {
+      "id": "node_0wnl5ds",
+      "latitude": 42.273556851978164,
+      "longitude": -71.8060575798154
+    },
+    {
+      "id": "node_7ek5qjv",
+      "latitude": 42.27356528685951,
+      "longitude": -71.8061373755336
+    },
+    {
+      "id": "node_ie5p2cv",
+      "latitude": 42.2732700653407,
+      "longitude": -71.80609513074161
+    },
+    {
+      "id": "node_sw3k0xv",
+      "latitude": 42.27265480932807,
+      "longitude": -71.80581953376532
+    },
+    {
+      "id": "node_29lqvwu",
+      "latitude": 42.27350599458141,
+      "longitude": -71.80564586073162
+    },
+    {
+      "id": "node_37srtxw",
+      "latitude": 42.27389226168404,
+      "longitude": -71.8056371435523
+    },
+    {
+      "id": "node_0flfp47",
+      "latitude": 42.273950809349124,
+      "longitude": -71.80618029087783
+    },
+    {
+      "id": "node_z2xqiju",
+      "latitude": 42.2739649500906,
+      "longitude": -71.80631440132858
+    },
+    {
+      "id": "node_gj27bjl",
+      "latitude": 42.2745638199832,
+      "longitude": -71.80549900978805
+    },
+    {
+      "id": "node_79uynsf",
+      "latitude": 42.2745618353368,
+      "longitude": -71.80543329566717
+    },
+    {
+      "id": "node_klxrimn",
+      "latitude": 42.27464221346674,
+      "longitude": -71.80551040917636
+    },
+    {
+      "id": "node_w8rimys",
+      "latitude": 42.27466454070688,
+      "longitude": -71.80566798895599
+    },
+    {
+      "id": "node_8m417w2",
+      "latitude": 42.27471390868753,
+      "longitude": -71.80552549660206
+    },
+    {
+      "id": "node_8eyjaky",
+      "latitude": 42.27474615910626,
+      "longitude": -71.8054886162281
+    },
+    {
+      "id": "node_wa84csq",
+      "latitude": 42.27504683144679,
+      "longitude": -71.80543899536134
+    },
+    {
+      "id": "node_wybk4pz",
+      "latitude": 42.27511058769108,
+      "longitude": -71.80536389350893
+    },
+    {
+      "id": "node_i4pz3lm",
+      "latitude": 42.27535122351842,
+      "longitude": -71.8060039356351
+    },
+    {
+      "id": "node_btv4crv",
+      "latitude": 42.27514457445645,
+      "longitude": -71.80599454790355
+    },
+    {
+      "id": "node_xct2xxb",
+      "latitude": 42.275069654701184,
+      "longitude": -71.80610585957767
+    },
+    {
+      "id": "node_bm0rzd3",
+      "latitude": 42.27490110287095,
+      "longitude": -71.80608386685192
+    },
+    {
+      "id": "node_l03zamh",
+      "latitude": 42.274876542998555,
+      "longitude": -71.80614823986828
+    },
+    {
+      "id": "node_jpthmpk",
+      "latitude": 42.275319469564934,
+      "longitude": -71.80648740381004
+    },
+    {
+      "id": "node_nyh4ghj",
+      "latitude": 42.27519170935614,
+      "longitude": -71.80658999830486
+    },
+    {
+      "id": "node_l8vu0gc",
+      "latitude": 42.27537330242975,
+      "longitude": -71.80639185011387
+    },
+    {
+      "id": "node_82928o9",
+      "latitude": 42.27537950436973,
+      "longitude": -71.80636569857599
+    },
+    {
+      "id": "node_gsweuvz",
+      "latitude": 42.27539389286818,
+      "longitude": -71.8063308298588
+    },
+    {
+      "id": "node_3p67m8x",
+      "latitude": 42.2754328410285,
+      "longitude": -71.80630333721638
+    },
+    {
+      "id": "node_xc9mznp",
+      "latitude": 42.2757746907277,
+      "longitude": -71.80705837905408
+    },
+    {
+      "id": "node_1lf7of2",
+      "latitude": 42.27571465629936,
+      "longitude": -71.80709660053255
+    },
+    {
+      "id": "node_8rjrabg",
+      "latitude": 42.275670498708145,
+      "longitude": -71.8071421980858
+    },
+    {
+      "id": "node_zoy46rw",
+      "latitude": 42.27565586219635,
+      "longitude": -71.80727764964105
+    },
+    {
+      "id": "node_j8xkeas",
+      "latitude": 42.275575981512816,
+      "longitude": -71.80745467543603
+    },
+    {
+      "id": "node_tox64v1",
+      "latitude": 42.27551619497225,
+      "longitude": -71.80746003985406
+    },
+    {
+      "id": "node_vnoff05",
+      "latitude": 42.27538570630912,
+      "longitude": -71.80748082697392
+    },
+    {
+      "id": "node_8qzuegb",
+      "latitude": 42.27589748824387,
+      "longitude": -71.80736582726242
+    },
+    {
+      "id": "node_taotfh6",
+      "latitude": 42.27587962680184,
+      "longitude": -71.80739734321833
+    },
+    {
+      "id": "node_vp3tc7t",
+      "latitude": 42.27582653859704,
+      "longitude": -71.80740974843503
+    },
+    {
+      "id": "node_8y8mr0h",
+      "latitude": 42.2758627576575,
+      "longitude": -71.8075468763709
+    },
+    {
+      "id": "node_3jyuke5",
+      "latitude": 42.275907907416055,
+      "longitude": -71.80753715336323
+    },
+    {
+      "id": "node_yu9kvrn",
+      "latitude": 42.27593941299764,
+      "longitude": -71.80752508342268
+    },
+    {
+      "id": "node_b4o5ub0",
+      "latitude": 42.27597364739127,
+      "longitude": -71.80749993771316
+    },
+    {
+      "id": "node_6c0md61",
+      "latitude": 42.27598753960367,
+      "longitude": -71.80749222636223
+    },
+    {
+      "id": "node_ehs0ivi",
+      "latitude": 42.27600589716534,
+      "longitude": -71.80750228464603
+    },
+    {
+      "id": "node_tdql943",
+      "latitude": 42.27608131195727,
+      "longitude": -71.80731385946275
+    },
+    {
+      "id": "node_j2t6dq6",
+      "latitude": 42.27625942942988,
+      "longitude": -71.80758643895389
+    },
+    {
+      "id": "node_2xpm4em",
+      "latitude": 42.27641249097839,
+      "longitude": -71.80778458714485
+    },
+    {
+      "id": "node_b1mpnz6",
+      "latitude": 42.27675557572442,
+      "longitude": -71.8081906065345
+    },
+    {
+      "id": "node_7o0sk1a",
+      "latitude": 42.27692426457476,
+      "longitude": -71.80838841944934
+    },
+    {
+      "id": "node_7umx3ol",
+      "latitude": 42.2772574237276,
+      "longitude": -71.80877700448038
+    },
+    {
+      "id": "node_kjh344c",
+      "latitude": 42.27759727897862,
+      "longitude": -71.80916860699654
+    },
+    {
+      "id": "node_f7ae01r",
+      "latitude": 42.276324661326306,
+      "longitude": -71.80767535345471
+    },
+    {
+      "id": "node_v7ckxgd",
+      "latitude": 42.27525323275116,
+      "longitude": -71.80527336895466
+    },
+    {
+      "id": "node_iiv720t",
+      "latitude": 42.27521304408864,
+      "longitude": -71.80515501648188
+    },
+    {
+      "id": "node_5pfj0jr",
+      "latitude": 42.275400094806145,
+      "longitude": -71.80565390735865
+    },
+    {
+      "id": "node_2a1y0yn",
+      "latitude": 42.275527110361494,
+      "longitude": -71.80599018931389
+    },
+    {
+      "id": "node_9b1amiy",
+      "latitude": 42.27566380064385,
+      "longitude": -71.80633552372456
+    },
+    {
+      "id": "node_qz8ir74",
+      "latitude": 42.27579974640193,
+      "longitude": -71.8066704645753
+    },
+    {
+      "id": "node_0q43wil",
+      "latitude": 42.275925768850044,
+      "longitude": -71.80697623640299
+    },
+    {
+      "id": "node_vetksdb",
+      "latitude": 42.27533857155451,
+      "longitude": -71.80220860987903
+    },
+    {
+      "id": "node_p5qoldw",
+      "latitude": 42.275337579243484,
+      "longitude": -71.80216368287803
+    },
+    {
+      "id": "node_hq48fus",
+      "latitude": 42.275350479285315,
+      "longitude": -71.8021884933114
+    },
+    {
+      "id": "node_k6uh592",
+      "latitude": 42.27544673336011,
+      "longitude": -71.80216636508703
+    },
+    {
+      "id": "node_ijbrz6b",
+      "latitude": 42.27510835498322,
+      "longitude": -71.80197190493347
+    },
+    {
+      "id": "node_hggiuf3",
+      "latitude": 42.27510190493786,
+      "longitude": -71.80189680308105
+    },
+    {
+      "id": "node_ddxw0zb",
+      "latitude": 42.27509371834087,
+      "longitude": -71.80178984999657
+    },
+    {
+      "id": "node_1ziqiy7",
+      "latitude": 42.27425371822231,
+      "longitude": -71.80253650993109
+    },
+    {
+      "id": "node_qspv0z6",
+      "latitude": 42.274251981648156,
+      "longitude": -71.80247213691473
+    },
+    {
+      "id": "node_q8hx05v",
+      "latitude": 42.27394287068586,
+      "longitude": -71.8024054169655
+    },
+    {
+      "id": "node_l4nneog",
+      "latitude": 42.27476947862953,
+      "longitude": -71.80190317332746
+    },
+    {
+      "id": "node_rnwn5ec",
+      "latitude": 42.27457250281056,
+      "longitude": -71.80202186107637
+    },
+    {
+      "id": "node_ut4l9pc",
+      "latitude": 42.27441497132841,
+      "longitude": -71.80210635066032
+    },
+    {
+      "id": "node_1omxsbl",
+      "latitude": 42.274897983932746,
+      "longitude": -71.80182673037054
+    },
+    {
+      "id": "node_24n54sl",
+      "latitude": 42.274307800079264,
+      "longitude": -71.80239032953979
+    },
+    {
+      "id": "node_96kldaz",
+      "latitude": 42.27432169265889,
+      "longitude": -71.80237088352442
+    },
+    {
+      "id": "node_p5rhl1b",
+      "latitude": 42.2745841626054,
+      "longitude": -71.80223006755115
+    },
+    {
+      "id": "node_9bq7wcj",
+      "latitude": 42.27480743485639,
+      "longitude": -71.80211808532476
+    },
+    {
+      "id": "node_inzjzcv",
+      "latitude": 42.274927257304945,
+      "longitude": -71.80207684636117
+    },
+    {
+      "id": "node_jfc6qmc",
+      "latitude": 42.274948344047665,
+      "longitude": -71.80205404758455
+    },
+    {
+      "id": "node_jvureqi",
+      "latitude": 42.27503368326385,
+      "longitude": -71.80517077445985
+    },
+    {
+      "id": "node_nb9vyfw",
+      "latitude": 42.27504112563189,
+      "longitude": -71.8051452934742
+    },
+    {
+      "id": "node_plly676",
+      "latitude": 42.274706829076635,
+      "longitude": -71.80423303726474
+    },
+    {
+      "id": "node_5rhlaen",
+      "latitude": 42.27409023195972,
+      "longitude": -71.80424876511097
+    },
+    {
+      "id": "node_uc7e0n1",
+      "latitude": 42.27458515492826,
+      "longitude": -71.80413812398912
+    },
+    {
+      "id": "node_p5z3zub",
+      "latitude": 42.27256648982686,
+      "longitude": -71.80490389466287
+    },
+    {
+      "id": "node_emm1a3c",
+      "latitude": 42.27384711048144,
+      "longitude": -71.80537898093463
+    },
+    {
+      "id": "node_d650fea",
+      "latitude": 42.27386546866662,
+      "longitude": -71.80530287325384
+    },
+    {
+      "id": "node_n37m0o7",
+      "latitude": 42.27389449443498,
+      "longitude": -71.80525559931995
+    },
+    {
+      "id": "node_nw8xixw",
+      "latitude": 42.27392922610605,
+      "longitude": -71.80523917078972
+    },
+    {
+      "id": "node_4kmuu5v",
+      "latitude": 42.27398529290608,
+      "longitude": -71.80523011833431
+    },
+    {
+      "id": "node_bn5va2q",
+      "latitude": 42.27401109354067,
+      "longitude": -71.80523313581944
+    },
+    {
+      "id": "node_4r2hdfn",
+      "latitude": 42.27404235198765,
+      "longitude": -71.80525593459608
+    },
+    {
+      "id": "node_7arlcsn",
+      "latitude": 42.27406046203316,
+      "longitude": -71.80527638643981
+    },
+    {
+      "id": "node_n5htz87",
+      "latitude": 42.2740879992157,
+      "longitude": -71.80533774197102
+    },
+    {
+      "id": "node_djxpnzl",
+      "latitude": 42.27337798261088,
+      "longitude": -71.80549398064613
+    },
+    {
+      "id": "node_299c6k5",
+      "latitude": 42.27321077278486,
+      "longitude": -71.80543966591358
+    },
+    {
+      "id": "node_dpakp7r",
+      "latitude": 42.273108809305256,
+      "longitude": -71.80555131286384
+    },
+    {
+      "id": "node_imorgxt",
+      "latitude": 42.27324624909066,
+      "longitude": -71.80543329566717
+    },
+    {
+      "id": "node_uylyvdv",
+      "latitude": 42.27333481572497,
+      "longitude": -71.80545911192894
+    },
+    {
+      "id": "node_s8i2qgs",
+      "latitude": 42.27262007695474,
+      "longitude": -71.80588591843845
+    },
+    {
+      "id": "node_zoipqu0",
+      "latitude": 42.27811946175981,
+      "longitude": -71.80881790816785
+    },
+    {
+      "id": "node_s4e787a",
+      "latitude": 42.278672152170365,
+      "longitude": -71.80849067866804
+    },
+    {
+      "id": "node_npdzggl",
+      "latitude": 42.27874161022735,
+      "longitude": -71.80751033127308
+    },
+    {
+      "id": "node_s0nwmhf",
+      "latitude": 42.27868430733586,
+      "longitude": -71.80739667266607
+    },
+    {
+      "id": "node_ga4ktfs",
+      "latitude": 42.278655035708844,
+      "longitude": -71.80758006870747
+    },
+    {
+      "id": "node_n1y4ivs",
+      "latitude": 42.2786096398536,
+      "longitude": -71.80777184665205
+    },
+    {
+      "id": "node_xal315c",
+      "latitude": 42.27858309690668,
+      "longitude": -71.80784996598959
+    },
+    {
+      "id": "node_zbyw586",
+      "latitude": 42.278502475737724,
+      "longitude": -71.80795960128309
+    },
+    {
+      "id": "node_xkotmlf",
+      "latitude": 42.27828839502536,
+      "longitude": -71.80809371173382
+    },
+    {
+      "id": "node_la36ldf",
+      "latitude": 42.27815220656915,
+      "longitude": -71.80815875530244
+    },
+    {
+      "id": "node_efgbflg",
+      "latitude": 42.27802668470767,
+      "longitude": -71.80821374058725
+    },
+    {
+      "id": "node_o8eytzg",
+      "latitude": 42.276618887810116,
+      "longitude": -71.80595532059671
+    },
+    {
+      "id": "node_ur6hsmh",
+      "latitude": 42.27630482697817,
+      "longitude": -71.80559422820807
+    },
+    {
+      "id": "node_5qoim60",
+      "latitude": 42.27602574317197,
+      "longitude": -71.8052100017667
+    },
+    {
+      "id": "node_an7lxcz",
+      "latitude": 42.2757384716166,
+      "longitude": -71.80451329797506
+    },
+    {
+      "id": "node_l0odvr3",
+      "latitude": 42.27552140459006,
+      "longitude": -71.80431045591831
+    },
+    {
+      "id": "node_5qxqvz8",
+      "latitude": 42.27557300459098,
+      "longitude": -71.8040905147791
+    },
+    {
+      "id": "node_p9ez9b2",
+      "latitude": 42.275827778976165,
+      "longitude": -71.80375289171936
+    },
+    {
+      "id": "node_hx0igye",
+      "latitude": 42.27612720578318,
+      "longitude": -71.803556419909
+    },
+    {
+      "id": "node_3nmddtc",
+      "latitude": 42.276014827869105,
+      "longitude": -71.80365465581419
+    },
+    {
+      "id": "node_et9mcxo",
+      "latitude": 42.27622643556277,
+      "longitude": -71.80227130651475
+    },
+    {
+      "id": "node_8jc3dog",
+      "latitude": 42.27640752950776,
+      "longitude": -71.80231288075449
+    },
+    {
+      "id": "node_hn56wis",
+      "latitude": 42.27630879616118,
+      "longitude": -71.80254757404329
+    },
+    {
+      "id": "node_ij24m8x",
+      "latitude": 42.27635295330516,
+      "longitude": -71.80234339088202
+    },
+    {
+      "id": "node_ilbbblx",
+      "latitude": 42.276360891664844,
+      "longitude": -71.80232528597118
+    },
+    {
+      "id": "node_auk2r8r",
+      "latitude": 42.278510909957156,
+      "longitude": -71.8077762052417
+    },
+    {
+      "id": "node_jwgx2o9",
+      "latitude": 42.2785317474356,
+      "longitude": -71.80762633681299
+    },
+    {
+      "id": "node_0znqu4l",
+      "latitude": 42.27855804233907,
+      "longitude": -71.8074654042721
+    },
+    {
+      "id": "node_7ev2l2r",
+      "latitude": 42.27834470601325,
+      "longitude": -71.80467724800111
+    },
+    {
+      "id": "node_jl3gdsd",
+      "latitude": 42.27847146756833,
+      "longitude": -71.804838180542
+    },
+    {
+      "id": "node_umgp607",
+      "latitude": 42.27854960812595,
+      "longitude": -71.80791635066272
+    },
+    {
+      "id": "node_x43habn",
+      "latitude": 42.278331062386435,
+      "longitude": -71.80807258933783
+    },
+    {
+      "id": "node_nkgqfke",
+      "latitude": 42.278224145863206,
+      "longitude": -71.80454917252064
+    },
+    {
+      "id": "node_s2cc831",
+      "latitude": 42.27792845003298,
+      "longitude": -71.8042427301407
+    },
+    {
+      "id": "node_5aibfda",
+      "latitude": 42.277954745188175,
+      "longitude": -71.80433459579946
+    },
+    {
+      "id": "node_aeffk8q",
+      "latitude": 42.27821050221031,
+      "longitude": -71.80362716317177
+    },
+    {
+      "id": "node_exo4l36",
+      "latitude": 42.27812095016062,
+      "longitude": -71.80340588092805
+    },
+    {
+      "id": "node_vlyzg2c",
+      "latitude": 42.27763300088394,
+      "longitude": -71.80289894342424
+    },
+    {
+      "id": "node_o0os4v7",
+      "latitude": 42.277094193327756,
+      "longitude": -71.80250063538553
+    },
+    {
+      "id": "node_iwz0eoy",
+      "latitude": 42.27685455644282,
+      "longitude": -71.80242083966732
+    },
+    {
+      "id": "node_d1txjpg",
+      "latitude": 42.27658390954846,
+      "longitude": -71.80236384272577
+    },
+    {
+      "id": "node_jnbpm97",
+      "latitude": 42.275412498680254,
+      "longitude": -71.80352993309498
+    },
+    {
+      "id": "node_c9euxuv",
+      "latitude": 42.27559533150136,
+      "longitude": -71.80320505052806
+    },
+    {
+      "id": "node_aqb02p8",
+      "latitude": 42.27561096033392,
+      "longitude": -71.80309072136879
+    },
+    {
+      "id": "node_jff0cc2",
+      "latitude": 42.27553728151792,
+      "longitude": -71.80334687232973
+    },
+    {
+      "id": "node_828oyhp",
+      "latitude": 42.27532492727685,
+      "longitude": -71.80371299386026
+    },
+    {
+      "id": "node_r41orfj",
+      "latitude": 42.275240084611305,
+      "longitude": -71.80399160832168
+    },
+    {
+      "id": "node_0cci4qu",
+      "latitude": 42.27520188056671,
+      "longitude": -71.80428531020881
+    },
+    {
+      "id": "node_0uo92cw",
+      "latitude": 42.275246782720636,
+      "longitude": -71.80485125631094
+    },
+    {
+      "id": "node_fb86w4f",
+      "latitude": 42.27519890362722,
+      "longitude": -71.80442914366724
+    },
+    {
+      "id": "node_8egul7j",
+      "latitude": 42.27522247106117,
+      "longitude": -71.80471781641245
+    },
+    {
+      "id": "node_jdbfuj1",
+      "latitude": 42.274470045371665,
+      "longitude": -71.80849067866804
+    },
+    {
+      "id": "node_v22xahn",
+      "latitude": 42.27419417850961,
+      "longitude": -71.8097858503461
+    },
+    {
+      "id": "node_iwanh6z",
+      "latitude": 42.27415225259484,
+      "longitude": -71.80994477123022
+    },
+    {
+      "id": "node_fazv9s9",
+      "latitude": 42.27407336233641,
+      "longitude": -71.81008893996479
+    },
+    {
+      "id": "node_im9avtd",
+      "latitude": 42.27372455705424,
+      "longitude": -71.81019086390735
+    },
+    {
+      "id": "node_rdb4o57",
+      "latitude": 42.27429986146096,
+      "longitude": -71.81002557277681
+    },
+    {
+      "id": "node_zeet1ad",
+      "latitude": 42.273943614935575,
+      "longitude": -71.81019119918346
+    },
+    {
+      "id": "node_bueq6wf",
+      "latitude": 42.27387241500558,
+      "longitude": -71.81020863354206
+    }
+  ],
+  "connections": {
+    "quad-center": [
+      "quad-rec-harrington",
+      "quad-rec-morgan",
+      "quad-daniels",
+      "node_vohp78g",
+      "node_z0wpa4j"
+    ],
+    "quad-rec-harrington": [
+      "node_iwanh6z",
+      "node_fazv9s9",
+      "node_rdb4o57"
+    ],
+    "quad-rec-morgan": [
+      "node_im9avtd",
+      "node_6yuuubd"
+    ],
+    "quad-daniels": [
+      "node_jb50j5g",
+      "node_qkgksnv"
+    ],
+    "quad-daniels-sanford": [
+      "sanford-riley-entrance",
+      "node_jb50j5g",
+      "node_z0wpa4j"
+    ],
+    "quad-bartlett": [
+      "node_bn8jsvn",
+      "node_zdiikry"
+    ],
+    "quad-innovation": [
+      "innovation-higgins",
+      "node_vohp78g",
+      "node_bnxhiti",
+      "node_o974n9c",
+      "node_jdbfuj1",
+      "node_pmrkqln"
+    ],
+    "innovation-higgins": [
+      "bartlett-higgins",
+      "node_jdbfuj1"
+    ],
+    "innovation-higgins-campus-center": [
+      "higgins-entrance",
+      "node_jdbfuj1"
+    ],
+    "innovation-messenger": [
+      "innovation-higgins-campus-center",
+      "node_8qpxnld",
+      "node_mth37uv"
+    ],
+    "fountain-campus-center": [
+      "fountain-olin",
+      "fountain-straton",
+      "node_hqwo2yn"
+    ],
+    "fountain-olin": [
+      "fountain-salisbury",
+      "salisbury-side-2"
+    ],
+    "fountain-salisbury": [
+      "fountain-straton",
+      "node_y1c24ar"
+    ],
+    "fountain-straton": [
+      "straton-higgins-entrance"
+    ],
+    "olin-main-entrance": [
+      "higgins-olin-cut",
+      "salisbury-side-entrance",
+      "node_plhkfpm"
+    ],
+    "olin-salisbury-street": [
+      "node_535ubn6",
+      "node_8qzuegb",
+      "node_xc9mznp"
+    ],
+    "olin-atwater": [
+      "salisbury-side-3",
+      "node_vsk10ty",
+      "node_gaz4s9p"
+    ],
+    "fuller-upper": [
+      "node_5srbb6n",
+      "node_0dv9bei"
+    ],
+    "gordon": [
+      "fuller-side-stairs",
+      "node_a2gsuto",
+      "node_rzwcnms"
+    ],
+    "unity-upper-washburn": [
+      "node_e17wwaa",
+      "node_k767ddn"
+    ],
+    "boynton": [
+      "boynton-straton",
+      "node_gwvnjmi",
+      "node_k767ddn"
+    ],
+    "boynton-corner": [
+      "boynton-coombs-1",
+      "node_210xmnf"
+    ],
+    "unity-lower": [
+      "kaven-boynton-street",
+      "node_3b0dzuo",
+      "node_cfaomhy",
+      "node_29lqvwu"
+    ],
+    "unity-upper": [
+      "unity-upper-washburn",
+      "node_r9lt83i",
+      "node_1illzq6"
+    ],
+    "bartlett-higgins": [
+      "innovation-higgins",
+      "node_bepy5nn",
+      "node_70d8cjy"
+    ],
+    "bartlett-sanford-alden": [
+      "alden",
+      "alden-side-entrance",
+      "node_bepy5nn",
+      "node_47yaxjm",
+      "node_fgrpb4y"
+    ],
+    "straton-higgins": [
+      "boynton-straton-walkway",
+      "straton-entrance",
+      "node_sgbqmqm",
+      "node_70d8cjy"
+    ],
+    "alden": [
+      "bartlett-sanford-alden",
+      "bridge",
+      "node_t66s9bp",
+      "node_3fj9c74"
+    ],
+    "boynton-straton": [
+      "boynton",
+      "node_zjwkw0c",
+      "node_omia147"
+    ],
+    "straton-higgins-entrance": [
+      "fountain-straton",
+      "straton-entrance"
+    ],
+    "higgins-entrance": [
+      "innovation-higgins-campus-center",
+      "node_f6zoakj",
+      "node_hqwo2yn"
+    ],
+    "sanford-riley-entrance": [
+      "quad-daniels-sanford",
+      "node_yw35r3q"
+    ],
+    "alden-side-entrance": [
+      "bartlett-sanford-alden",
+      "node_47yaxjm"
+    ],
+    "alden-west-street-entrance": [
+      "node_sgbqmqm",
+      "node_oyoxve0"
+    ],
+    "washburn-entrance": [
+      "node_3j5i9aa",
+      "node_a2gsuto",
+      "node_u2bqxjm"
+    ],
+    "salisbury-entrance": [
+      "node_u2bqxjm",
+      "node_9vomlnc",
+      "node_l7c028b"
+    ],
+    "higgins-olin-cut": [
+      "salisbury-side-2",
+      "olin-main-entrance",
+      "node_ayn82at"
+    ],
+    "salisbury-side-1": [
+      "salisbury-side-entrance",
+      "node_y1c24ar",
+      "node_9vomlnc"
+    ],
+    "salisbury-side-2": [
+      "fountain-olin",
+      "higgins-olin-cut",
+      "node_azcybt8",
+      "node_v6gpby8"
+    ],
+    "salisbury-side-3": [
+      "olin-atwater",
+      "node_vsk10ty",
+      "node_plhkfpm"
+    ],
+    "salisbury-side-entrance": [
+      "salisbury-side-1",
+      "olin-main-entrance",
+      "salisbury-side-4-1",
+      "node_1szi5s1",
+      "node_azcybt8"
+    ],
+    "olin-atwater-cut": [
+      "node_0nr3ojf",
+      "node_4x153s8"
+    ],
+    "salisbury-side-4-1": [
+      "salisbury-side-entrance",
+      "node_h9at3bk"
+    ],
+    "gordon-washburn-cut": [
+      "node_f3hubup",
+      "node_e17wwaa"
+    ],
+    "kaven-stairs": [
+      "fuller-side-stairs",
+      "node_3e9wsuc",
+      "node_l03zamh"
+    ],
+    "kaven-stairs-bottom": [
+      "kaven-entrance",
+      "node_l03zamh"
+    ],
+    "kaven-boynton-street": [
+      "kaven-boynton-street-salisbury-street",
+      "unity-lower",
+      "node_klxrimn"
+    ],
+    "kaven-boynton-street-salisbury-street": [
+      "kaven-boynton-street",
+      "node_wybk4pz",
+      "node_jvureqi"
+    ],
+    "kaven-side-entrance": [
+      "node_wa84csq"
+    ],
+    "fuller-side-stairs": [
+      "kaven-stairs",
+      "gordon",
+      "node_ndit8t0",
+      "node_h65mlhu"
+    ],
+    "institute-park-salisbury-street": [
+      "institute-park-1",
+      "node_iiv720t"
+    ],
+    "institute-park-humbolt-ave": [
+      "node_ttc0h3j",
+      "node_5wn2t79",
+      "node_ltpwu2c",
+      "node_aqb02p8"
+    ],
+    "skull-institute": [
+      "node_chykcv5",
+      "node_sw3k0xv",
+      "node_s8i2qgs"
+    ],
+    "institute-road-coombs": [
+      "node_30hln1l",
+      "node_lqzozlf"
+    ],
+    "west-street-institute": [
+      "boynton-alden-stairs-2",
+      "node_59pfkcz",
+      "node_6iop1fz"
+    ],
+    "sanford-quad-institute": [
+      "morgan-daniels-institute",
+      "node_jb50j5g",
+      "node_9zpnuup"
+    ],
+    "morgan-daniels-institute": [
+      "sanford-quad-institute",
+      "node_1q5p6cx"
+    ],
+    "institute-morgan": [
+      "alumni-field",
+      "node_8tth6zp",
+      "node_o9lgtgb"
+    ],
+    "alumni-field": [
+      "institute-morgan",
+      "node_lw603tl"
+    ],
+    "alumni-field-park-ave": [
+      "park-ave-salisbury-street",
+      "node_lw603tl"
+    ],
+    "park-ave-salisbury-street": [
+      "alumni-field-park-ave",
+      "node_orxruho",
+      "node_7eph337"
+    ],
+    "boynton-alden-stairs": [
+      "node_l4ztgly",
+      "node_hagy750",
+      "node_f49xh9k",
+      "node_ax367z4",
+      "node_q3wo9t2"
+    ],
+    "boynton-alden-stairs-1": [
+      "node_f49xh9k",
+      "node_soofc5j"
+    ],
+    "boynton-alden-stairs-2": [
+      "west-street-institute",
+      "node_soofc5j",
+      "node_oyoxve0"
+    ],
+    "boynton-coombs-1": [
+      "boynton-corner",
+      "node_plt0mr7",
+      "node_0v3rd3b"
+    ],
+    "boynton-coombs-2": [
+      "boynton-coombs-3",
+      "node_0v3rd3b"
+    ],
+    "boynton-coombs-3": [
+      "boynton-coombs-2",
+      "boynton-coombs-4"
+    ],
+    "boynton-coombs-4": [
+      "boynton-coombs-3",
+      "boynton-coombs-5"
+    ],
+    "boynton-coombs-5": [
+      "boynton-coombs-4",
+      "node_9t9vmuh"
+    ],
+    "bridge": [
+      "alden",
+      "node_l4ztgly"
+    ],
+    "boynton-straton-walkway": [
+      "straton-higgins",
+      "node_l4ztgly",
+      "node_adwvoj8",
+      "node_ax367z4"
+    ],
+    "institute-park-1": [
+      "institute-park-salisbury-street",
+      "node_0uo92cw"
+    ],
+    "institute-park-2": [
+      "node_fb86w4f",
+      "node_8egul7j"
+    ],
+    "institute-park-3": [
+      "node_r41orfj",
+      "node_0cci4qu"
+    ],
+    "institute-park-4": [
+      "node_828oyhp",
+      "node_r41orfj"
+    ],
+    "institute-park-5": [
+      "node_c9euxuv",
+      "node_jff0cc2"
+    ],
+    "atwater-fuller-stairs": [
+      "node_i4pz3lm",
+      "node_3p67m8x",
+      "node_xc9mznp"
+    ],
+    "fuller-salisbury-street-stairs": [
+      "node_wybk4pz",
+      "node_i4pz3lm",
+      "node_btv4crv"
+    ],
+    "kaven-entrance": [
+      "kaven-stairs-bottom",
+      "node_klxrimn",
+      "node_w8rimys"
+    ],
+    "straton-entrance": [
+      "straton-higgins",
+      "straton-higgins-entrance"
+    ],
+    "node_hee3l4b": [
+      "node_im9avtd",
+      "node_bueq6wf"
+    ],
+    "node_hbq0rz0": [
+      "node_fazv9s9",
+      "node_zeet1ad"
+    ],
+    "node_3v8ec98": [
+      "node_v22xahn",
+      "node_iwanh6z",
+      "node_rdb4o57"
+    ],
+    "node_22typhd": [
+      "node_q79zhty",
+      "node_v22xahn"
+    ],
+    "node_q79zhty": [
+      "node_22typhd",
+      "node_pmrkqln"
+    ],
+    "node_jb50j5g": [
+      "quad-daniels",
+      "quad-daniels-sanford",
+      "sanford-quad-institute"
+    ],
+    "node_a18hyvk": [
+      "node_3p4ghcj",
+      "node_6yuuubd"
+    ],
+    "node_3p4ghcj": [
+      "node_a18hyvk",
+      "node_qkgksnv"
+    ],
+    "node_zp5k7dm": [
+      "node_gqs2k2b",
+      "node_im9avtd"
+    ],
+    "node_gqs2k2b": [
+      "node_zp5k7dm",
+      "node_8vkanxe"
+    ],
+    "node_8vkanxe": [
+      "node_gqs2k2b",
+      "node_zkusfj9"
+    ],
+    "node_zkusfj9": [
+      "node_8vkanxe",
+      "node_zk4go50"
+    ],
+    "node_zk4go50": [
+      "node_zkusfj9",
+      "node_5l94nm5"
+    ],
+    "node_5l94nm5": [
+      "node_zk4go50",
+      "node_j6jv8xp",
+      "node_ipi0m0c"
+    ],
+    "node_j6jv8xp": [
+      "node_5l94nm5",
+      "node_zhddnit",
+      "node_ipi0m0c"
+    ],
+    "node_zhddnit": [
+      "node_j6jv8xp",
+      "node_8tth6zp"
+    ],
+    "node_8tth6zp": [
+      "node_zhddnit",
+      "institute-morgan"
+    ],
+    "node_uwbtr3l": [
+      "node_0dgf1d7",
+      "node_df0636c"
+    ],
+    "node_qwnzoag": [
+      "node_8jppe5t",
+      "node_27y9pvw",
+      "node_r613m6t"
+    ],
+    "node_8jppe5t": [
+      "node_qwnzoag",
+      "node_8qpxnld"
+    ],
+    "node_8qpxnld": [
+      "node_8jppe5t",
+      "innovation-messenger"
+    ],
+    "node_0dgf1d7": [
+      "node_uwbtr3l",
+      "node_op0emm6"
+    ],
+    "node_op0emm6": [
+      "node_0dgf1d7",
+      "node_rdb4o57"
+    ],
+    "node_ipi0m0c": [
+      "node_5l94nm5",
+      "node_j6jv8xp",
+      "node_73sl55y"
+    ],
+    "node_73sl55y": [
+      "node_ipi0m0c",
+      "node_o9lgtgb"
+    ],
+    "node_o9lgtgb": [
+      "node_73sl55y",
+      "institute-morgan",
+      "node_1q5p6cx"
+    ],
+    "node_1q5p6cx": [
+      "node_o9lgtgb",
+      "morgan-daniels-institute"
+    ],
+    "node_59pfkcz": [
+      "west-street-institute",
+      "node_tefblys"
+    ],
+    "node_tefblys": [
+      "node_59pfkcz",
+      "node_r4ihqj9"
+    ],
+    "node_r4ihqj9": [
+      "node_tefblys",
+      "node_30hln1l"
+    ],
+    "node_30hln1l": [
+      "node_r4ihqj9",
+      "institute-road-coombs"
+    ],
+    "node_lqzozlf": [
+      "institute-road-coombs",
+      "node_r9l6gx1"
+    ],
+    "node_r9l6gx1": [
+      "node_lqzozlf",
+      "node_r2wh5gt",
+      "node_9t9vmuh"
+    ],
+    "node_r2wh5gt": [
+      "node_r9l6gx1",
+      "node_802ap4p",
+      "node_i3u1z49"
+    ],
+    "node_802ap4p": [
+      "node_r2wh5gt",
+      "node_xmt47re",
+      "node_s8i2qgs"
+    ],
+    "node_zjwkw0c": [
+      "node_nzgyw34",
+      "boynton-straton"
+    ],
+    "node_nzgyw34": [
+      "node_zjwkw0c",
+      "node_9s661s1"
+    ],
+    "node_lfw5lpl": [
+      "node_rgeb0go",
+      "node_4l04df4"
+    ],
+    "node_rgeb0go": [
+      "node_lfw5lpl",
+      "node_9vomlnc",
+      "node_b5o8vmk",
+      "node_l7c028b"
+    ],
+    "node_5wn2t79": [
+      "institute-park-humbolt-ave",
+      "node_vtr2tpd",
+      "node_ibx0g3x"
+    ],
+    "node_ibx0g3x": [
+      "node_5wn2t79",
+      "node_eken83e"
+    ],
+    "node_eken83e": [
+      "node_ibx0g3x",
+      "node_97yu309",
+      "node_vetksdb"
+    ],
+    "node_2hdp633": [
+      "node_o1cuzmc",
+      "node_d8ij4b6",
+      "node_p5qoldw"
+    ],
+    "node_d8ij4b6": [
+      "node_2hdp633",
+      "node_gryoui0",
+      "node_ijbrz6b"
+    ],
+    "node_52zjs3s": [
+      "node_ddxw0zb",
+      "node_1omxsbl"
+    ],
+    "node_vtr2tpd": [
+      "node_5wn2t79",
+      "node_97yu309"
+    ],
+    "node_97yu309": [
+      "node_vtr2tpd",
+      "node_eken83e",
+      "node_k6uh592"
+    ],
+    "node_o1cuzmc": [
+      "node_2hdp633",
+      "node_k6uh592",
+      "node_et9mcxo"
+    ],
+    "node_ttc0h3j": [
+      "node_gei4ndh",
+      "institute-park-humbolt-ave",
+      "node_ar2z161"
+    ],
+    "node_gei4ndh": [
+      "node_w1dxdn7",
+      "node_ttc0h3j",
+      "node_iiv720t"
+    ],
+    "node_w1dxdn7": [
+      "node_gei4ndh",
+      "node_plly676",
+      "node_nb9vyfw"
+    ],
+    "node_yub1zin": [
+      "node_nw8xixw",
+      "node_4kmuu5v"
+    ],
+    "node_t8dx956": [
+      "node_7arlcsn",
+      "node_n5htz87"
+    ],
+    "node_bd085mo": [
+      "node_kid1bbv",
+      "node_91wx4c4",
+      "node_n5htz87"
+    ],
+    "node_91wx4c4": [
+      "node_bd085mo",
+      "node_3b0dzuo",
+      "node_emm1a3c"
+    ],
+    "node_fqu3g30": [
+      "node_emm1a3c",
+      "node_d650fea"
+    ],
+    "node_kncuyu5": [
+      "node_d650fea",
+      "node_n37m0o7"
+    ],
+    "node_kid1bbv": [
+      "node_bd085mo",
+      "node_jvureqi"
+    ],
+    "node_z7labb6": [
+      "node_2dbrj35",
+      "node_3b0dzuo",
+      "node_djxpnzl"
+    ],
+    "node_2dbrj35": [
+      "node_chykcv5",
+      "node_z7labb6",
+      "node_dpakp7r"
+    ],
+    "node_re5j7af": [
+      "node_299c6k5",
+      "node_dpakp7r"
+    ],
+    "node_q6836m6": [
+      "node_uylyvdv",
+      "node_imorgxt"
+    ],
+    "node_chykcv5": [
+      "node_2dbrj35",
+      "skull-institute",
+      "node_p5z3zub"
+    ],
+    "node_3b0dzuo": [
+      "unity-lower",
+      "node_1zy5gb1",
+      "node_z7labb6",
+      "node_91wx4c4"
+    ],
+    "node_1zy5gb1": [
+      "node_3b0dzuo",
+      "node_s6njde5",
+      "node_5rhlaen"
+    ],
+    "node_mvxorkn": [
+      "node_xou06c4",
+      "node_ut4l9pc"
+    ],
+    "node_xou06c4": [
+      "node_mvxorkn",
+      "node_qspv0z6"
+    ],
+    "node_gryoui0": [
+      "node_d8ij4b6",
+      "node_jfc6qmc"
+    ],
+    "node_vbtl4d1": [
+      "node_9bq7wcj",
+      "node_p5rhl1b"
+    ],
+    "node_ar2z161": [
+      "node_ttc0h3j",
+      "node_1ziqiy7"
+    ],
+    "node_535ubn6": [
+      "olin-salisbury-street",
+      "node_tdql943",
+      "node_0q43wil"
+    ],
+    "node_7gcgnl4": [
+      "node_4gkzhj9",
+      "node_j2t6dq6",
+      "node_tdql943"
+    ],
+    "node_4gkzhj9": [
+      "node_7gcgnl4",
+      "node_5cmr9fw",
+      "node_ehs0ivi"
+    ],
+    "node_vsk10ty": [
+      "olin-atwater",
+      "salisbury-side-3",
+      "node_obkjm7x"
+    ],
+    "node_orxruho": [
+      "park-ave-salisbury-street",
+      "node_6k6gix3",
+      "node_kjh344c"
+    ],
+    "node_uap1r47": [
+      "node_uc7e0n1",
+      "node_plly676"
+    ],
+    "node_s6njde5": [
+      "node_1zy5gb1",
+      "node_p5z3zub"
+    ],
+    "node_6iop1fz": [
+      "node_9zpnuup",
+      "west-street-institute",
+      "node_oyoxve0"
+    ],
+    "node_9zpnuup": [
+      "sanford-quad-institute",
+      "node_6iop1fz"
+    ],
+    "node_27y9pvw": [
+      "node_qwnzoag",
+      "node_0et65xg"
+    ],
+    "node_0et65xg": [
+      "node_27y9pvw"
+    ],
+    "node_oyc3qjo": [
+      "node_reyam7q",
+      "node_r613m6t"
+    ],
+    "node_reyam7q": [
+      "node_hyl5hs8",
+      "node_oyc3qjo"
+    ],
+    "node_hyl5hs8": [
+      "node_xqidz7d",
+      "node_reyam7q"
+    ],
+    "node_xqidz7d": [
+      "node_9q88fjk",
+      "node_hyl5hs8",
+      "node_w2l6w1o"
+    ],
+    "node_9q88fjk": [
+      "node_sp6s7k3",
+      "node_xqidz7d"
+    ],
+    "node_sp6s7k3": [
+      "node_2ajm8fw",
+      "node_9q88fjk"
+    ],
+    "node_2ajm8fw": [
+      "node_6a1ic09",
+      "node_sp6s7k3"
+    ],
+    "node_6a1ic09": [
+      "node_x5k1n82",
+      "node_2ajm8fw"
+    ],
+    "node_zk3z248": [
+      "node_cnfipvu",
+      "node_x5k1n82"
+    ],
+    "node_x5k1n82": [
+      "node_zk3z248",
+      "node_6a1ic09"
+    ],
+    "node_cnfipvu": [
+      "node_digypf3",
+      "node_zk3z248"
+    ],
+    "node_digypf3": [
+      "node_0dr4gu8",
+      "node_cnfipvu"
+    ],
+    "node_0dr4gu8": [
+      "node_ggamkj0",
+      "node_digypf3"
+    ],
+    "node_ggamkj0": [
+      "node_n4a5t3s",
+      "node_0dr4gu8"
+    ],
+    "node_n4a5t3s": [
+      "node_ggamkj0",
+      "node_7eph337"
+    ],
+    "node_7eph337": [
+      "park-ave-salisbury-street",
+      "node_n4a5t3s",
+      "node_noapuhm"
+    ],
+    "node_r613m6t": [
+      "node_oyc3qjo",
+      "node_qwnzoag",
+      "node_df0636c"
+    ],
+    "node_w2l6w1o": [
+      "node_df0636c",
+      "node_xqidz7d",
+      "node_si2bgw1"
+    ],
+    "node_4orn4w9": [
+      "node_k1t32ov",
+      "node_lizr19j",
+      "node_si2bgw1"
+    ],
+    "node_lizr19j": [
+      "node_oiq953e",
+      "node_4orn4w9"
+    ],
+    "node_oiq953e": [
+      "node_lizr19j",
+      "node_48u9iwg"
+    ],
+    "node_48u9iwg": [
+      "node_oiq953e",
+      "node_clewoq5"
+    ],
+    "node_clewoq5": [
+      "node_48u9iwg",
+      "node_ue4c4hc"
+    ],
+    "node_ue4c4hc": [
+      "node_clewoq5",
+      "node_37c1iaj"
+    ],
+    "node_37c1iaj": [
+      "node_ue4c4hc",
+      "node_af6rb9j"
+    ],
+    "node_af6rb9j": [
+      "node_37c1iaj",
+      "node_lw603tl",
+      "node_tza73pb"
+    ],
+    "node_lw603tl": [
+      "node_af6rb9j",
+      "alumni-field-park-ave",
+      "alumni-field"
+    ],
+    "node_tza73pb": [
+      "node_af6rb9j",
+      "node_trp00tj"
+    ],
+    "node_trp00tj": [
+      "node_tza73pb",
+      "node_f14l5ra"
+    ],
+    "node_f14l5ra": [
+      "node_trp00tj",
+      "node_301m8vx"
+    ],
+    "node_301m8vx": [
+      "node_f14l5ra",
+      "node_k1t32ov"
+    ],
+    "node_k1t32ov": [
+      "node_301m8vx",
+      "node_4orn4w9"
+    ],
+    "node_si2bgw1": [
+      "node_w2l6w1o",
+      "node_4orn4w9",
+      "node_aonc5ww"
+    ],
+    "node_aonc5ww": [
+      "node_si2bgw1",
+      "node_uxddq5w"
+    ],
+    "node_uxddq5w": [
+      "node_aonc5ww",
+      "node_df0636c"
+    ],
+    "node_df0636c": [
+      "node_w2l6w1o",
+      "node_uxddq5w",
+      "node_uwbtr3l",
+      "node_r613m6t"
+    ],
+    "node_44y8g76": [
+      "node_obkjm7x",
+      "node_wxtxsy6"
+    ],
+    "node_obkjm7x": [
+      "node_44y8g76",
+      "node_vsk10ty",
+      "node_8y8mr0h"
+    ],
+    "node_6k6gix3": [
+      "node_zqrw6mj",
+      "node_orxruho"
+    ],
+    "node_zqrw6mj": [
+      "node_aclfzeo",
+      "node_6k6gix3"
+    ],
+    "node_aclfzeo": [
+      "node_zqrw6mj",
+      "node_npdzggl"
+    ],
+    "node_0hayt91": [
+      "node_cx2cktd"
+    ],
+    "node_z67yd2v": [
+      "node_cx2cktd",
+      "node_w143iqx",
+      "node_0znqu4l"
+    ],
+    "node_cx2cktd": [
+      "node_0hayt91",
+      "node_z67yd2v",
+      "node_npdzggl"
+    ],
+    "node_w143iqx": [
+      "node_z67yd2v",
+      "node_aa6fuaf"
+    ],
+    "node_aa6fuaf": [
+      "node_w143iqx",
+      "node_d6egan5"
+    ],
+    "node_d6egan5": [
+      "node_aa6fuaf",
+      "node_4a44tzz"
+    ],
+    "node_4a44tzz": [
+      "node_d6egan5",
+      "node_zldxa9t"
+    ],
+    "node_zldxa9t": [
+      "node_2oagz8p",
+      "node_4a44tzz"
+    ],
+    "node_2oagz8p": [
+      "node_zldxa9t",
+      "node_texwq15"
+    ],
+    "node_texwq15": [
+      "node_2oagz8p",
+      "node_jl3gdsd"
+    ],
+    "node_85o72ak": [
+      "node_7ev2l2r",
+      "node_nkgqfke"
+    ],
+    "node_3gpwgnz": [
+      "node_nkgqfke",
+      "node_5aibfda"
+    ],
+    "node_2tdexvl": [
+      "node_5aibfda",
+      "node_s2cc831"
+    ],
+    "node_ah7w4ip": [
+      "node_s2cc831",
+      "node_aeffk8q"
+    ],
+    "node_webx3dq": [
+      "node_81j392u",
+      "node_aeffk8q"
+    ],
+    "node_wqjgtsv": [
+      "node_pghw3s1",
+      "node_auk2r8r"
+    ],
+    "node_pghw3s1": [
+      "node_wqjgtsv",
+      "node_zbyw586",
+      "node_x43habn"
+    ],
+    "node_5reduqb": [
+      "node_cj7a1xz",
+      "node_efgbflg"
+    ],
+    "node_cj7a1xz": [
+      "node_5reduqb",
+      "node_zj24m5r"
+    ],
+    "node_zj24m5r": [
+      "node_cj7a1xz",
+      "node_1nowm59"
+    ],
+    "node_1nowm59": [
+      "node_vvjm8w9",
+      "node_zj24m5r",
+      "node_vsv48oy"
+    ],
+    "node_vvjm8w9": [
+      "node_1nowm59",
+      "node_7umx3ol",
+      "node_7o0sk1a"
+    ],
+    "node_vsv48oy": [
+      "node_1nowm59",
+      "node_qpdtt45",
+      "node_out8vym"
+    ],
+    "node_qpdtt45": [
+      "node_vsv48oy",
+      "node_iruk5p4"
+    ],
+    "node_iruk5p4": [
+      "node_qpdtt45",
+      "node_5bzfqek"
+    ],
+    "node_5bzfqek": [
+      "node_iruk5p4",
+      "node_dz607nw"
+    ],
+    "node_dz607nw": [
+      "node_5bzfqek",
+      "node_b1mpnz6",
+      "node_2xpm4em"
+    ],
+    "node_out8vym": [
+      "node_vsv48oy",
+      "node_729gnpk"
+    ],
+    "node_729gnpk": [
+      "node_out8vym",
+      "node_bwj5yvb"
+    ],
+    "node_bwj5yvb": [
+      "node_729gnpk",
+      "node_2vvpeb0"
+    ],
+    "node_2vvpeb0": [
+      "node_bwj5yvb",
+      "node_2l2s2zw"
+    ],
+    "node_2l2s2zw": [
+      "node_2vvpeb0",
+      "node_8so2u1x"
+    ],
+    "node_8so2u1x": [
+      "node_2l2s2zw",
+      "node_iaows3s"
+    ],
+    "node_iaows3s": [
+      "node_8so2u1x",
+      "node_gpe4qes"
+    ],
+    "node_gpe4qes": [
+      "node_iaows3s",
+      "node_o8eytzg"
+    ],
+    "node_90nt0uu": [
+      "node_o8eytzg",
+      "node_ur6hsmh"
+    ],
+    "node_z89mfb1": [
+      "node_ur6hsmh",
+      "node_5qoim60"
+    ],
+    "node_hg56var": [
+      "node_ovyxtf7",
+      "node_5qoim60"
+    ],
+    "node_ovyxtf7": [
+      "node_hg56var",
+      "node_oe6one1"
+    ],
+    "node_oe6one1": [
+      "node_ovyxtf7",
+      "node_an7lxcz"
+    ],
+    "node_7rk3129": [
+      "node_an7lxcz",
+      "node_l0odvr3"
+    ],
+    "node_p0ouxf5": [
+      "node_l0odvr3",
+      "node_5qxqvz8"
+    ],
+    "node_mo83bdg": [
+      "node_5qxqvz8",
+      "node_p9ez9b2"
+    ],
+    "node_40b3qo9": [
+      "node_p9ez9b2",
+      "node_3nmddtc"
+    ],
+    "node_nexhzqm": [
+      "node_oe7t7uj",
+      "node_hx0igye"
+    ],
+    "node_oe7t7uj": [
+      "node_nexhzqm",
+      "node_tx2tesu"
+    ],
+    "node_tx2tesu": [
+      "node_o4lpo3s",
+      "node_oe7t7uj"
+    ],
+    "node_o4lpo3s": [
+      "node_tx2tesu",
+      "node_hn56wis"
+    ],
+    "node_weao2ri": [
+      "node_biyca0k",
+      "node_hn56wis",
+      "node_ij24m8x"
+    ],
+    "node_4vh4dvn": [
+      "node_ilbbblx",
+      "node_8jc3dog",
+      "node_et9mcxo"
+    ],
+    "node_mo4nufy": [
+      "node_2168xrc",
+      "node_o0os4v7"
+    ],
+    "node_2168xrc": [
+      "node_vdzecmb",
+      "node_mo4nufy"
+    ],
+    "node_vdzecmb": [
+      "node_2168xrc",
+      "node_x9v50uv"
+    ],
+    "node_x9v50uv": [
+      "node_5thzuyf",
+      "node_vdzecmb"
+    ],
+    "node_5thzuyf": [
+      "node_y35ffux",
+      "node_x9v50uv"
+    ],
+    "node_y35ffux": [
+      "node_oiiokod",
+      "node_5thzuyf"
+    ],
+    "node_oiiokod": [
+      "node_78snb5d",
+      "node_y35ffux"
+    ],
+    "node_78snb5d": [
+      "node_oiiokod",
+      "node_vlyzg2c"
+    ],
+    "node_4lu6j3v": [
+      "node_g0opp30",
+      "node_vlyzg2c"
+    ],
+    "node_g0opp30": [
+      "node_4lu6j3v",
+      "node_exo4l36"
+    ],
+    "node_ha7duyy": [
+      "node_81j392u",
+      "node_exo4l36"
+    ],
+    "node_81j392u": [
+      "node_webx3dq",
+      "node_ha7duyy"
+    ],
+    "node_ltpwu2c": [
+      "institute-park-humbolt-ave",
+      "node_biyca0k"
+    ],
+    "node_biyca0k": [
+      "node_ltpwu2c",
+      "node_weao2ri"
+    ],
+    "node_3j5i9aa": [
+      "washburn-entrance",
+      "node_f3hubup"
+    ],
+    "node_f3hubup": [
+      "node_3j5i9aa",
+      "node_a2gsuto",
+      "gordon-washburn-cut"
+    ],
+    "node_a2gsuto": [
+      "node_f3hubup",
+      "washburn-entrance",
+      "gordon",
+      "node_8rzwzf7"
+    ],
+    "node_asqoh7a": [
+      "node_5srbb6n",
+      "node_y2l71hr"
+    ],
+    "node_5srbb6n": [
+      "node_asqoh7a",
+      "fuller-upper"
+    ],
+    "node_kwkop3p": [],
+    "node_hagy750": [
+      "node_plt0mr7",
+      "boynton-alden-stairs",
+      "node_ax367z4"
+    ],
+    "node_plt0mr7": [
+      "node_hagy750",
+      "boynton-coombs-1"
+    ],
+    "node_l4ztgly": [
+      "boynton-straton-walkway",
+      "bridge",
+      "boynton-alden-stairs",
+      "node_ax367z4"
+    ],
+    "node_sgefad9": [
+      "node_yw35r3q",
+      "node_v7id44b"
+    ],
+    "node_o2fksn0": [
+      "node_09a917s",
+      "node_fgrpb4y",
+      "node_v7id44b"
+    ],
+    "node_bepy5nn": [
+      "bartlett-sanford-alden",
+      "bartlett-higgins",
+      "node_47yaxjm"
+    ],
+    "node_47yaxjm": [
+      "node_bepy5nn",
+      "bartlett-sanford-alden",
+      "alden-side-entrance",
+      "node_t66s9bp"
+    ],
+    "node_t66s9bp": [
+      "node_47yaxjm",
+      "alden",
+      "node_3fj9c74"
+    ],
+    "node_3fj9c74": [
+      "alden",
+      "node_t66s9bp",
+      "node_drua9fa"
+    ],
+    "node_drua9fa": [
+      "node_3fj9c74",
+      "node_79r85s4"
+    ],
+    "node_79r85s4": [
+      "node_drua9fa",
+      "node_j39sulo"
+    ],
+    "node_j39sulo": [
+      "node_79r85s4",
+      "node_jnicz76",
+      "node_99ksl3w"
+    ],
+    "node_jnicz76": [
+      "node_j39sulo",
+      "node_sgbqmqm"
+    ],
+    "node_sgbqmqm": [
+      "node_jnicz76",
+      "straton-higgins",
+      "alden-west-street-entrance"
+    ],
+    "node_99ksl3w": [
+      "node_j39sulo",
+      "node_70d8cjy"
+    ],
+    "node_70d8cjy": [
+      "straton-higgins",
+      "node_99ksl3w",
+      "bartlett-higgins"
+    ],
+    "node_4nrt18t": [
+      "node_o974n9c",
+      "node_zdiikry"
+    ],
+    "node_f49xh9k": [
+      "boynton-alden-stairs-1",
+      "boynton-alden-stairs"
+    ],
+    "node_soofc5j": [
+      "boynton-alden-stairs-1",
+      "boynton-alden-stairs-2"
+    ],
+    "node_zmd4mc7": [],
+    "node_dyoqi4e": [],
+    "node_5nl0lhd": [],
+    "node_c71heo8": [],
+    "node_4akev87": [],
+    "node_6yuuubd": [
+      "node_a18hyvk",
+      "quad-rec-morgan"
+    ],
+    "node_qkgksnv": [
+      "node_3p4ghcj",
+      "quad-daniels"
+    ],
+    "node_z0wpa4j": [
+      "quad-center",
+      "quad-daniels-sanford",
+      "node_09a917s"
+    ],
+    "node_yw35r3q": [
+      "sanford-riley-entrance",
+      "node_sgefad9"
+    ],
+    "node_v7id44b": [
+      "node_o2fksn0",
+      "node_sgefad9"
+    ],
+    "node_fgrpb4y": [
+      "node_o2fksn0",
+      "bartlett-sanford-alden"
+    ],
+    "node_bnxhiti": [
+      "node_mth37uv",
+      "node_pmrkqln",
+      "quad-innovation"
+    ],
+    "node_pmrkqln": [
+      "node_bnxhiti",
+      "node_vohp78g",
+      "node_q79zhty",
+      "quad-innovation"
+    ],
+    "node_vohp78g": [
+      "node_pmrkqln",
+      "quad-innovation",
+      "quad-center"
+    ],
+    "node_mth37uv": [
+      "innovation-messenger",
+      "node_72aykmt",
+      "node_bnxhiti"
+    ],
+    "node_72aykmt": [
+      "node_mth37uv",
+      "node_z5ob5zv"
+    ],
+    "node_z5ob5zv": [
+      "node_72aykmt",
+      "node_ip2k9ds"
+    ],
+    "node_ip2k9ds": [
+      "node_z5ob5zv"
+    ],
+    "node_09a917s": [
+      "node_z0wpa4j",
+      "node_o2fksn0",
+      "node_jorxvoq"
+    ],
+    "node_jorxvoq": [
+      "node_09a917s",
+      "node_bn8jsvn"
+    ],
+    "node_bn8jsvn": [
+      "quad-bartlett",
+      "node_jorxvoq"
+    ],
+    "node_zdiikry": [
+      "node_4nrt18t",
+      "quad-bartlett"
+    ],
+    "node_o974n9c": [
+      "quad-innovation",
+      "node_4nrt18t"
+    ],
+    "node_ymky5u7": [],
+    "node_ug4vxmg": [],
+    "node_tryf9dn": [],
+    "node_dy81aa5": [],
+    "node_u2psdyl": [
+      "node_adwvoj8",
+      "node_omia147"
+    ],
+    "node_210xmnf": [
+      "boynton-corner",
+      "node_gwvnjmi"
+    ],
+    "node_gwvnjmi": [
+      "node_210xmnf",
+      "boynton"
+    ],
+    "node_oyoxve0": [
+      "boynton-alden-stairs-2",
+      "alden-west-street-entrance",
+      "node_6iop1fz"
+    ],
+    "node_3e9wsuc": [
+      "kaven-stairs",
+      "node_xct2xxb",
+      "node_bm0rzd3"
+    ],
+    "node_igws1hk": [
+      "node_21fkjot",
+      "node_xct2xxb",
+      "node_btv4crv"
+    ],
+    "node_21fkjot": [
+      "node_xh5m26h",
+      "node_igws1hk"
+    ],
+    "node_xh5m26h": [
+      "node_xu19r2d",
+      "node_21fkjot"
+    ],
+    "node_xu19r2d": [
+      "node_rcmt8zs",
+      "node_xh5m26h"
+    ],
+    "node_rcmt8zs": [
+      "node_xu19r2d",
+      "node_gsweuvz",
+      "node_3p67m8x"
+    ],
+    "node_9ngit6i": [
+      "node_l8vu0gc",
+      "node_jpthmpk"
+    ],
+    "node_lzhi9a2": [
+      "node_kuwf96m",
+      "node_nyh4ghj"
+    ],
+    "node_kuwf96m": [
+      "node_lzhi9a2",
+      "node_7x2h2f6"
+    ],
+    "node_0dv9bei": [
+      "node_7x2h2f6",
+      "fuller-upper",
+      "node_ndit8t0"
+    ],
+    "node_7x2h2f6": [
+      "node_zc23uht",
+      "node_kuwf96m",
+      "node_0dv9bei"
+    ],
+    "node_zc23uht": [
+      "node_fpqmuk8",
+      "node_ngx7whc",
+      "node_7x2h2f6"
+    ],
+    "node_mrtsh89": [
+      "node_fpqmuk8",
+      "node_0nr3ojf",
+      "node_ngx7whc",
+      "node_273q4b0"
+    ],
+    "node_fpqmuk8": [
+      "node_8lkr0p8",
+      "node_mrtsh89",
+      "node_zc23uht"
+    ],
+    "node_8lkr0p8": [
+      "node_7unuxon",
+      "node_fpqmuk8"
+    ],
+    "node_98ruz7p": [
+      "node_i02r4f6",
+      "node_7unuxon"
+    ],
+    "node_i02r4f6": [
+      "node_7v9ru73",
+      "node_h7baatk",
+      "node_98ruz7p"
+    ],
+    "node_h7baatk": [
+      "node_0nr3ojf",
+      "node_i02r4f6"
+    ],
+    "node_0nr3ojf": [
+      "node_h7baatk",
+      "olin-atwater-cut",
+      "node_gaz4s9p",
+      "node_mrtsh89"
+    ],
+    "node_gaz4s9p": [
+      "node_7v9ru73",
+      "node_0nr3ojf",
+      "olin-atwater"
+    ],
+    "node_7v9ru73": [
+      "node_gaz4s9p",
+      "node_i02r4f6",
+      "node_vnoff05"
+    ],
+    "node_5cmr9fw": [
+      "node_e6gldl7",
+      "node_4gkzhj9"
+    ],
+    "node_e6gldl7": [
+      "node_noapuhm",
+      "node_5cmr9fw"
+    ],
+    "node_noapuhm": [
+      "node_7eph337",
+      "node_e6gldl7"
+    ],
+    "node_7unuxon": [
+      "node_98ruz7p",
+      "node_8lkr0p8"
+    ],
+    "node_ngx7whc": [
+      "node_mrtsh89",
+      "node_zc23uht"
+    ],
+    "node_4x153s8": [
+      "olin-atwater-cut",
+      "node_plhkfpm",
+      "node_1szi5s1"
+    ],
+    "node_plhkfpm": [
+      "node_4x153s8",
+      "olin-main-entrance",
+      "salisbury-side-3"
+    ],
+    "node_1szi5s1": [
+      "node_4x153s8",
+      "salisbury-side-entrance"
+    ],
+    "node_y1c24ar": [
+      "fountain-salisbury",
+      "salisbury-side-1"
+    ],
+    "node_azcybt8": [
+      "salisbury-side-2",
+      "salisbury-side-entrance"
+    ],
+    "node_f6zoakj": [
+      "higgins-entrance",
+      "node_57ukh3n",
+      "node_vu9wwu0"
+    ],
+    "node_57ukh3n": [
+      "node_f6zoakj",
+      "node_fh4rxmj"
+    ],
+    "node_fh4rxmj": [
+      "node_57ukh3n",
+      "node_obn6opa",
+      "node_hqwo2yn",
+      "node_ntq97gy"
+    ],
+    "node_obn6opa": [
+      "node_fh4rxmj",
+      "node_jvz2lar"
+    ],
+    "node_jvz2lar": [
+      "node_obn6opa",
+      "node_ayn82at",
+      "node_kuh803t"
+    ],
+    "node_ayn82at": [
+      "node_jvz2lar",
+      "node_6626j9r",
+      "higgins-olin-cut"
+    ],
+    "node_6626j9r": [
+      "node_ayn82at",
+      "node_v6gpby8"
+    ],
+    "node_v6gpby8": [
+      "node_6626j9r",
+      "salisbury-side-2"
+    ],
+    "node_hqwo2yn": [
+      "node_fh4rxmj",
+      "fountain-campus-center",
+      "higgins-entrance"
+    ],
+    "node_ntq97gy": [
+      "node_177odxa",
+      "node_qw8wjlr",
+      "node_fh4rxmj",
+      "node_zzw9yu7"
+    ],
+    "node_177odxa": [
+      "node_5zk3m8v",
+      "node_ntq97gy"
+    ],
+    "node_5zk3m8v": [
+      "node_sr6h759",
+      "node_177odxa"
+    ],
+    "node_sr6h759": [
+      "node_5zk3m8v"
+    ],
+    "node_kuh803t": [
+      "node_ift8oi8",
+      "node_jvz2lar"
+    ],
+    "node_ift8oi8": [
+      "node_uyt0lmq",
+      "node_kuh803t"
+    ],
+    "node_uyt0lmq": [
+      "node_qw8wjlr",
+      "node_ift8oi8"
+    ],
+    "node_qw8wjlr": [
+      "node_3erx9g5",
+      "node_uyt0lmq",
+      "node_ntq97gy"
+    ],
+    "node_3erx9g5": [
+      "node_zy8a13m",
+      "node_qw8wjlr"
+    ],
+    "node_zy8a13m": [
+      "node_wxtxsy6",
+      "node_3erx9g5"
+    ],
+    "node_wxtxsy6": [
+      "node_zy8a13m",
+      "node_44y8g76"
+    ],
+    "node_zzw9yu7": [
+      "node_ntq97gy",
+      "node_vu9wwu0"
+    ],
+    "node_vu9wwu0": [
+      "node_zzw9yu7",
+      "node_f6zoakj"
+    ],
+    "node_h9at3bk": [
+      "salisbury-side-4-1",
+      "node_qys0o1p"
+    ],
+    "node_qys0o1p": [
+      "node_h9at3bk",
+      "node_60cu9mh"
+    ],
+    "node_60cu9mh": [
+      "node_qys0o1p",
+      "node_273q4b0"
+    ],
+    "node_273q4b0": [
+      "node_60cu9mh",
+      "node_mrtsh89"
+    ],
+    "node_ycelv86": [
+      "node_h65mlhu"
+    ],
+    "node_h65mlhu": [
+      "fuller-side-stairs",
+      "node_ycelv86"
+    ],
+    "node_ndit8t0": [
+      "node_0dv9bei",
+      "fuller-side-stairs"
+    ],
+    "node_u2bqxjm": [
+      "salisbury-entrance",
+      "washburn-entrance",
+      "node_l7c028b"
+    ],
+    "node_9s661s1": [
+      "node_nzgyw34",
+      "node_4l04df4"
+    ],
+    "node_4l04df4": [
+      "node_9s661s1",
+      "node_lfw5lpl"
+    ],
+    "node_9vomlnc": [
+      "salisbury-side-1",
+      "node_rgeb0go",
+      "salisbury-entrance"
+    ],
+    "node_b5o8vmk": [
+      "node_q2ylbrr",
+      "node_rgeb0go"
+    ],
+    "node_q2ylbrr": [
+      "node_b5o8vmk"
+    ],
+    "node_l7c028b": [
+      "node_rgeb0go",
+      "node_u2bqxjm",
+      "salisbury-entrance"
+    ],
+    "node_y2l71hr": [
+      "node_8rzwzf7",
+      "node_asqoh7a"
+    ],
+    "node_8rzwzf7": [
+      "node_a2gsuto",
+      "node_y2l71hr"
+    ],
+    "node_rzwcnms": [
+      "gordon",
+      "node_n8l1pcj",
+      "node_e17wwaa"
+    ],
+    "node_xv8pb3v": [
+      "node_n8l1pcj",
+      "node_8usiaom"
+    ],
+    "node_8usiaom": [
+      "node_xv8pb3v",
+      "node_rsse5lo"
+    ],
+    "node_rsse5lo": [
+      "node_uswdty3",
+      "node_8usiaom"
+    ],
+    "node_uswdty3": [
+      "node_rsse5lo"
+    ],
+    "node_n8l1pcj": [
+      "node_rzwcnms",
+      "node_xv8pb3v",
+      "node_r9lt83i"
+    ],
+    "node_r9lt83i": [
+      "unity-upper",
+      "node_n8l1pcj"
+    ],
+    "node_e17wwaa": [
+      "gordon-washburn-cut",
+      "unity-upper-washburn",
+      "node_rzwcnms"
+    ],
+    "node_omia147": [
+      "node_u2psdyl",
+      "boynton-straton"
+    ],
+    "node_adwvoj8": [
+      "boynton-straton-walkway",
+      "node_u2psdyl",
+      "node_ax367z4"
+    ],
+    "node_ax367z4": [
+      "node_adwvoj8",
+      "node_l4ztgly",
+      "node_hagy750",
+      "boynton-straton-walkway",
+      "boynton-alden-stairs"
+    ],
+    "node_k767ddn": [
+      "node_37ji0er",
+      "boynton",
+      "unity-upper-washburn"
+    ],
+    "node_37ji0er": [
+      "node_k767ddn",
+      "node_df56n4p"
+    ],
+    "node_df56n4p": [
+      "node_x3vrw3f",
+      "node_37ji0er"
+    ],
+    "node_x3vrw3f": [
+      "node_ms8krwf",
+      "node_df56n4p",
+      "node_0wnl5ds",
+      "node_v3ytg38"
+    ],
+    "node_ms8krwf": [
+      "node_bbw3mcz",
+      "node_x3vrw3f"
+    ],
+    "node_bbw3mcz": [
+      "node_1illzq6",
+      "node_ms8krwf",
+      "node_ybdusqm"
+    ],
+    "node_1illzq6": [
+      "node_bbw3mcz",
+      "node_ojkup50",
+      "unity-upper"
+    ],
+    "node_ojkup50": [
+      "node_1illzq6",
+      "node_cfaomhy",
+      "node_37srtxw"
+    ],
+    "node_cfaomhy": [
+      "node_ybdusqm",
+      "node_ojkup50",
+      "unity-lower"
+    ],
+    "node_ybdusqm": [
+      "node_bbw3mcz",
+      "node_cfaomhy",
+      "node_l0pt5l6",
+      "node_29lqvwu"
+    ],
+    "node_l0pt5l6": [
+      "node_mcqd34i",
+      "node_ybdusqm"
+    ],
+    "node_mcqd34i": [
+      "node_l0pt5l6",
+      "node_u1758nb",
+      "node_29lqvwu"
+    ],
+    "node_u1758nb": [
+      "node_a2gf1u1",
+      "node_c2u79yo",
+      "node_sw3k0xv",
+      "node_mcqd34i"
+    ],
+    "node_a2gf1u1": [
+      "node_tzit9kf",
+      "node_u1758nb"
+    ],
+    "node_tzit9kf": [
+      "node_xmt47re",
+      "node_a2gf1u1",
+      "node_lz7r6zo"
+    ],
+    "node_xmt47re": [
+      "node_i3u1z49",
+      "node_802ap4p",
+      "node_tzit9kf"
+    ],
+    "node_lz7r6zo": [
+      "node_tzit9kf",
+      "node_i3u1z49",
+      "node_ypa65hk"
+    ],
+    "node_ypa65hk": [
+      "node_lz7r6zo",
+      "node_43ro1vp"
+    ],
+    "node_43ro1vp": [
+      "node_ypa65hk",
+      "node_f06j0q3",
+      "node_2fyb6lg"
+    ],
+    "node_f06j0q3": [
+      "node_n67c1ii",
+      "node_43ro1vp"
+    ],
+    "node_n67c1ii": [
+      "node_c2u79yo",
+      "node_f06j0q3"
+    ],
+    "node_c2u79yo": [
+      "node_u1758nb",
+      "node_n67c1ii"
+    ],
+    "node_i3u1z49": [
+      "node_vil74wc",
+      "node_r2wh5gt",
+      "node_xmt47re",
+      "node_lz7r6zo"
+    ],
+    "node_vil74wc": [
+      "node_9t9vmuh",
+      "node_i3u1z49"
+    ],
+    "node_9t9vmuh": [
+      "boynton-coombs-5",
+      "node_r9l6gx1",
+      "node_vil74wc"
+    ],
+    "node_0v3rd3b": [
+      "node_lhf5b4f",
+      "boynton-coombs-2",
+      "boynton-coombs-1"
+    ],
+    "node_lhf5b4f": [
+      "node_30millj",
+      "node_0v3rd3b"
+    ],
+    "node_30millj": [
+      "node_fwrfjvr",
+      "node_lhf5b4f"
+    ],
+    "node_fwrfjvr": [
+      "node_9pnxquz",
+      "node_30millj"
+    ],
+    "node_9pnxquz": [
+      "node_q3wo9t2",
+      "node_fwrfjvr"
+    ],
+    "node_q3wo9t2": [
+      "boynton-alden-stairs",
+      "node_9pnxquz"
+    ],
+    "node_2fyb6lg": [
+      "node_43ro1vp",
+      "node_ie5p2cv"
+    ],
+    "node_khumbm2": [
+      "node_v3ytg38",
+      "node_eusr7vc",
+      "node_ie5p2cv"
+    ],
+    "node_eusr7vc": [
+      "node_khumbm2"
+    ],
+    "node_v3ytg38": [
+      "node_x3vrw3f",
+      "node_khumbm2"
+    ],
+    "node_0wnl5ds": [
+      "node_7ek5qjv",
+      "node_x3vrw3f"
+    ],
+    "node_7ek5qjv": [
+      "node_0wnl5ds"
+    ],
+    "node_ie5p2cv": [
+      "node_khumbm2",
+      "node_2fyb6lg"
+    ],
+    "node_sw3k0xv": [
+      "skull-institute",
+      "node_u1758nb"
+    ],
+    "node_29lqvwu": [
+      "node_ybdusqm",
+      "node_mcqd34i",
+      "unity-lower"
+    ],
+    "node_37srtxw": [
+      "node_0flfp47",
+      "node_ojkup50",
+      "node_gj27bjl"
+    ],
+    "node_0flfp47": [
+      "node_z2xqiju",
+      "node_37srtxw"
+    ],
+    "node_z2xqiju": [
+      "node_0flfp47"
+    ],
+    "node_gj27bjl": [
+      "node_klxrimn",
+      "node_79uynsf",
+      "node_37srtxw"
+    ],
+    "node_79uynsf": [
+      "node_gj27bjl"
+    ],
+    "node_klxrimn": [
+      "kaven-entrance",
+      "kaven-boynton-street",
+      "node_gj27bjl"
+    ],
+    "node_w8rimys": [
+      "node_8m417w2",
+      "kaven-entrance"
+    ],
+    "node_8m417w2": [
+      "node_8eyjaky",
+      "node_w8rimys"
+    ],
+    "node_8eyjaky": [
+      "node_wa84csq",
+      "node_8m417w2"
+    ],
+    "node_wa84csq": [
+      "node_wybk4pz",
+      "kaven-side-entrance",
+      "node_8eyjaky"
+    ],
+    "node_wybk4pz": [
+      "kaven-boynton-street-salisbury-street",
+      "node_wa84csq",
+      "fuller-salisbury-street-stairs",
+      "node_v7ckxgd"
+    ],
+    "node_i4pz3lm": [
+      "atwater-fuller-stairs",
+      "fuller-salisbury-street-stairs"
+    ],
+    "node_btv4crv": [
+      "node_igws1hk",
+      "fuller-salisbury-street-stairs"
+    ],
+    "node_xct2xxb": [
+      "node_igws1hk",
+      "node_3e9wsuc"
+    ],
+    "node_bm0rzd3": [
+      "node_l03zamh",
+      "node_3e9wsuc"
+    ],
+    "node_l03zamh": [
+      "kaven-stairs",
+      "node_bm0rzd3",
+      "kaven-stairs-bottom"
+    ],
+    "node_jpthmpk": [
+      "node_9ngit6i",
+      "node_nyh4ghj"
+    ],
+    "node_nyh4ghj": [
+      "node_jpthmpk",
+      "node_lzhi9a2"
+    ],
+    "node_l8vu0gc": [
+      "node_82928o9",
+      "node_9ngit6i"
+    ],
+    "node_82928o9": [
+      "node_gsweuvz",
+      "node_l8vu0gc"
+    ],
+    "node_gsweuvz": [
+      "node_rcmt8zs",
+      "node_82928o9"
+    ],
+    "node_3p67m8x": [
+      "node_rcmt8zs",
+      "atwater-fuller-stairs"
+    ],
+    "node_xc9mznp": [
+      "node_1lf7of2",
+      "olin-salisbury-street",
+      "atwater-fuller-stairs"
+    ],
+    "node_1lf7of2": [
+      "node_8rjrabg",
+      "node_xc9mznp"
+    ],
+    "node_8rjrabg": [
+      "node_zoy46rw",
+      "node_1lf7of2"
+    ],
+    "node_zoy46rw": [
+      "node_j8xkeas",
+      "node_8rjrabg"
+    ],
+    "node_j8xkeas": [
+      "node_tox64v1",
+      "node_zoy46rw",
+      "node_vp3tc7t"
+    ],
+    "node_tox64v1": [
+      "node_vnoff05",
+      "node_j8xkeas"
+    ],
+    "node_vnoff05": [
+      "node_7v9ru73",
+      "node_tox64v1"
+    ],
+    "node_8qzuegb": [
+      "node_6c0md61",
+      "olin-salisbury-street",
+      "node_taotfh6"
+    ],
+    "node_taotfh6": [
+      "node_8qzuegb",
+      "node_vp3tc7t"
+    ],
+    "node_vp3tc7t": [
+      "node_taotfh6",
+      "node_j8xkeas"
+    ],
+    "node_8y8mr0h": [
+      "node_3jyuke5",
+      "node_obkjm7x"
+    ],
+    "node_3jyuke5": [
+      "node_yu9kvrn",
+      "node_8y8mr0h"
+    ],
+    "node_yu9kvrn": [
+      "node_b4o5ub0",
+      "node_3jyuke5"
+    ],
+    "node_b4o5ub0": [
+      "node_6c0md61",
+      "node_yu9kvrn"
+    ],
+    "node_6c0md61": [
+      "node_ehs0ivi",
+      "node_8qzuegb",
+      "node_b4o5ub0"
+    ],
+    "node_ehs0ivi": [
+      "node_4gkzhj9",
+      "node_6c0md61"
+    ],
+    "node_tdql943": [
+      "node_7gcgnl4",
+      "node_535ubn6"
+    ],
+    "node_j2t6dq6": [
+      "node_7gcgnl4",
+      "node_f7ae01r"
+    ],
+    "node_2xpm4em": [
+      "node_dz607nw",
+      "node_f7ae01r"
+    ],
+    "node_b1mpnz6": [
+      "node_7o0sk1a",
+      "node_dz607nw"
+    ],
+    "node_7o0sk1a": [
+      "node_vvjm8w9",
+      "node_b1mpnz6"
+    ],
+    "node_7umx3ol": [
+      "node_kjh344c",
+      "node_vvjm8w9"
+    ],
+    "node_kjh344c": [
+      "node_orxruho",
+      "node_7umx3ol"
+    ],
+    "node_f7ae01r": [
+      "node_2xpm4em",
+      "node_j2t6dq6"
+    ],
+    "node_v7ckxgd": [
+      "node_5pfj0jr",
+      "node_wybk4pz",
+      "node_iiv720t"
+    ],
+    "node_iiv720t": [
+      "node_v7ckxgd",
+      "institute-park-salisbury-street",
+      "node_gei4ndh"
+    ],
+    "node_5pfj0jr": [
+      "node_2a1y0yn",
+      "node_v7ckxgd"
+    ],
+    "node_2a1y0yn": [
+      "node_9b1amiy",
+      "node_5pfj0jr"
+    ],
+    "node_9b1amiy": [
+      "node_qz8ir74",
+      "node_2a1y0yn"
+    ],
+    "node_qz8ir74": [
+      "node_0q43wil",
+      "node_9b1amiy"
+    ],
+    "node_0q43wil": [
+      "node_535ubn6",
+      "node_qz8ir74"
+    ],
+    "node_vetksdb": [
+      "node_eken83e",
+      "node_p5qoldw"
+    ],
+    "node_p5qoldw": [
+      "node_hq48fus",
+      "node_vetksdb",
+      "node_2hdp633"
+    ],
+    "node_hq48fus": [
+      "node_k6uh592",
+      "node_p5qoldw"
+    ],
+    "node_k6uh592": [
+      "node_97yu309",
+      "node_o1cuzmc",
+      "node_hq48fus"
+    ],
+    "node_ijbrz6b": [
+      "node_d8ij4b6",
+      "node_hggiuf3"
+    ],
+    "node_hggiuf3": [
+      "node_ijbrz6b",
+      "node_ddxw0zb"
+    ],
+    "node_ddxw0zb": [
+      "node_hggiuf3",
+      "node_52zjs3s"
+    ],
+    "node_1ziqiy7": [
+      "node_qspv0z6",
+      "node_ar2z161"
+    ],
+    "node_qspv0z6": [
+      "node_xou06c4",
+      "node_1ziqiy7"
+    ],
+    "node_q8hx05v": [],
+    "node_l4nneog": [
+      "node_1omxsbl",
+      "node_rnwn5ec"
+    ],
+    "node_rnwn5ec": [
+      "node_l4nneog",
+      "node_ut4l9pc"
+    ],
+    "node_ut4l9pc": [
+      "node_rnwn5ec",
+      "node_mvxorkn"
+    ],
+    "node_1omxsbl": [
+      "node_52zjs3s",
+      "node_l4nneog"
+    ],
+    "node_24n54sl": [
+      "node_96kldaz"
+    ],
+    "node_96kldaz": [
+      "node_p5rhl1b",
+      "node_24n54sl"
+    ],
+    "node_p5rhl1b": [
+      "node_vbtl4d1",
+      "node_96kldaz"
+    ],
+    "node_9bq7wcj": [
+      "node_inzjzcv",
+      "node_vbtl4d1"
+    ],
+    "node_inzjzcv": [
+      "node_jfc6qmc",
+      "node_9bq7wcj"
+    ],
+    "node_jfc6qmc": [
+      "node_gryoui0",
+      "node_inzjzcv"
+    ],
+    "node_jvureqi": [
+      "node_nb9vyfw",
+      "node_kid1bbv",
+      "kaven-boynton-street-salisbury-street"
+    ],
+    "node_nb9vyfw": [
+      "node_w1dxdn7",
+      "node_jvureqi"
+    ],
+    "node_plly676": [
+      "node_uap1r47",
+      "node_w1dxdn7"
+    ],
+    "node_5rhlaen": [
+      "node_1zy5gb1",
+      "node_uc7e0n1"
+    ],
+    "node_uc7e0n1": [
+      "node_uap1r47",
+      "node_5rhlaen"
+    ],
+    "node_p5z3zub": [
+      "node_chykcv5",
+      "node_s6njde5"
+    ],
+    "node_emm1a3c": [
+      "node_91wx4c4",
+      "node_fqu3g30"
+    ],
+    "node_d650fea": [
+      "node_fqu3g30",
+      "node_kncuyu5"
+    ],
+    "node_n37m0o7": [
+      "node_kncuyu5",
+      "node_nw8xixw"
+    ],
+    "node_nw8xixw": [
+      "node_n37m0o7",
+      "node_yub1zin"
+    ],
+    "node_4kmuu5v": [
+      "node_yub1zin",
+      "node_bn5va2q"
+    ],
+    "node_bn5va2q": [
+      "node_4kmuu5v",
+      "node_4r2hdfn"
+    ],
+    "node_4r2hdfn": [
+      "node_bn5va2q",
+      "node_7arlcsn"
+    ],
+    "node_7arlcsn": [
+      "node_4r2hdfn",
+      "node_t8dx956"
+    ],
+    "node_n5htz87": [
+      "node_bd085mo",
+      "node_t8dx956"
+    ],
+    "node_djxpnzl": [
+      "node_z7labb6",
+      "node_uylyvdv"
+    ],
+    "node_299c6k5": [
+      "node_re5j7af",
+      "node_imorgxt"
+    ],
+    "node_dpakp7r": [
+      "node_re5j7af",
+      "node_2dbrj35"
+    ],
+    "node_imorgxt": [
+      "node_q6836m6",
+      "node_299c6k5"
+    ],
+    "node_uylyvdv": [
+      "node_djxpnzl",
+      "node_q6836m6"
+    ],
+    "node_s8i2qgs": [
+      "node_802ap4p",
+      "skull-institute"
+    ],
+    "node_zoipqu0": [],
+    "node_s4e787a": [],
+    "node_npdzggl": [
+      "node_ga4ktfs",
+      "node_aclfzeo",
+      "node_cx2cktd"
+    ],
+    "node_s0nwmhf": [],
+    "node_ga4ktfs": [
+      "node_npdzggl",
+      "node_n1y4ivs"
+    ],
+    "node_n1y4ivs": [
+      "node_ga4ktfs",
+      "node_xal315c"
+    ],
+    "node_xal315c": [
+      "node_n1y4ivs",
+      "node_umgp607"
+    ],
+    "node_zbyw586": [
+      "node_pghw3s1",
+      "node_umgp607"
+    ],
+    "node_xkotmlf": [
+      "node_x43habn",
+      "node_la36ldf"
+    ],
+    "node_la36ldf": [
+      "node_xkotmlf",
+      "node_efgbflg"
+    ],
+    "node_efgbflg": [
+      "node_la36ldf",
+      "node_5reduqb"
+    ],
+    "node_o8eytzg": [
+      "node_gpe4qes",
+      "node_90nt0uu"
+    ],
+    "node_ur6hsmh": [
+      "node_90nt0uu",
+      "node_z89mfb1"
+    ],
+    "node_5qoim60": [
+      "node_z89mfb1",
+      "node_hg56var"
+    ],
+    "node_an7lxcz": [
+      "node_oe6one1",
+      "node_7rk3129"
+    ],
+    "node_l0odvr3": [
+      "node_7rk3129",
+      "node_p0ouxf5"
+    ],
+    "node_5qxqvz8": [
+      "node_p0ouxf5",
+      "node_mo83bdg"
+    ],
+    "node_p9ez9b2": [
+      "node_mo83bdg",
+      "node_40b3qo9"
+    ],
+    "node_hx0igye": [
+      "node_3nmddtc",
+      "node_nexhzqm"
+    ],
+    "node_3nmddtc": [
+      "node_40b3qo9",
+      "node_hx0igye"
+    ],
+    "node_et9mcxo": [
+      "node_4vh4dvn",
+      "node_o1cuzmc"
+    ],
+    "node_8jc3dog": [
+      "node_4vh4dvn",
+      "node_d1txjpg"
+    ],
+    "node_hn56wis": [
+      "node_o4lpo3s",
+      "node_weao2ri"
+    ],
+    "node_ij24m8x": [
+      "node_weao2ri",
+      "node_ilbbblx"
+    ],
+    "node_ilbbblx": [
+      "node_ij24m8x",
+      "node_4vh4dvn"
+    ],
+    "node_auk2r8r": [
+      "node_wqjgtsv",
+      "node_jwgx2o9"
+    ],
+    "node_jwgx2o9": [
+      "node_auk2r8r",
+      "node_0znqu4l"
+    ],
+    "node_0znqu4l": [
+      "node_jwgx2o9",
+      "node_z67yd2v"
+    ],
+    "node_7ev2l2r": [
+      "node_85o72ak",
+      "node_jl3gdsd"
+    ],
+    "node_jl3gdsd": [
+      "node_7ev2l2r",
+      "node_texwq15"
+    ],
+    "node_umgp607": [
+      "node_zbyw586",
+      "node_xal315c"
+    ],
+    "node_x43habn": [
+      "node_xkotmlf",
+      "node_pghw3s1"
+    ],
+    "node_nkgqfke": [
+      "node_85o72ak",
+      "node_3gpwgnz"
+    ],
+    "node_s2cc831": [
+      "node_2tdexvl",
+      "node_ah7w4ip"
+    ],
+    "node_5aibfda": [
+      "node_3gpwgnz",
+      "node_2tdexvl"
+    ],
+    "node_aeffk8q": [
+      "node_webx3dq",
+      "node_ah7w4ip"
+    ],
+    "node_exo4l36": [
+      "node_ha7duyy",
+      "node_g0opp30"
+    ],
+    "node_vlyzg2c": [
+      "node_4lu6j3v",
+      "node_78snb5d"
+    ],
+    "node_o0os4v7": [
+      "node_iwz0eoy",
+      "node_mo4nufy"
+    ],
+    "node_iwz0eoy": [
+      "node_d1txjpg",
+      "node_o0os4v7"
+    ],
+    "node_d1txjpg": [
+      "node_8jc3dog",
+      "node_iwz0eoy"
+    ],
+    "node_jnbpm97": [
+      "node_jff0cc2",
+      "node_828oyhp"
+    ],
+    "node_c9euxuv": [
+      "node_aqb02p8",
+      "institute-park-5"
+    ],
+    "node_aqb02p8": [
+      "institute-park-humbolt-ave",
+      "node_c9euxuv"
+    ],
+    "node_jff0cc2": [
+      "institute-park-5",
+      "node_jnbpm97"
+    ],
+    "node_828oyhp": [
+      "node_jnbpm97",
+      "institute-park-4"
+    ],
+    "node_r41orfj": [
+      "institute-park-4",
+      "institute-park-3"
+    ],
+    "node_0cci4qu": [
+      "institute-park-3",
+      "node_fb86w4f"
+    ],
+    "node_0uo92cw": [
+      "institute-park-1",
+      "node_8egul7j"
+    ],
+    "node_fb86w4f": [
+      "institute-park-2",
+      "node_0cci4qu"
+    ],
+    "node_8egul7j": [
+      "node_0uo92cw",
+      "institute-park-2"
+    ],
+    "node_jdbfuj1": [
+      "innovation-higgins-campus-center",
+      "quad-innovation",
+      "innovation-higgins"
+    ],
+    "node_v22xahn": [
+      "node_22typhd",
+      "node_3v8ec98",
+      "node_rdb4o57"
+    ],
+    "node_iwanh6z": [
+      "node_3v8ec98",
+      "quad-rec-harrington",
+      "node_rdb4o57"
+    ],
+    "node_fazv9s9": [
+      "quad-rec-harrington",
+      "node_rdb4o57",
+      "node_hbq0rz0"
+    ],
+    "node_im9avtd": [
+      "node_zp5k7dm",
+      "quad-rec-morgan",
+      "node_hee3l4b"
+    ],
+    "node_rdb4o57": [
+      "node_op0emm6",
+      "quad-rec-harrington",
+      "node_iwanh6z",
+      "node_3v8ec98",
+      "node_v22xahn",
+      "node_fazv9s9"
+    ],
+    "node_zeet1ad": [
+      "node_bueq6wf",
+      "node_hbq0rz0"
+    ],
+    "node_bueq6wf": [
+      "node_hee3l4b",
+      "node_zeet1ad"
+    ]
+  }
+}
