@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Circle,
   CircleMarker,
@@ -79,12 +79,41 @@ export default function LocationMap({
 
 function MapPosition({ position }: { position: [number, number] }) {
   const map = useMap();
+  const userMovedMap = useRef(false);
+  const [showRecenter, setShowRecenter] = useState(false);
 
   useEffect(() => {
-    map.setView(position, map.getZoom(), { animate: true });
+    const handleDragStart = () => {
+      userMovedMap.current = true;
+      setShowRecenter(true);
+    };
+
+    map.on("dragstart", handleDragStart);
+    return () => {
+      map.off("dragstart", handleDragStart);
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!userMovedMap.current) {
+      map.setView(position, map.getZoom(), { animate: true });
+    }
   }, [map, position[0], position[1]]);
 
-  return null;
+  return showRecenter ? (
+    <button
+      type="button"
+      className="recenter-button"
+      onClick={() => {
+        userMovedMap.current = false;
+        setShowRecenter(false);
+        map.setView(position, map.getZoom(), { animate: true });
+      }}
+      aria-label="Recenter map on your location"
+    >
+      Recenter
+    </button>
+  ) : null;
 }
 
 function RouteBounds({

@@ -45,7 +45,7 @@
         "name": "Fuller Labs",
         "entrance": [42.274862939819116, -71.80664105825561],
         "exit": [42.27511136458773, -71.806089660067],
-        "duration": 45
+        "duration": -1
       }
     ]
   },
@@ -76,6 +76,14 @@
     "entrances": [
       { "latitude": 42.274190590356554, "longitude": -71.80902902169986, "name": "Quad Entrance" },
       { "latitude": 42.27442516757421, "longitude": -71.8085548240773, "name": "Campus Center Entrance" }
+    ],
+    "indoorShortcuts": [
+      {
+        "name": "Innovation Studios",
+        "entrance": [42.274190590356554, -71.80902902169986],
+        "exit": [42.27442516757421, -71.8085548240773],
+        "duration": 0.75
+      }
     ]
   },
   {
@@ -135,7 +143,7 @@
         "name": "Unity Hall",
         "entrance": [42.27379806882368, -71.80676653564187],
         "exit": [42.27364405179721, -71.80576137065076],
-        "duration": 60
+        "duration": 1
       }
     ]
   },

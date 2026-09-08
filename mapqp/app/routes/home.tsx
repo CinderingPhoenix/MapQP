@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
-import type { Route } from "./+types/home";
+import { useEffect, useRef, useState } from "react";
 import buildingData from "../data/wpi-buildings.json";
+import type { WalkingRoute } from "../utils/routing";
+import { distanceBetween, routeBetween } from "../utils/routing";
+import type { Route } from "./+types/home";
 
 type LocationMapProps = {
   latitude: number;
@@ -25,11 +27,9 @@ type RoutePlan = {
   via?: string;
 };
 
-type WalkingRoute = {
-  geometry: [number, number][];
-  distance: number;
-  duration: number;
-  via?: undefined;
+type RouteCandidate = WalkingRoute & {
+  origin: Point;
+  destination: Point;
 };
 
 type IndoorShortcut = {
@@ -37,6 +37,13 @@ type IndoorShortcut = {
   entrance: readonly [number, number];
   exit: readonly [number, number];
   duration: number;
+};
+
+type ShortcutDirection = {
+  buildingId: string;
+  shortcut: IndoorShortcut;
+  entrance: readonly [number, number];
+  exit: readonly [number, number];
 };
 
 type Building = {
@@ -63,8 +70,6 @@ type Coordinates = {
 
 const SAMPLE_COUNT = 5;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
-const routeCache = new Map<string, WalkingRoute>();
-let routeRequestTail = Promise.resolve();
 const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"),
   name: building.name,
@@ -242,93 +247,70 @@ export default function Home() {
 
     setRouteLoading(true);
     try {
-      const currentLocation = originMode === "current"
+      const origin = originMode === "current"
         ? {
             latitude: coordinates!.latitude,
             longitude: coordinates!.longitude,
             label: "Your current location",
           }
-        : null;
-      const entrancePair = originSelection
-        ? await closestRouteEntrancePair(originSelection, destinationSelection)
-        : null;
-      const destinationEntranceIndex = currentLocation
-        ? await closestRouteEntranceIndex(destinationSelection, currentLocation)
-        : entrancePair!.destinationIndex;
-      const origin = currentLocation ?? buildingPoint(originSelection!, entrancePair!.originIndex);
-      const destination = buildingPoint(
-        destinationSelection,
-        destinationEntranceIndex,
+        : buildingPoint(originSelection!, 0);
+      const destinationEntrances = destinationSelection.entrances.map((_, index) =>
+        buildingPoint(destinationSelection, index),
       );
 
-      const outdoorRoute = await routeBetween(origin, destination);
-      const shouldCheckIndoorShortcuts = originMode === "building"
-        ? originSelection?.id === "boynton-hall" ||
-          originSelection?.id === "fuller-laboratories" ||
-          originSelection?.id === "unity-hall" ||
-          destinationSelection.id === "boynton-hall" ||
-          destinationSelection.id === "fuller-laboratories" ||
-          destinationSelection.id === "unity-hall"
-        : destinationSelection.id === "boynton-hall";
+      const outdoorCandidates = await Promise.all(
+        destinationEntrances.map(async (destination): Promise<RouteCandidate | null> => {
+          try {
+            return {
+              ...(await routeBetween(origin, destination)),
+              origin,
+              destination,
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      const availableOutdoorRoutes = outdoorCandidates.filter(
+        (candidate): candidate is RouteCandidate => candidate !== null,
+      );
+      if (availableOutdoorRoutes.length === 0) {
+        throw new Error("The walking route service could not find a route. Try again.");
+      }
+      const outdoorRoute = fastestRoute(availableOutdoorRoutes);
+      setRoute(outdoorRoute);
+
       const relevantShortcutBuildings = new Set([
         "fuller-laboratories",
         "unity-hall",
+        "innovation-studios",
       ]);
-      const shortcutRoutes = WPI_BUILDINGS.filter((building) =>
-        shouldCheckIndoorShortcuts && relevantShortcutBuildings.has(building.id),
-      ).flatMap(
-        (building) => building.indoorShortcuts ?? [],
-      ).flatMap((shortcut) => [
-        { shortcut, entrance: shortcut.entrance, exit: shortcut.exit },
-        { shortcut, entrance: shortcut.exit, exit: shortcut.entrance },
-      ]).map(async ({ shortcut, entrance, exit }) => {
-        const shortcutEntrance: Point = {
-          latitude: entrance[0],
-          longitude: entrance[1],
-          label: `${shortcut.name} entrance`,
-        };
-        const shortcutExit: Point = {
-          latitude: exit[0],
-          longitude: exit[1],
-          label: `${shortcut.name} exit`,
-        };
-        const [toShortcut, fromShortcut] = await Promise.all([
-          routeBetween(origin, shortcutEntrance),
-          routeBetween(shortcutExit, destination),
-        ]);
-
-        return {
-          geometry: [
-            ...toShortcut.geometry,
-            [shortcutExit.latitude, shortcutExit.longitude] as [number, number],
-            ...fromShortcut.geometry,
-          ],
-          distance: toShortcut.distance +
-            distanceBetween(
-              entrance[0],
-              entrance[1],
-              exit[0],
-              exit[1],
-            ) +
-            fromShortcut.distance,
-          duration: toShortcut.duration + shortcut.duration + fromShortcut.duration,
-          via: shortcut.name,
-        };
-      });
-      const candidates = [outdoorRoute, ...(await Promise.all(shortcutRoutes))];
-      const selectedRoute = candidates.reduce((shortest, candidate) =>
-        candidate.duration < shortest.duration ? candidate : shortest,
+      const shortcutDirections = WPI_BUILDINGS.filter((building) =>
+        relevantShortcutBuildings.has(building.id),
+      ).flatMap((building) => (building.indoorShortcuts ?? []).flatMap((shortcut) => [
+        { buildingId: building.id, shortcut, entrance: shortcut.entrance, exit: shortcut.exit },
+        { buildingId: building.id, shortcut, entrance: shortcut.exit, exit: shortcut.entrance },
+      ]));
+      const shortcutChains = buildShortcutChains(shortcutDirections, 1);
+      const shortcutCandidates = await Promise.all(
+        shortcutChains.flatMap((chain) =>
+          [outdoorRoute.destination].map((destination) => buildShortcutRoute(
+            origin,
+            destination,
+            destinationSelection.id,
+            originSelection?.id,
+            chain,
+          )),
+        ),
       );
+      const routes = shortcutCandidates.filter(
+        (candidate): candidate is RouteCandidate => candidate !== null,
+      );
+      const selectedRoute = fastestRoute([outdoorRoute, ...routes]);
 
-      setRoute({
-        origin,
-        destination,
-        geometry: selectedRoute.geometry,
-        distance: selectedRoute.distance,
-        duration: selectedRoute.duration,
-        via: selectedRoute.via,
-      });
+      setRoute(selectedRoute);
     } catch (routeRequestError) {
+      autoRouteKeyRef.current = "";
       setRouteError(
         routeRequestError instanceof Error
           ? routeRequestError.message
@@ -474,69 +456,120 @@ function buildingPoint(building: Building, entranceIndex: number): Point {
   };
 }
 
-async function routeBetween(origin: Point, destination: Point): Promise<WalkingRoute> {
-  const cacheKey = [
-    origin.longitude,
-    origin.latitude,
-    destination.longitude,
-    destination.latitude,
-  ].join(",");
-  const cachedRoute = routeCache.get(cacheKey);
-  if (cachedRoute) {
-    return cachedRoute;
-  }
+function shortcutPoint(
+  direction: ShortcutDirection,
+  side: "entrance" | "exit",
+): Point {
+  const [latitude, longitude] = direction[side];
 
-  const response = await requestWalkingRoute(
-    `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`,
-  );
-  if (!response.ok) {
-    throw new Error("The walking route could not be found.");
-  }
-
-  const data = await response.json();
-  const selectedRoute = data.routes?.[0];
-  if (!selectedRoute) {
-    throw new Error("No walking route was found between those buildings.");
-  }
-
-  const route = {
-    geometry: selectedRoute.geometry.coordinates.map(
-      ([longitude, latitude]: [number, number]) => [latitude, longitude] as [number, number],
-    ),
-    distance: selectedRoute.distance,
-    duration: selectedRoute.duration,
-    via: undefined,
+  return {
+    latitude,
+    longitude,
+    label: `${direction.shortcut.name} ${side}`,
   };
-  routeCache.set(cacheKey, route);
-  return route;
 }
 
-function requestWalkingRoute(url: string): Promise<Response> {
-  const request = routeRequestTail.then(async () => {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 0 : 1500 * 2 ** (attempt - 1)));
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 20_000);
+function buildShortcutChains(
+  directions: ShortcutDirection[],
+  maximumLength: number,
+) {
+  const chains: ShortcutDirection[][] = [];
 
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        if (response.status !== 429 && response.status < 500) {
-          return response;
-        }
-      } catch {
-        if (attempt === 2) {
-          throw new Error("The walking route service timed out. Wait a moment and try again.");
-        }
-      } finally {
-        window.clearTimeout(timeout);
+  function extendChain(
+    chain: ShortcutDirection[],
+    remaining: ShortcutDirection[],
+  ) {
+    for (const direction of remaining) {
+      if (chain.some((item) => item.buildingId === direction.buildingId)) {
+        continue;
       }
+
+      const nextChain = [...chain, direction];
+      chains.push(nextChain);
+      if (nextChain.length === maximumLength) {
+        continue;
+      }
+      extendChain(
+        nextChain,
+        remaining.filter((item) => item.buildingId !== direction.buildingId),
+      );
+    }
+  }
+
+  extendChain([], directions);
+  return chains;
+}
+
+function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
+  return routes.reduce(
+    (fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest,
+  );
+}
+
+async function buildShortcutRoute(
+  origin: Point,
+  destination: Point,
+  destinationBuildingId: string,
+  originBuildingId: string | undefined,
+  chain: ShortcutDirection[],
+): Promise<RouteCandidate | null> {
+  try {
+    const geometry: [number, number][] = [];
+    let distance = 0;
+    let duration = 0;
+    let previousExit: Point | null = null;
+
+    for (let index = 0; index < chain.length; index += 1) {
+      const direction = chain[index];
+      const entrance = shortcutPoint(direction, "entrance");
+      const exit = shortcutPoint(direction, "exit");
+      const startsAtShortcut = index === 0 && originBuildingId === direction.buildingId;
+      const approach = startsAtShortcut
+        ? {
+            geometry: [[entrance.latitude, entrance.longitude] as [number, number]],
+            distance: 0,
+            duration: 0,
+          }
+        : await routeBetween(previousExit ?? origin, entrance);
+
+      geometry.push(...approach.geometry);
+      geometry.push(
+        [entrance.latitude, entrance.longitude],
+        [exit.latitude, exit.longitude],
+      );
+      distance += approach.distance + distanceBetween(
+        direction.entrance[0],
+        direction.entrance[1],
+        direction.exit[0],
+        direction.exit[1],
+      );
+      duration += approach.duration + direction.shortcut.duration * 60;
+      previousExit = exit;
     }
 
-    throw new Error("The walking route service is busy. Wait a moment and try again.");
-  });
+    const endsAtShortcut = chain[chain.length - 1].buildingId === destinationBuildingId;
+    const finalLeg = endsAtShortcut
+      ? {
+          geometry: [[previousExit!.latitude, previousExit!.longitude] as [number, number]],
+          distance: 0,
+          duration: 0,
+        }
+      : await routeBetween(previousExit!, destination);
+    geometry.push(...finalLeg.geometry);
 
-  routeRequestTail = request.then(() => undefined, () => undefined);
-  return request;
+    return {
+      geometry,
+      distance: distance + finalLeg.distance,
+      duration: duration + finalLeg.duration,
+      via: chain.map(({ shortcut }) => shortcut.name).join(" -> "),
+      origin: originBuildingId === chain[0].buildingId
+        ? shortcutPoint(chain[0], "entrance")
+        : origin,
+      destination: endsAtShortcut ? previousExit! : destination,
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function closestRouteEntranceIndex(building: Building, point: Point) {
@@ -572,18 +605,6 @@ async function closestRouteEntrancePair(origin: Building, destination: Building)
   }
 
   return closestPair;
-}
-
-function distanceBetween(
-  latitudeOne: number,
-  longitudeOne: number,
-  latitudeTwo: number,
-  longitudeTwo: number,
-) {
-  const latitudeScale = Math.cos(((latitudeOne + latitudeTwo) / 2) * Math.PI / 180);
-  const latitudeDelta = (latitudeTwo - latitudeOne) * 111_320;
-  const longitudeDelta = (longitudeTwo - longitudeOne) * 111_320 * latitudeScale;
-  return Math.hypot(latitudeDelta, longitudeDelta);
 }
 
 function formatDistance(meters: number) {
