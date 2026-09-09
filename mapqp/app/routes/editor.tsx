@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
+import { useEffect, useState } from "react";
 import type { ActionFunctionArgs } from "react-router";
 import { useFetcher } from "react-router";
 import routePointsData from "../data/route-points.json";
@@ -467,9 +467,6 @@ export default function Editor() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ margin: 0 }}>Route Editor</h2>
-            <span style={{ fontSize: "0.8rem", color: isSaving ? "#e06b3c" : "#27ae60", fontWeight: "bold" }}>
-              {isSaving ? "Saving..." : "Saved to disk"}
-            </span>
           </div>
 
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>

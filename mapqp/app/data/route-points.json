@@ -9,7 +9,7 @@
     {"id":"quad-innovation","latitude":42.27413,"longitude":-71.809142},
     {"id":"innovation-higgins","latitude":42.274096,"longitude":-71.808564},
     {"id":"innovation-higgins-campus-center","latitude":42.274547,"longitude":-71.808475},
-    {"id":"innovation-messenger","latitude":42.27463,"longitude":-71.809166},
+    {"id":"innovation-messenger","latitude":42.27463,"longitude":-71.809157},
     {"id":"fountain-campus-center","latitude":42.274476,"longitude":-71.807801},
     {"id":"fountain-olin","latitude":42.274493,"longitude":-71.807774},
     {"id":"fountain-stratton","latitude":42.27446,"longitude":-71.80778},
@@ -267,7 +267,7 @@
     {"id":"node_a2gsuto","latitude":42.274293,"longitude":-71.806894},
     {"id":"node_asqoh7a","latitude":42.274517,"longitude":-71.806825},
     {"id":"node_5srbb6n","latitude":42.274795,"longitude":-71.806769},
-    {"id":"node_kwkop3p","latitude":42.274832,"longitude":-71.807166},
+    {"id":"node_kwkop3p","latitude":42.274861,"longitude":-71.807172},
     {"id":"node_hagy750","latitude":42.27339,"longitude":-71.807596},
     {"id":"node_plt0mr7","latitude":42.273372,"longitude":-71.807422},
     {"id":"node_l4ztgly","latitude":42.273406,"longitude":-71.807764},
@@ -483,7 +483,6 @@
     {"id":"node_ddxw0zb","latitude":42.275094,"longitude":-71.80179},
     {"id":"node_1ziqiy7","latitude":42.274254,"longitude":-71.802537},
     {"id":"node_qspv0z6","latitude":42.274252,"longitude":-71.802472},
-    {"id":"node_q8hx05v","latitude":42.273943,"longitude":-71.802405},
     {"id":"node_l4nneog","latitude":42.274769,"longitude":-71.801903},
     {"id":"node_rnwn5ec","latitude":42.274573,"longitude":-71.802022},
     {"id":"node_ut4l9pc","latitude":42.274415,"longitude":-71.802106},
@@ -903,7 +902,13 @@
     {"id":"node_qfbebrk","latitude":42.273482,"longitude":-71.810215},
     {"id":"node_o8o5kyx","latitude":42.27543,"longitude":-71.807815},
     {"id":"node_dk5gq5j","latitude":42.275417,"longitude":-71.807714},
-    {"id":"node_kwb78zc","latitude":42.275414,"longitude":-71.80764}
+    {"id":"node_kwb78zc","latitude":42.275414,"longitude":-71.80764},
+    {"id":"node_pbb5vep","latitude":42.274594,"longitude":-71.803945},
+    {"id":"node_xxxh94v","latitude":42.27436,"longitude":-71.803287},
+    {"id":"node_aay4znj","latitude":42.27431,"longitude":-71.803173},
+    {"id":"node_yytd9lc","latitude":42.274312,"longitude":-71.80315},
+    {"id":"node_q6ozgc6","latitude":42.274069,"longitude":-71.802535},
+    {"id":"node_c6b52mo","latitude":42.274562,"longitude":-71.809168}
   ],
   "connections": {
     "quad-center": [
@@ -957,7 +962,7 @@
       "innovation-higgins-campus-center",
       "node_8qpxnld",
       {
-        "to": "node_mth37uv",
+        "to": "node_c6b52mo",
         "accessible": false
       }
     ],
@@ -1562,7 +1567,8 @@
     ],
     "node_uap1r47": [
       "node_uc7e0n1",
-      "node_plly676"
+      "node_plly676",
+      "node_pbb5vep"
     ],
     "node_s6njde5": [
       "node_p5z3zub"
@@ -1961,7 +1967,7 @@
     "node_mth37uv": [
       "node_72aykmt",
       {
-        "to": "innovation-messenger",
+        "to": "node_c6b52mo",
         "accessible": false
       }
     ],
@@ -1992,7 +1998,10 @@
     "node_igws1hk": [
       "node_21fkjot",
       "node_xct2xxb",
-      "node_btv4crv"
+      {
+        "to": "node_btv4crv",
+        "accessible": false
+      }
     ],
     "node_21fkjot": [
       "node_xh5m26h"
@@ -2511,7 +2520,8 @@
       "node_ut4l9pc"
     ],
     "node_24n54sl": [
-      "node_96kldaz"
+      "node_96kldaz",
+      "node_xou06c4"
     ],
     "node_96kldaz": [
       "node_p5rhl1b"
@@ -3718,7 +3728,11 @@
       "kaven-side-entrance"
     ],
     "node_btv4crv": [
-      "Kaven Hall-entrance-2"
+      "Kaven Hall-entrance-2",
+      {
+        "to": "node_igws1hk",
+        "accessible": false
+      }
     ],
     "Fuller Laboratories-entrance-0": [
       "node_igws1hk",
@@ -3831,6 +3845,35 @@
     "node_kwb78zc": [
       "node_obkjm7x",
       "node_8y8mr0h"
+    ],
+    "node_pbb5vep": [
+      "node_xxxh94v"
+    ],
+    "node_xxxh94v": [
+      "node_aay4znj"
+    ],
+    "node_yytd9lc": [
+      "node_aay4znj",
+      "node_q6ozgc6"
+    ],
+    "node_q6ozgc6": [
+      "node_xou06c4"
+    ],
+    "node_ngx7whc": [
+      "node_mrtsh89"
+    ],
+    "node_kwkop3p": [
+      "node_mrtsh89"
+    ],
+    "node_c6b52mo": [
+      {
+        "to": "node_mth37uv",
+        "accessible": false
+      },
+      {
+        "to": "innovation-messenger",
+        "accessible": false
+      }
     ]
   }
 }
