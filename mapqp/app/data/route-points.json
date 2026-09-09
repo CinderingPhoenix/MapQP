@@ -29,7 +29,7 @@
     {"id":"institute-park-salisbury-street","latitude":42.275228,"longitude":-71.805144},
     {"id":"institute-park-humbolt-ave","latitude":42.275631,"longitude":-71.803006},
     {"id":"boynton-stratton","latitude":42.273629,"longitude":-71.807567},
-    {"id":"stratton-higgins-entrance","latitude":42.274145,"longitude":-71.807827},
+    {"id":"stratton-higgins-entrance","latitude":42.274137,"longitude":-71.807842},
     {"id":"higgins-entrance","latitude":42.274507,"longitude":-71.808149},
     {"id":"alden-side-entrance","latitude":42.273397,"longitude":-71.808547},
     {"id":"alden-west-street-entrance","latitude":42.273101,"longitude":-71.808117},
@@ -47,7 +47,7 @@
     {"id":"kaven-stairs-bottom","latitude":42.274605,"longitude":-71.805945},
     {"id":"kaven-boynton-street","latitude":42.274652,"longitude":-71.805416},
     {"id":"kaven-boynton-street-salisbury-street","latitude":42.275094,"longitude":-71.805326},
-    {"id":"kaven-side-entrance","latitude":42.274943,"longitude":-71.805734},
+    {"id":"kaven-side-entrance","latitude":42.274944,"longitude":-71.805731},
     {"id":"fuller-side-stairs","latitude":42.274724,"longitude":-71.8066},
     {"id":"skull-institute","latitude":42.272628,"longitude":-71.805837},
     {"id":"institute-road-coombs","latitude":42.272513,"longitude":-71.806893},
@@ -76,7 +76,7 @@
     {"id":"atwater-fuller-stairs","latitude":42.275461,"longitude":-71.80628},
     {"id":"fuller-salisbury-street-stairs","latitude":42.275249,"longitude":-71.80573},
     {"id":"kaven-entrance","latitude":42.27463,"longitude":-71.805655},
-    {"id":"stratton-entrance","latitude":42.273911,"longitude":-71.807874},
+    {"id":"stratton-entrance","latitude":42.273923,"longitude":-71.807888},
     {"id":"node_hee3l4b","latitude":42.273789,"longitude":-71.810209},
     {"id":"node_hbq0rz0","latitude":42.274018,"longitude":-71.810145},
     {"id":"node_3v8ec98","latitude":42.274179,"longitude":-71.809862},
@@ -891,7 +891,19 @@
     {"id":"node_0uykiw3","latitude":42.274535,"longitude":-71.80838},
     {"id":"node_2hzaalz","latitude":42.273597,"longitude":-71.811007},
     {"id":"node_6svo1qt","latitude":42.273468,"longitude":-71.811201},
-    {"id":"node_1671b2r","latitude":42.273254,"longitude":-71.811411}
+    {"id":"node_1671b2r","latitude":42.273254,"longitude":-71.811411},
+    {"id":"node_0qltq72","latitude":42.273594,"longitude":-71.807267},
+    {"id":"node_l4ia3xk","latitude":42.275016,"longitude":-71.806755},
+    {"id":"node_w0sxbai","latitude":42.27329,"longitude":-71.809344},
+    {"id":"node_2by55nj","latitude":42.273225,"longitude":-71.809357},
+    {"id":"node_18krvvn","latitude":42.273225,"longitude":-71.809372},
+    {"id":"node_ofi5umn","latitude":42.273609,"longitude":-71.810246},
+    {"id":"node_ib8np3q","latitude":42.273653,"longitude":-71.810196},
+    {"id":"node_ltor4t6","latitude":42.273498,"longitude":-71.809978},
+    {"id":"node_qfbebrk","latitude":42.273482,"longitude":-71.810215},
+    {"id":"node_o8o5kyx","latitude":42.27543,"longitude":-71.807815},
+    {"id":"node_dk5gq5j","latitude":42.275417,"longitude":-71.807714},
+    {"id":"node_kwb78zc","latitude":42.275414,"longitude":-71.80764}
   ],
   "connections": {
     "quad-center": [
@@ -912,7 +924,11 @@
     ],
     "quad-daniels": [
       "node_qkgksnv",
-      "node_c0d2z6c"
+      "node_c0d2z6c",
+      {
+        "to": "node_ltor4t6",
+        "accessible": false
+      }
     ],
     "quad-daniels-sanford": [
       "node_z0wpa4j",
@@ -964,7 +980,8 @@
     "olin-main-entrance": [
       "higgins-olin-cut",
       "salisbury-side-entrance",
-      "node_plhkfpm"
+      "node_plhkfpm",
+      "Olin Hall-entrance-0"
     ],
     "olin-salisbury-street": [
       "node_535ubn6",
@@ -983,7 +1000,8 @@
     "gordon": [
       "fuller-side-stairs",
       "node_a2gsuto",
-      "node_rzwcnms"
+      "node_rzwcnms",
+      "Gordon Library-entrance-0"
     ],
     "unity-upper-washburn": [
       "node_e17wwaa",
@@ -994,13 +1012,13 @@
       }
     ],
     "boynton": [
-      "boynton-stratton",
       "node_gwvnjmi",
       "node_k767ddn"
     ],
     "boynton-corner": [
       "boynton-coombs-1",
-      "node_210xmnf"
+      "node_210xmnf",
+      "Boynton Hall-entrance-1"
     ],
     "unity-lower": [
       "kaven-boynton-street",
@@ -1010,8 +1028,8 @@
     ],
     "unity-upper": [
       "node_r9lt83i",
-      "node_1illzq6",
-      "node_xv8pb3v"
+      "node_xv8pb3v",
+      "Unity Hall-entrance-0"
     ],
     "stratton-higgins": [
       "stratton-entrance",
@@ -1026,7 +1044,8 @@
       "node_omia147"
     ],
     "stratton-higgins-entrance": [
-      "stratton-entrance"
+      "stratton-entrance",
+      "Higgins Laboratories-entrance-1"
     ],
     "higgins-entrance": [
       "node_f6zoakj",
@@ -1041,7 +1060,8 @@
       {
         "to": "node_oyoxve0",
         "accessible": false
-      }
+      },
+      "Alden Memorial-entrance-2"
     ],
     "washburn-entrance": [
       {
@@ -1110,7 +1130,8 @@
       "node_jvureqi"
     ],
     "kaven-side-entrance": [
-      "node_wa84csq"
+      "node_wa84csq",
+      "Kaven Hall-entrance-1"
     ],
     "fuller-side-stairs": [
       "node_ndit8t0",
@@ -1156,7 +1177,8 @@
       }
     ],
     "morgan-daniels-institute": [
-      "node_1q5p6cx"
+      "node_1q5p6cx",
+      "Daniels Hall-entrance-0"
     ],
     "institute-morgan": [
       "alumni-field",
@@ -1660,11 +1682,10 @@
     ],
     "node_44y8g76": [
       "node_obkjm7x",
-      "node_wxtxsy6"
+      "node_wxtxsy6",
+      "Olin Hall-entrance-2"
     ],
-    "node_obkjm7x": [
-      "node_8y8mr0h"
-    ],
+    "node_obkjm7x": [],
     "node_6k6gix3": [
       "node_s4e787a"
     ],
@@ -1899,7 +1920,8 @@
       {
         "to": "washburn-entrance",
         "accessible": false
-      }
+      },
+      "Washburn Shops-entrance-0"
     ],
     "node_f3hubup": [
       "node_a2gsuto"
@@ -2009,7 +2031,7 @@
     "node_0dv9bei": [
       "node_7x2h2f6",
       "node_ndit8t0",
-      "node_igws1hk"
+      "Fuller Laboratories-entrance-1"
     ],
     "node_7x2h2f6": [
       "node_zc23uht"
@@ -2183,21 +2205,49 @@
       "node_ax367z4"
     ],
     "node_k767ddn": [
-      "node_37ji0er"
+      {
+        "to": "node_37ji0er",
+        "accessible": false
+      }
     ],
     "node_37ji0er": [
-      "node_df56n4p"
+      {
+        "to": "node_df56n4p",
+        "accessible": false
+      },
+      {
+        "to": "node_k767ddn",
+        "accessible": false
+      }
     ],
     "node_df56n4p": [
-      "node_x3vrw3f"
+      {
+        "to": "node_x3vrw3f",
+        "accessible": false
+      },
+      {
+        "to": "node_37ji0er",
+        "accessible": false
+      }
     ],
     "node_x3vrw3f": [
-      "node_ms8krwf",
+      {
+        "to": "node_ms8krwf",
+        "accessible": false
+      },
       "node_0wnl5ds",
-      "node_v3ytg38"
+      "node_v3ytg38",
+      {
+        "to": "node_df56n4p",
+        "accessible": false
+      }
     ],
     "node_ms8krwf": [
-      "node_bbw3mcz"
+      "node_bbw3mcz",
+      {
+        "to": "node_x3vrw3f",
+        "accessible": false
+      }
     ],
     "node_bbw3mcz": [
       "node_1illzq6",
@@ -2389,8 +2439,7 @@
       "node_8qzuegb"
     ],
     "node_8y8mr0h": [
-      "node_3jyuke5",
-      "node_obkjm7x"
+      "node_3jyuke5"
     ],
     "node_3jyuke5": [
       "node_yu9kvrn",
@@ -2653,7 +2702,8 @@
       "alumni-field"
     ],
     "node_25h0nxj": [
-      "node_m7egvzn"
+      "node_m7egvzn",
+      "Higgins Laboratories-entrance-3"
     ],
     "node_m7egvzn": [
       "node_emtpcpa"
@@ -2665,7 +2715,8 @@
       "node_xwfx1qw"
     ],
     "node_xwfx1qw": [
-      "stratton-higgins"
+      "stratton-higgins",
+      "Higgins Laboratories-entrance-2"
     ],
     "node_tryf9dn": [
       "node_dy81aa5"
@@ -2688,18 +2739,13 @@
         "to": "node_bj9seza",
         "accessible": false
       },
-      {
-        "to": "node_wgpp91e",
-        "accessible": false
-      }
+      "node_18krvvn"
     ],
     "node_wgpp91e": [
       "node_c0d2z6c",
       "node_y0g2xm5",
-      {
-        "to": "node_867v76c",
-        "accessible": false
-      }
+      "node_18krvvn",
+      "node_w0sxbai"
     ],
     "node_c0d2z6c": [
       "node_y0g2xm5",
@@ -2739,7 +2785,6 @@
     ],
     "node_sta2qxp": [
       "node_bnxhiti",
-      "node_jdbfuj1",
       "node_fu5al4a"
     ],
     "node_fu5al4a": [
@@ -3658,6 +3703,134 @@
     ],
     "node_1671b2r": [
       "node_j6jv8xp"
+    ],
+    "Unity Hall-entrance-1": [
+      "node_1illzq6",
+      "Unity Hall-entrance-0"
+    ],
+    "Unity Hall-entrance-2": [
+      "node_7ek5qjv"
+    ],
+    "Kaven Hall-entrance-0": [
+      "node_w8rimys"
+    ],
+    "Kaven Hall-entrance-1": [
+      "kaven-side-entrance"
+    ],
+    "node_btv4crv": [
+      "Kaven Hall-entrance-2"
+    ],
+    "Fuller Laboratories-entrance-0": [
+      "node_igws1hk",
+      "Fuller Laboratories-entrance-1"
+    ],
+    "Alden Memorial-entrance-0": [
+      "alden"
+    ],
+    "Alden Memorial-entrance-1": [
+      "alden-side-entrance"
+    ],
+    "node_plt0mr7": [
+      "Boynton Hall-entrance-2"
+    ],
+    "node_0qltq72": [
+      "boynton",
+      "Boynton Hall-entrance-0",
+      "boynton-stratton"
+    ],
+    "node_l4ia3xk": [
+      "node_kuwf96m"
+    ],
+    "Atwater Kent Laboratories-entrance-1": [
+      "node_l4ia3xk"
+    ],
+    "Atwater Kent Laboratories-entrance-0": [
+      "node_98ruz7p"
+    ],
+    "Goddard Hall-entrance-1": [
+      "node_8y8mr0h"
+    ],
+    "Olin Hall-entrance-1": [
+      "node_vsk10ty"
+    ],
+    "Higgins Laboratories-entrance-0": [
+      "higgins-entrance"
+    ],
+    "stratton-entrance": [
+      "Stratton Hall-entrance-0"
+    ],
+    "Project Center-entrance-0": [
+      "node_y1c24ar"
+    ],
+    "Project Center-entrance-1": [
+      "node_lfw5lpl"
+    ],
+    "Innovation Studios-entrance-1": [
+      "node_jdbfuj1"
+    ],
+    "Innovation Studios-entrance-0": [
+      "node_sta2qxp",
+      "Innovation Studios-entrance-1"
+    ],
+    "node_18krvvn": [
+      "node_2by55nj"
+    ],
+    "node_2by55nj": [
+      "node_w0sxbai",
+      "Sandford Riley Hall-entrance-1"
+    ],
+    "Sandford Riley Hall-entrance-0": [
+      "node_n8fcrae"
+    ],
+    "Morgan Hall-entrance-1": [
+      "node_1q5p6cx"
+    ],
+    "Morgan Hall-entrance-0": [
+      "node_ofi5umn",
+      {
+        "to": "node_qfbebrk",
+        "accessible": false
+      }
+    ],
+    "node_ib8np3q": [
+      "node_ofi5umn",
+      "quad-rec-morgan"
+    ],
+    "node_qfbebrk": [
+      {
+        "to": "node_ltor4t6",
+        "accessible": false
+      },
+      {
+        "to": "Morgan Hall-entrance-0",
+        "accessible": false
+      }
+    ],
+    "node_ltor4t6": [
+      {
+        "to": "quad-daniels",
+        "accessible": false
+      },
+      {
+        "to": "node_qfbebrk",
+        "accessible": false
+      }
+    ],
+    "Daniels Hall-entrance-1": [
+      "quad-daniels"
+    ],
+    "Goddard Hall-entrance-0": [
+      "node_o8o5kyx"
+    ],
+    "node_o8o5kyx": [
+      "node_dk5gq5j"
+    ],
+    "node_dk5gq5j": [
+      "node_kwb78zc"
+    ],
+    "node_kwb78zc": [
+      "node_obkjm7x",
+      "node_8y8mr0h"
     ]
   }
 }

@@ -15,6 +15,7 @@ const CAMPUS_CENTER: [number, number] = [42.2744, -71.8075];
 export default function EditorMap({
   nodes,
   connections,
+  buildings,
   mode,
   selectedNodeId,
   onMapClick,
@@ -24,7 +25,23 @@ export default function EditorMap({
 }: EditorMapProps) {
   const lines: { key: string; fromId: string; toId: string; accessible: boolean; positions: [[number, number], [number, number]] }[] = [];
   const seenEdges = new Set<string>();
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  const allNodes: { id: string; latitude: number; longitude: number }[] = [...nodes];
+  
+  if (buildings) {
+    buildings.forEach((building) => {
+      building.entrances.forEach((entrance, index) => {
+        const entranceId = `${building.name}-entrance-${index}`;
+        allNodes.push({
+          id: entranceId,
+          latitude: entrance.latitude,
+          longitude: entrance.longitude,
+        });
+      });
+    });
+  }
+
+  const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
 
   const isLineClickable = mode === "disconnect" || mode === "delete" || mode === "accessibility";
 
@@ -73,7 +90,7 @@ export default function EditorMap({
       <MapEventCatcher onMapClick={onMapClick} />
 
       {lines.map((line) => {
-        const lineColor = line.accessible ? "#d46b3f" : "#8e44ad"; // purple for non-accessible/stairs
+        const lineColor = line.accessible ? "#d46b3f" : "#8e44ad";
 
         return (
           <React.Fragment key={line.key}>
@@ -98,7 +115,7 @@ export default function EditorMap({
                 color: lineColor,
                 weight: 4,
                 opacity: 0.8,
-                dashArray: line.accessible ? undefined : "6, 6" // dashed line for non-accessible segments
+                dashArray: line.accessible ? undefined : "6, 6"
               }}
               eventHandlers={{
                 click: (e: { originalEvent: { stopPropagation: () => void; }; }) => {
@@ -160,6 +177,52 @@ export default function EditorMap({
           </Marker>
         );
       })}
+
+      {buildings && buildings.flatMap((building) =>
+        building.entrances.map((entrance, index) => {
+          const entranceId = `${building.name}-entrance-${index}`;
+          const isSelected = entranceId === selectedNodeId;
+
+          const entranceIcon = divIcon({
+            className: "",
+            html: `<div style="
+              width: ${isSelected ? 18 : 14}px;
+              height: ${isSelected ? 18 : 14}px;
+              background-color: ${isSelected ? "#e06b3c" : "#2980b9"};
+              border: 2px format #fffdf8;
+              border: 2px solid #fffdf8;
+              border-radius: 4px;
+              cursor: grab;
+              transform: translate(-50%, -50%);
+            " title="${building.name}: ${entrance.name}"></div>`,
+            iconSize: [0, 0],
+          });
+
+          return (
+            <Marker
+              key={entranceId}
+              position={[entrance.latitude, entrance.longitude]}
+              icon={entranceIcon}
+              draggable={true}
+              eventHandlers={{
+                click: (e: { originalEvent: { stopPropagation: () => void; }; }) => {
+                  e.originalEvent.stopPropagation();
+                  onNodeClick(entranceId);
+                },
+                dragend: (e: { target: any; }) => {
+                  const marker = e.target;
+                  const position = marker.getLatLng();
+                  onNodeDragEnd(entranceId, position.lat, position.lng);
+                },
+              }}
+            >
+              <Tooltip permanent={isSelected} direction="top">
+                {building.name} - {entrance.name} (Fl {entrance.floor})
+              </Tooltip>
+            </Marker>
+          );
+        })
+      )}
     </MapContainer>
   );
 }

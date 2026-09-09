@@ -40,62 +40,71 @@ const walkwayConnections: Record<string, WalkwayConnectionItem[]> = routePointsD
 
 const campusNodes: GraphNode[] = [
   ...walkwayNodes,
-  ...buildingData.flatMap((building) => [
-    ...building.entrances.map((entrance, index) => ({
+  ...buildingData.flatMap((building) =>
+    building.entrances.map((entrance, index) => ({
       id: `${building.name}-entrance-${index}`,
       latitude: entrance.latitude,
       longitude: entrance.longitude,
-    })),
-  ]),
+    }))
+  ),
 ];
 
+const campusNodesById = new Map(campusNodes.map((node) => [node.id, node]));
+
 const graphEdges = new Map<string, GraphEdge[]>();
-for (const node of walkwayNodes) {
+for (const node of campusNodes) {
   graphEdges.set(node.id, []);
 }
-const walkwayNodesById = new Map(walkwayNodes.map((node) => [node.id, node]));
+
 for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
-  const fromNode = walkwayNodesById.get(fromId);
+  const fromNode = campusNodesById.get(fromId);
   if (!fromNode) {
-    throw new Error(`Unknown walkway node: ${fromId}`);
+    throw new Error(`Unknown node in walkwayConnections: ${fromId}`);
   }
 
   for (const item of toIds) {
     const toId = typeof item === "string" ? item : item.to;
-    const toNode = walkwayNodesById.get(toId);
+    const toNode = campusNodesById.get(toId);
     if (!toNode) {
-      throw new Error(`Unknown walkway node: ${toId}`);
+      throw new Error(`Unknown node in walkwayConnections: ${toId}`);
     }
     connectWalkwayNodes(fromNode, toNode);
   }
 }
 
-export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
-  return {
-    nodes: walkwayNodes.map((node) => [node.latitude, node.longitude]),
-    connections: Object.entries(walkwayConnections).flatMap(([fromId, toIds]) => {
-      const fromNode = walkwayNodesById.get(fromId)!;
-      return toIds.map((item) => {
-        const toId = typeof item === "string" ? item : item.to;
-        const toNode = walkwayNodesById.get(toId)!;
-        return [
-          [fromNode.latitude, fromNode.longitude] as [number, number],
-          [toNode.latitude, toNode.longitude] as [number, number],
-        ] as [[number, number], [number, number]];
-      });
-    }),
-  };
+for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
+  const existingEdges = graphEdges.get(node.id) ?? [];
+  if (existingEdges.length === 0) {
+    const nearest = nearestEdges(node);
+    graphEdges.set(node.id, nearest);
+    for (const edge of nearest) {
+      graphEdges.set(edge.nodeId, [
+        ...(graphEdges.get(edge.nodeId) ?? []),
+        { nodeId: node.id, distance: edge.distance },
+      ]);
+    }
+  }
 }
 
-for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
-  const nearest = nearestEdges(node);
-  graphEdges.set(node.id, nearest);
-  for (const edge of nearest) {
-    graphEdges.set(edge.nodeId, [
-      ...(graphEdges.get(edge.nodeId) ?? []),
-      { nodeId: node.id, distance: edge.distance },
-    ]);
-  }
+export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
+  return {
+    nodes: campusNodes.map((node) => [node.latitude, node.longitude]),
+    connections: Object.entries(walkwayConnections).flatMap(([fromId, toIds]) => {
+      const fromNode = campusNodesById.get(fromId);
+      if (!fromNode) return [];
+      return toIds
+        .map((item) => {
+          const toId = typeof item === "string" ? item : item.to;
+          const toNode = campusNodesById.get(toId);
+          if (!toNode) return null;
+          return [
+            [fromNode.latitude, fromNode.longitude] as [number, number],
+            [toNode.latitude, toNode.longitude] as [number, number],
+          ] as [[number, number], [number, number]];
+        })
+        .filter((conn): conn is [[number, number], [number, number]] => conn !== null);
+    }),
+  };
 }
 
 export async function routeBetween(
@@ -219,7 +228,6 @@ function findLocalWalkingRoute(
     return [node.latitude, node.longitude] as [number, number];
   });
 
-  // Smooth the path geometry (adjust '2' for more or fewer passes)
   const geometry = smoothPolyline(rawGeometry, 0.25);
 
   const distance = distances.get(destinationId)!;
@@ -238,16 +246,14 @@ function nearestEdges(
   let minDistanceToSegment = Number.POSITIVE_INFINITY;
   const seenEdges = new Set<string>();
 
-  for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
-    const fromNode = walkwayNodesById.get(fromId);
+  for (const [fromId, neighbors] of graphEdges.entries()) {
+    const fromNode = campusNodesById.get(fromId);
     if (!fromNode) continue;
 
-    for (const item of toIds) {
-      const toId = typeof item === "string" ? item : item.to;
-      const toNode = walkwayNodesById.get(toId);
-      if (!toNode) {
-        throw new Error(`Unknown walkway node: ${toId}`);
-      }
+    for (const neighbor of neighbors) {
+      const toId = neighbor.nodeId;
+      const toNode = campusNodesById.get(toId);
+      if (!toNode) continue;
 
       const edgeKey = [fromId, toId].sort().join("::");
       if (seenEdges.has(edgeKey)) continue;

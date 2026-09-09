@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import type { ActionFunctionArgs } from "react-router";
 import { useFetcher } from "react-router";
 import routePointsData from "../data/route-points.json";
+import buildingData from "../data/wpi-buildings.json";
 
 type GraphNode = {
   id: string;
@@ -17,10 +18,24 @@ type ConnectionDetail = {
 
 type Connections = Record<string, (string | ConnectionDetail)[]>;
 
+type Entrance = {
+  latitude: number;
+  longitude: number;
+  floor: number;
+  accessibility: boolean;
+  name: string;
+};
+
+type Building = {
+  name: string;
+  entrances: Entrance[];
+};
+
 export type EditorMapProps = {
   nodes: GraphNode[];
   connections: Connections;
-  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility";
+  buildings: Building[];
+  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility" | "add-entrance";
   selectedNodeId: string | null;
   onMapClick: (lat: number, lng: number) => void;
   onNodeClick: (id: string) => void;
@@ -41,8 +56,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }));
   }
 
-  // Safely format output json string without dumping `[object Object]` directly into subEntries
-  const rootKeys = Object.keys(data);
+  const rootKeys = Object.keys(data).filter((k) => k !== "buildings");
   let jsonString = "{\n";
   rootKeys.forEach((key, i) => {
     const val = data[key];
@@ -70,8 +84,16 @@ export async function action({ request }: ActionFunctionArgs) {
   });
   jsonString += "}";
 
-  const filePath = path.join(process.cwd(), "app", "data", "route-points.json");
-  await fs.writeFile(filePath, jsonString, "utf-8");
+  if (data.nodes || data.connections) {
+    const filePath = path.join(process.cwd(), "app", "data", "route-points.json");
+    await fs.writeFile(filePath, jsonString, "utf-8");
+  }
+
+  if (data.buildings) {
+    const buildingsPath = path.join(process.cwd(), "app", "data", "wpi-buildings.json");
+    await fs.writeFile(buildingsPath, JSON.stringify(data.buildings, null, 2), "utf-8");
+  }
+
   return { success: true };
 }
 
@@ -82,12 +104,80 @@ export default function Editor() {
 
   const [nodes, setNodes] = useState<GraphNode[]>(routePointsData.nodes);
   const [connections, setConnections] = useState<Connections>(routePointsData.connections as Connections);
-  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility">("add");
+  const [buildings, setBuildings] = useState<Building[]>(buildingData as Building[]);
+
+  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility" | "add-entrance">("add");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  const [selectedBuilding, setSelectedBuilding] = useState<string>(buildingData[0]?.name || "");
+  const [entranceName, setEntranceName] = useState("");
+  const [entranceFloor, setEntranceFloor] = useState<number>(1);
+  const [entranceAccessible, setEntranceAccessible] = useState<boolean>(true);
+
+  const handleUpdateEntranceField = (field: string, value: any) => {
+    if (!selectedNodeId || !selectedNodeId.includes("-entrance-")) return;
+    const parts = selectedNodeId.split("-entrance-");
+    const buildingSlug = parts[0];
+    const entranceIndex = Number(parts[1]);
+
+    const nextBuildings = buildings.map((b) => {
+      const sanitizedName = b.name.toLowerCase().replace(/[^a-z0-9]/g, "-");
+      if (sanitizedName === buildingSlug) {
+        const updatedEntrances = [...b.entrances];
+        updatedEntrances[entranceIndex] = {
+          ...updatedEntrances[entranceIndex],
+          [field]: value,
+        };
+        return { ...b, entrances: updatedEntrances };
+      }
+      return b;
+    });
+
+    setBuildings(nextBuildings);
+    saveToDisk(nodes, connections, nextBuildings);
+  };
+
+  const saveToDisk = (updatedNodes: GraphNode[], updatedConns: Connections, updatedBuildings?: Building[]) => {
+    fetcher.submit(
+      { nodes: updatedNodes, connections: updatedConns, buildings: updatedBuildings || buildings },
+      { method: "POST", encType: "application/json" }
+    );
+  };
+
   const handleNodeDragEnd = (id: string, latitude: number, longitude: number) => {
+    if (id.includes("-entrance-")) {
+      const parts = id.split("-entrance-");
+      const buildingName = parts[0].replace(/-/g, " ");
+      const entranceIndex = Number(parts[1]);
+
+      const nextBuildings = buildings.map((b) => {
+        if (b.name.toLowerCase().replace(/[^a-z0-9]/g, "") === buildingName.toLowerCase().replace(/[^a-z0-9]/g, "")) {
+          const updatedEntrances = [...b.entrances];
+          if (updatedEntrances[entranceIndex]) {
+            updatedEntrances[entranceIndex] = {
+              ...updatedEntrances[entranceIndex],
+              latitude: Number(latitude.toFixed(6)),
+              longitude: Number(longitude.toFixed(6)),
+            };
+          }
+          return { ...b, entrances: updatedEntrances };
+        }
+        return b;
+      });
+
+      setBuildings(nextBuildings);
+      saveToDisk(nodes, connections, nextBuildings);
+      return;
+    }
+
     const nextNodes = nodes.map((node) =>
-      node.id === id ? { ...node, latitude, longitude } : node
+      node.id === id
+        ? {
+            ...node,
+            latitude: Number(latitude.toFixed(6)),
+            longitude: Number(longitude.toFixed(6)),
+          }
+        : node
     );
     setNodes(nextNodes);
     saveToDisk(nextNodes, connections);
@@ -109,14 +199,37 @@ export default function Editor() {
     };
   }, []);
 
-  const saveToDisk = (updatedNodes: GraphNode[], updatedConns: Connections) => {
-    fetcher.submit(
-      { nodes: updatedNodes, connections: updatedConns },
-      { method: "POST", encType: "application/json" }
-    );
-  };
-
   const handleMapClick = (latitude: number, longitude: number) => {
+    if (mode === "add-entrance") {
+      if (!selectedBuilding) return;
+      const roundedLat = Number(latitude.toFixed(6));
+      const roundedLng = Number(longitude.toFixed(6));
+
+      const nextBuildings = buildings.map((b) => {
+        if (b.name === selectedBuilding) {
+          return {
+            ...b,
+            entrances: [
+              ...b.entrances,
+              {
+                latitude: roundedLat,
+                longitude: roundedLng,
+                name: entranceName || "Main Entrance",
+                floor: Number(entranceFloor),
+                accessibility: entranceAccessible,
+              },
+            ],
+          };
+        }
+        return b;
+      });
+
+      setBuildings(nextBuildings);
+      saveToDisk(nodes, connections, nextBuildings);
+      setEntranceName("");
+      return;
+    }
+
     if (mode !== "add") return;
 
     const id = `node_${Math.random().toString(36).substring(2, 9)}`;
@@ -181,7 +294,47 @@ export default function Editor() {
   };
 
   const handleNodeClick = (nodeId: string) => {
+    if (selectedNodeId === nodeId && (mode === "add" || mode === "add-entrance")) {
+      setSelectedNodeId(null);
+      return;
+    }
+
+    if (mode === "add" || mode === "add-entrance") {
+      setSelectedNodeId(nodeId);
+      return;
+    }
+
     if (mode === "delete") {
+      if (nodeId.includes("-entrance-")) {
+        const parts = nodeId.split("-entrance-");
+        const targetBuildingName = parts[0].replace(/-/g, " ");
+        const entranceIndex = Number(parts[1]);
+
+        const nextBuildings = buildings.map((b) => {
+          if (b.name.toLowerCase().replace(/[^a-z0-9]/g, "") === targetBuildingName.toLowerCase().replace(/[^a-z0-9]/g, "")) {
+            return {
+              ...b,
+              entrances: b.entrances.filter((_, idx) => idx !== entranceIndex),
+            };
+          }
+          return b;
+        });
+
+        const nextConnections = { ...connections };
+        delete nextConnections[nodeId];
+        Object.keys(nextConnections).forEach((key) => {
+          nextConnections[key] = nextConnections[key].filter((item) => {
+            const target = typeof item === "string" ? item : item?.to;
+            return target && target !== nodeId;
+          });
+        });
+
+        setBuildings(nextBuildings);
+        setConnections(nextConnections);
+        saveToDisk(nodes, nextConnections, nextBuildings);
+        return;
+      }
+
       const nextNodes = nodes.filter((n) => n.id !== nodeId);
       const nextConnections = { ...connections };
       delete nextConnections[nodeId];
@@ -195,6 +348,11 @@ export default function Editor() {
       setNodes(nextNodes);
       setConnections(nextConnections);
       saveToDisk(nextNodes, nextConnections);
+      return;
+    }
+
+    if (nodeId.includes("-entrance-")) {
+      setSelectedNodeId(nodeId);
       return;
     }
 
@@ -291,6 +449,7 @@ export default function Editor() {
           <EditorMap
             nodes={nodes}
             connections={connections}
+            buildings={buildings}
             mode={mode}
             selectedNodeId={selectedNodeId}
             onMapClick={handleMapClick}
@@ -321,6 +480,12 @@ export default function Editor() {
               Add Node
             </button>
             <button
+              style={{ fontWeight: mode === "add-entrance" ? "bold" : "normal", color: "#2980b9" }}
+              onClick={() => { setMode("add-entrance"); setSelectedNodeId(null); }}
+            >
+              Add Entrance
+            </button>
+            <button
               style={{ fontWeight: mode === "connect" ? "bold" : "normal" }}
               onClick={() => { setMode("connect"); setSelectedNodeId(null); }}
             >
@@ -330,7 +495,7 @@ export default function Editor() {
               style={{ fontWeight: mode === "accessibility" ? "bold" : "normal", color: "#8e44ad" }}
               onClick={() => { setMode("accessibility"); setSelectedNodeId(null); }}
             >
-              Toggle Accessibility
+              Accessibility
             </button>
             <button
               style={{ fontWeight: mode === "disconnect" ? "bold" : "normal", color: "#d35400" }}
@@ -342,25 +507,184 @@ export default function Editor() {
               style={{ fontWeight: mode === "delete" ? "bold" : "normal", color: "#c0392b" }}
               onClick={() => { setMode("delete"); setSelectedNodeId(null); }}
             >
-              Delete Node
+              Delete
             </button>
           </div>
 
+          {mode === "add-entrance" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "#f9f9f9", padding: "0.75rem", borderRadius: "4px", border: "1px solid #ddd" }}>
+              <h4 style={{ margin: "0 0 0.25rem 0", fontSize: "0.9rem" }}>Building Entrance Details</h4>
+              <label style={{ fontSize: "0.8rem" }}>
+                Building:
+                <select 
+                  value={selectedBuilding} 
+                  onChange={(e) => setSelectedBuilding(e.target.value)}
+                  style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                >
+                  {buildings.map((b) => (
+                    <option key={b.name} value={b.name}>{b.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ fontSize: "0.8rem" }}>
+                Entrance Name:
+                <input 
+                  type="text" 
+                  value={entranceName} 
+                  onChange={(e) => setEntranceName(e.target.value)} 
+                  placeholder="e.g. Quad Entrance"
+                  style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                />
+              </label>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <label style={{ fontSize: "0.8rem", flex: 1 }}>
+                  Floor:
+                  <input 
+                    type="number" 
+                    step="0.5"
+                    value={entranceFloor} 
+                    onChange={(e) => setEntranceFloor(Number(e.target.value))} 
+                    style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                  />
+                </label>
+
+                <label style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "1rem" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={entranceAccessible} 
+                    onChange={(e) => setEntranceAccessible(e.target.checked)} 
+                  />
+                  Accessible
+                </label>
+              </div>
+              <span style={{ fontSize: "0.75rem", color: "#2980b9", fontWeight: "bold" }}>Click map to place entrance in {selectedBuilding}.</span>
+            </div>
+          )}
+
+          {selectedNodeId && !selectedNodeId.includes("-entrance-") && (() => {
+            const node = nodes.find((n) => n.id === selectedNodeId);
+            if (!node) return null;
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "#e8f8f5", padding: "0.75rem", borderRadius: "4px", border: "1px solid #1abc9c" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 style={{ margin: "0", fontSize: "0.9rem", color: "#16a085" }}>Edit Node Properties</h4>
+                  <button 
+                    onClick={() => setSelectedNodeId(null)}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <span style={{ fontSize: "0.75rem", color: "#666" }}>Node ID: {node.id}</span>
+
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <label style={{ fontSize: "0.8rem", flex: 1 }}>
+                    Latitude:
+                    <input 
+                      type="number" 
+                      step="0.000001"
+                      value={node.latitude} 
+                      onChange={(e) => {
+                        const lat = Number(e.target.value);
+                        const nextNodes = nodes.map((n) => n.id === node.id ? { ...n, latitude: lat } : n);
+                        setNodes(nextNodes);
+                        saveToDisk(nextNodes, connections);
+                      }} 
+                      style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: "0.8rem", flex: 1 }}>
+                    Longitude:
+                    <input 
+                      type="number" 
+                      step="0.000001"
+                      value={node.longitude} 
+                      onChange={(e) => {
+                        const lng = Number(e.target.value);
+                        const nextNodes = nodes.map((n) => n.id === node.id ? { ...n, longitude: lng } : n);
+                        setNodes(nextNodes);
+                        saveToDisk(nextNodes, connections);
+                      }} 
+                      style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                    />
+                  </label>
+                </div>
+              </div>
+            );
+          })()}
+          {selectedNodeId && selectedNodeId.includes("-entrance-") && (() => {
+            const parts = selectedNodeId.split("-entrance-");
+            const buildingSlug = parts[0];
+            const entranceIndex = Number(parts[1]);
+            const building = buildings.find(
+              (b) => b.name.toLowerCase().replace(/[^a-z0-9]/g, "-") === buildingSlug
+            );
+            const entrance = building?.entrances[entranceIndex];
+
+            if (!entrance) return null;
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", background: "#fef9e7", padding: "0.75rem", borderRadius: "4px", border: "1px solid #f1c40f" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 style={{ margin: "0", fontSize: "0.9rem", color: "#b7950b" }}>Edit Entrance Properties</h4>
+                  <button 
+                    onClick={() => setSelectedNodeId(null)}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <span style={{ fontSize: "0.75rem", color: "#666" }}>Building: {building.name}</span>
+
+                <label style={{ fontSize: "0.8rem" }}>
+                  Name:
+                  <input 
+                    type="text" 
+                    value={entrance.name} 
+                    onChange={(e) => handleUpdateEntranceField("name", e.target.value)} 
+                    style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                  />
+                </label>
+
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <label style={{ fontSize: "0.8rem", flex: 1 }}>
+                    Floor:
+                    <input 
+                      type="number" 
+                      step="0.5"
+                      value={entrance.floor} 
+                      onChange={(e) => handleUpdateEntranceField("floor", Number(e.target.value))} 
+                      style={{ width: "100%", marginTop: "2px", padding: "4px" }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "1rem" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={entrance.accessibility ?? true} 
+                      onChange={(e) => handleUpdateEntranceField("accessibility", e.target.checked)} 
+                    />
+                    Accessible
+                  </label>
+                </div>
+              </div>
+            );
+          })()}
+
           <p style={{ fontSize: "0.85rem", color: "#555", margin: 0 }}>
-            {mode === "add" && "Click the map to create a node instantly."}
-            {mode === "connect" && (!selectedNodeId
-              ? "Click the first node to select it."
-              : `Selected "${selectedNodeId}". Click a second node to connect.`)}
-            {mode === "accessibility" && (!selectedNodeId
-              ? "Click first node of a connection to toggle accessibility."
-              : `Selected "${selectedNodeId}". Click connected node or line to toggle accessible/stairs.`)}
-            {mode === "disconnect" && (!selectedNodeId
-              ? "Click two connected nodes (or click line directly) to disconnect."
-              : `Selected "${selectedNodeId}". Click connected node to remove edge.`)}
+            {mode === "add" && "Click the map to create a walkway node instantly."}
+            {mode === "add-entrance" && "Fill out metadata above and click the map location to add the building entrance."}
+            {mode === "connect" && (!selectedNodeId ? "Click the first node to select it." : `Selected "${selectedNodeId}". Click second node to connect.`)}
+            {mode === "accessibility" && (!selectedNodeId ? "Click first node of a connection." : `Selected "${selectedNodeId}". Click target node or line to toggle accessibility.`)}
+            {mode === "disconnect" && (!selectedNodeId ? "Click two connected nodes or click line directly." : `Selected "${selectedNodeId}". Click connected node to remove.`)}
             {mode === "delete" && "Click a node on the map to delete it immediately."}
           </p>
 
-          <hr style={{ borderTop: "1px solid #ccc", margin: "0.5rem 0" }} />
+          <hr style={{ borderTop: "1px solid #ccc", margin: "0.2rem 0" }} />
 
           <div>
             <h4 style={{ margin: "0 0 0.5rem 0" }}>Active Connections ({activeConnectionList.length})</h4>
@@ -369,15 +693,14 @@ export default function Editor() {
                 <div key={`${from}::${to}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", background: "#f5f5f5", padding: "0.25rem 0.5rem", borderRadius: "3px" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                     {from} ↔ {to}
-                    {!accessible && <span style={{ color: "#c0392b", fontSize: "0.7rem", fontWeight: "bold", background: "#fadbd8", padding: "1px 4px", borderRadius: "3px" }}>Not Accessible</span>}
+                    {!accessible && <span style={{ color: "#c0392b", fontSize: "0.7rem", fontWeight: "bold", background: "#fadbd8", padding: "1px 4px", borderRadius: "3px" }}>Stairs</span>}
                   </span>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <button
                       onClick={() => toggleAccessibility(from, to)}
                       style={{ color: accessible ? "#8e44ad" : "#27ae60", border: "none", background: "none", cursor: "pointer", fontSize: "0.75rem" }}
-                      title="Toggle accessibility"
                     >
-                      {accessible ? "Mark Stairs/Steep" : "Mark Accessible"}
+                      {accessible ? "Mark Stairs" : "Mark Accessible"}
                     </button>
                     <button
                       onClick={() => removeConnection(from, to)}
