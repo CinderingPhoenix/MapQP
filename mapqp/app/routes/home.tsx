@@ -54,7 +54,9 @@ type Coordinates = {
   timestamp: number;
 };
 
-const SAMPLE_COUNT = 5;
+const SAMPLE_COUNT = 8;
+const MAX_ACCURACY_THRESHOLD = 150;
+const MAX_SAMPLE_AGE_MS = 15_000;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const WALKWAY_DEBUG = import.meta.env.DEV ? getWalkwayDebugOverlay() : undefined;
 const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
@@ -62,6 +64,43 @@ const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   name: building.name,
   entrances: building.entrances,
 }));
+
+function computeWeightedCoordinates(samples: Coordinates[], currentTimestamp: number): Coordinates | null {
+  if (samples.length === 0) return null;
+
+  // 1. Filter out stale samples older than 15s
+  let freshSamples = samples.filter((s) => currentTimestamp - s.timestamp <= MAX_SAMPLE_AGE_MS);
+  if (freshSamples.length === 0) {
+    freshSamples = [samples[samples.length - 1]];
+  }
+
+  // 2. Filter out low-accuracy spikes if higher quality fixes exist
+  const accurateSamples = freshSamples.filter((s) => s.accuracy <= MAX_ACCURACY_THRESHOLD);
+  const candidateSamples = accurateSamples.length > 0 ? accurateSamples : freshSamples;
+
+  // 3. Inverse Variance Weighting: w_i = 1 / accuracy^2
+  let totalWeight = 0;
+  let weightedLat = 0;
+  let weightedLng = 0;
+  let weightedAcc = 0;
+
+  for (const sample of candidateSamples) {
+    const weight = 1 / Math.pow(Math.max(sample.accuracy, 0.5), 2);
+    totalWeight += weight;
+    weightedLat += sample.latitude * weight;
+    weightedLng += sample.longitude * weight;
+    weightedAcc += sample.accuracy * weight;
+  }
+
+  const latestSample = candidateSamples[candidateSamples.length - 1];
+
+  return {
+    ...latestSample,
+    latitude: weightedLat / totalWeight,
+    longitude: weightedLng / totalWeight,
+    accuracy: weightedAcc / totalWeight,
+  };
+}
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -126,43 +165,28 @@ export default function Home() {
           timestamp,
         };
 
-        const nextSamples = [...samplesRef.current, sample].slice(
-          -SAMPLE_COUNT,
-        );
+        const nextSamples = [...samplesRef.current, sample]
+          .filter((s) => timestamp - s.timestamp <= MAX_SAMPLE_AGE_MS)
+          .slice(-SAMPLE_COUNT);
 
         samplesRef.current = nextSamples;
 
-        const totals = nextSamples.reduce(
-          (total, currentSample) => ({
-            latitude: total.latitude + currentSample.latitude,
-            longitude: total.longitude + currentSample.longitude,
-            accuracy: total.accuracy + currentSample.accuracy,
-          }),
-          {
-            latitude: 0,
-            longitude: 0,
-            accuracy: 0,
-          },
-        );
+        const smoothed = computeWeightedCoordinates(nextSamples, timestamp);
+        if (smoothed) {
+          setCoordinates(smoothed);
 
-        setCoordinates({
-          ...sample,
-          latitude: totals.latitude / nextSamples.length,
-          longitude: totals.longitude / nextSamples.length,
-          accuracy: totals.accuracy / nextSamples.length,
-        });
-
-        if (import.meta.env.DEV) {
-          console.debug("[MapQP] GPS position", {
-            latitude: totals.latitude / nextSamples.length,
-            longitude: totals.longitude / nextSamples.length,
-            accuracy: totals.accuracy / nextSamples.length,
-            altitude: sample.altitude,
-            altitudeAccuracy: sample.altitudeAccuracy,
-            heading: sample.heading,
-            speed: sample.speed,
-            timestamp: sample.timestamp,
-          });
+          if (import.meta.env.DEV) {
+            console.debug("[MapQP] GPS position (smoothed)", {
+              latitude: smoothed.latitude,
+              longitude: smoothed.longitude,
+              accuracy: smoothed.accuracy,
+              altitude: sample.altitude,
+              altitudeAccuracy: sample.altitudeAccuracy,
+              heading: sample.heading,
+              speed: sample.speed,
+              timestamp: sample.timestamp,
+            });
+          }
         }
 
         setError("");
@@ -256,7 +280,6 @@ export default function Home() {
         throw new Error("The walking route service could not find a route. Try again.");
       }
       const outdoorRoute = fastestRoute(availableOutdoorRoutes);
-      setRoute(outdoorRoute);
       setRoute(outdoorRoute);
     } catch (routeRequestError) {
       autoRouteKeyRef.current = "";
