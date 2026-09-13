@@ -1,6 +1,8 @@
 import buildingData from "../data/wpi-buildings.json";
 import routePointsData from "../data/route-points.json";
 
+// --- Types ---
+
 export type RoutePoint = {
   latitude: number;
   longitude: number;
@@ -19,9 +21,6 @@ export type WalkwayDebugOverlay = {
   connections: [[number, number], [number, number]][];
 };
 
-const routeCache = new Map<string, WalkingRoute>();
-const WALKING_SPEED_METERS_PER_SECOND = 1.4;
-
 type GraphNode = {
   id: string;
   latitude: number;
@@ -33,11 +32,18 @@ type GraphEdge = {
   distance: number;
 };
 
-const walkwayNodes: GraphNode[] = routePointsData.nodes;
-
 type WalkwayConnectionItem = string | { to: string; accessible?: boolean };
+
+// --- Constants & Graph Initialization ---
+
+const WALKING_SPEED_METERS_PER_SECOND = 1.4;
+const routeCache = new Map<string, WalkingRoute>();
+
+// Load static walkway nodes from JSON
+const walkwayNodes: GraphNode[] = routePointsData.nodes;
 const walkwayConnections: Record<string, WalkwayConnectionItem[]> = routePointsData.connections;
 
+// Combine walkway intersection nodes and building entrance points into a unified graph
 const campusNodes: GraphNode[] = [
   ...walkwayNodes,
   ...buildingData.flatMap((building) =>
@@ -50,12 +56,13 @@ const campusNodes: GraphNode[] = [
 ];
 
 const campusNodesById = new Map(campusNodes.map((node) => [node.id, node]));
-
 const graphEdges = new Map<string, GraphEdge[]>();
+
 for (const node of campusNodes) {
   graphEdges.set(node.id, []);
 }
 
+// 1. Build bidirectional edges for pre-defined walkway paths
 for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
   const fromNode = campusNodesById.get(fromId);
   if (!fromNode) {
@@ -72,6 +79,7 @@ for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
   }
 }
 
+// 2. Connect building entrances to the nearest existing walkway segments
 for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
   const existingEdges = graphEdges.get(node.id) ?? [];
   if (existingEdges.length === 0) {
@@ -86,6 +94,11 @@ for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(cand
   }
 }
 
+// --- Public API ---
+
+/**
+ * Returns overlay geometry for debug visualization of walkway nodes and paths.
+ */
 export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
   return {
     nodes: campusNodes.map((node) => [node.latitude, node.longitude]),
@@ -107,6 +120,9 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
   };
 }
 
+/**
+ * Computes or retrieves a cached walking route between two geographical points.
+ */
 export async function routeBetween(
   origin: RoutePoint,
   destination: RoutePoint,
@@ -117,6 +133,7 @@ export async function routeBetween(
     destination.longitude,
     destination.latitude,
   ].join(",");
+
   const cachedRoute = routeCache.get(cacheKey);
   if (cachedRoute) {
     return cachedRoute;
@@ -127,6 +144,94 @@ export async function routeBetween(
   return route;
 }
 
+// --- Pathfinding & Geometry ---
+
+/**
+ * Executes Dijkstra's algorithm to calculate the shortest path along the campus walkway graph.
+ */
+function findLocalWalkingRoute(
+  origin: RoutePoint,
+  destination: RoutePoint,
+): WalkingRoute {
+  const startId = "__origin";
+  const destinationId = "__destination";
+
+  const nodes = [
+    { id: startId, latitude: origin.latitude, longitude: origin.longitude },
+    ...campusNodes,
+    { id: destinationId, latitude: destination.latitude, longitude: destination.longitude },
+  ];
+
+  // Dynamically attach origin and destination points to nearby edges
+  const edges = new Map(graphEdges);
+  edges.set(startId, nearestEdges(origin));
+  edges.set(destinationId, []);
+
+  for (const edge of nearestEdges(destination)) {
+    edges.set(edge.nodeId, [
+      ...(edges.get(edge.nodeId) ?? []),
+      { nodeId: destinationId, distance: edge.distance },
+    ]);
+  }
+
+  const distances = new Map<string, number>([[startId, 0]]);
+  const previous = new Map<string, string>();
+  const open = new Set([startId]);
+
+  // Dijkstra search loop
+  while (open.size > 0) {
+    const current = [...open].reduce((closest, nodeId) =>
+      (distances.get(nodeId) ?? Number.POSITIVE_INFINITY) <
+        (distances.get(closest) ?? Number.POSITIVE_INFINITY)
+        ? nodeId
+        : closest,
+    );
+
+    open.delete(current);
+    if (current === destinationId) break;
+
+    for (const edge of edges.get(current) ?? []) {
+      const nextDistance = (distances.get(current) ?? 0) + edge.distance;
+      if (nextDistance < (distances.get(edge.nodeId) ?? Number.POSITIVE_INFINITY)) {
+        distances.set(edge.nodeId, nextDistance);
+        previous.set(edge.nodeId, current);
+        open.add(edge.nodeId);
+      }
+    }
+  }
+
+  if (!distances.has(destinationId)) {
+    throw new Error("No local walking route was found between those locations.");
+  }
+
+  // Reconstruct the node path from destination back to origin
+  const path = [destinationId];
+  while (path[0] !== startId) {
+    const parent = previous.get(path[0]);
+    if (!parent) {
+      throw new Error("The local walking route is incomplete.");
+    }
+    path.unshift(parent);
+  }
+
+  const rawGeometry = path.map((nodeId) => {
+    const node = nodes.find((candidate) => candidate.id === nodeId)!;
+    return [node.latitude, node.longitude] as [number, number];
+  });
+
+  const geometry = smoothPolyline(rawGeometry);
+  const distance = distances.get(destinationId)!;
+
+  return {
+    geometry,
+    distance,
+    duration: distance / WALKING_SPEED_METERS_PER_SECOND,
+  };
+}
+
+/**
+ * Applies Chaikin's corner-cutting algorithm to smooth jagged polyline path lines.
+ */
 function smoothPolyline(
   points: [number, number][],
   iterations = 2,
@@ -162,82 +267,11 @@ function smoothPolyline(
   return current;
 }
 
-function findLocalWalkingRoute(
-  origin: RoutePoint,
-  destination: RoutePoint,
-): WalkingRoute {
-  const startId = "__origin";
-  const destinationId = "__destination";
-  const nodes = [
-    { id: startId, latitude: origin.latitude, longitude: origin.longitude },
-    ...campusNodes,
-    { id: destinationId, latitude: destination.latitude, longitude: destination.longitude },
-  ];
-  const edges = new Map(graphEdges);
-  edges.set(startId, nearestEdges(origin));
-  edges.set(destinationId, []);
-  for (const edge of nearestEdges(destination)) {
-    edges.set(edge.nodeId, [
-      ...(edges.get(edge.nodeId) ?? []),
-      { nodeId: destinationId, distance: edge.distance },
-    ]);
-  }
+// --- Math & Distance Calculations ---
 
-  const distances = new Map<string, number>([[startId, 0]]);
-  const previous = new Map<string, string>();
-  const open = new Set([startId]);
-
-  while (open.size > 0) {
-    const current = [...open].reduce((closest, nodeId) =>
-      (distances.get(nodeId) ?? Number.POSITIVE_INFINITY) <
-        (distances.get(closest) ?? Number.POSITIVE_INFINITY)
-        ? nodeId
-        : closest,
-    );
-    open.delete(current);
-    if (current === destinationId) {
-      break;
-    }
-
-    for (const edge of edges.get(current) ?? []) {
-      const nextDistance = (distances.get(current) ?? 0) + edge.distance;
-    if (nextDistance < (distances.get(edge.nodeId) ?? Number.POSITIVE_INFINITY)) {
-        distances.set(edge.nodeId, nextDistance);
-        previous.set(edge.nodeId, current);
-        open.add(edge.nodeId);
-      }
-    }
-  }
-
-  if (!distances.has(destinationId)) {
-    throw new Error("No local walking route was found between those locations.");
-  }
-
-  const path = [destinationId];
-  while (path[0] !== startId) {
-    const parent = previous.get(path[0]);
-    if (!parent) {
-      throw new Error("The local walking route is incomplete.");
-    }
-    path.unshift(parent);
-  }
-
-  const rawGeometry = path.map((nodeId) => {
-    const node = nodes.find((candidate) => candidate.id === nodeId)!;
-    return [node.latitude, node.longitude] as [number, number];
-  });
-
-  const geometry = smoothPolyline(rawGeometry);
-
-  const distance = distances.get(destinationId)!;
-
-  return {
-    geometry,
-    distance,
-    duration: distance / WALKING_SPEED_METERS_PER_SECOND,
-  };
-}
-
+/**
+ * Finds the nearest graph segment to project an arbitrary coordinate point onto.
+ */
 function nearestEdges(
   point: Pick<RoutePoint, "latitude" | "longitude">,
 ): GraphEdge[] {
@@ -278,6 +312,9 @@ function nearestEdges(
   return bestEdges;
 }
 
+/**
+ * Projects a point onto a line segment using planar projection scaled for local latitude.
+ */
 function projectPointToSegment(
   pLat: number,
   pLng: number,
@@ -313,6 +350,7 @@ function connectWalkwayNodes(first: GraphNode, second: GraphNode) {
     second.latitude,
     second.longitude,
   );
+
   graphEdges.set(first.id, [
     ...(graphEdges.get(first.id) ?? []),
     { nodeId: second.id, distance },
@@ -323,6 +361,9 @@ function connectWalkwayNodes(first: GraphNode, second: GraphNode) {
   ]);
 }
 
+/**
+ * Calculates straight-line distance (in meters) between two coordinates using planar equirectangular projection.
+ */
 export function distanceBetween(
   latitudeOne: number,
   longitudeOne: number,

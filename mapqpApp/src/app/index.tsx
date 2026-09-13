@@ -5,7 +5,9 @@ import * as Location from "expo-location";
 import LocationMap from "../components/location-map";
 import buildingData from "../data/wpi-buildings.json";
 import { getWalkwayDebugOverlay, routeBetween } from "../utils/routing";
-import type { WalkingRoute, WalkwayDebugOverlay } from "../utils/routing";
+import type { WalkingRoute } from "../utils/routing";
+
+// --- Types ---
 
 type Point = {
   latitude: number;
@@ -48,18 +50,26 @@ type Coordinates = {
   timestamp: number;
 };
 
-const SAMPLE_COUNT = 8;
-const MAX_ACCURACY_THRESHOLD = 150;
-const MAX_SAMPLE_AGE_MS = 15_000;
-const OFF_ROUTE_THRESHOLD_METERS = 15; // Distance threshold to trigger re-routing
+// --- Constants ---
+
+const SAMPLE_COUNT = 20; 
+const MAX_ACCURACY_THRESHOLD = 25; 
+const MAX_SAMPLE_AGE_MS = 20_000;
+const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
-const WALKWAY_DEBUG = __DEV__ ? getWalkwayDebugOverlay() : undefined;
+
 const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"),
   name: building.name,
   entrances: building.entrances,
 }));
 
+// --- Utility Functions ---
+
+/**
+ * Calculates a smoothed, weighted average of recent GPS coordinates 
+ * to reduce jitter and prevent the user marker from jumping erratically.
+ */
 function computeWeightedCoordinates(samples: Coordinates[], currentTimestamp: number): Coordinates | null {
   if (samples.length === 0) return null;
 
@@ -85,18 +95,58 @@ function computeWeightedCoordinates(samples: Coordinates[], currentTimestamp: nu
   }
 
   const latestSample = candidateSamples[candidateSamples.length - 1];
+  const baseAccuracy = weightedAcc / totalWeight;
+
+  // CONFIDENCE BOOST: 
+  // If the user is relatively stationary, gathering multiple independent samples 
+  // exponentially increases our statistical confidence. Apply Standard Error of the Mean.
+  const isStationary = (latestSample.speed ?? 0) < 0.5;
+  let finalAccuracy = baseAccuracy;
+
+  if (isStationary && candidateSamples.length > 1) {
+    finalAccuracy = baseAccuracy / Math.sqrt(candidateSamples.length);
+  }
+
+  // Clamp to a realistic hardware minimum so the radius doesn't visually disappear
+  finalAccuracy = Math.max(2, finalAccuracy);
 
   return {
     ...latestSample,
     latitude: weightedLat / totalWeight,
     longitude: weightedLng / totalWeight,
-    accuracy: weightedAcc / totalWeight,
+    accuracy: finalAccuracy,
   };
 }
 
-// Helper to calculate approximate distance in meters between two lat/lng points (Haversine-ish)
+/**
+ * SMART POLLING LOGIC
+ * Calculates the ideal millisecond delay between GPS polls based on real-time factors.
+ * 
+ * - Poor Accuracy: Drops interval to poll faster and narrow down location.
+ * - High Speed: Drops interval to keep up with user movement.
+ * - Stopped & Accurate: Increases interval to save battery life.
+ */
+function calculateSmartPollingInterval(accuracy: number, speed: number): number {
+  let interval = 4000; // Base interval (slowest baseline for battery saving)
+
+  // 1. Accuracy Penalty: Subtract up to 2000ms if accuracy is worse than 50 meters
+  const accuracyPenalty = Math.min((accuracy / 50) * 2000, 2000);
+  interval -= accuracyPenalty;
+
+  // 2. Speed Penalty: Subtract up to 1500ms if moving faster than 3 m/s (running pace)
+  const speedPenalty = Math.min((speed / 3) * 1500, 1500);
+  interval -= speedPenalty;
+
+  // Clamp the final value between 500ms (fastest) and 4000ms (slowest)
+  const clamped = Math.max(500, Math.min(interval, 4000));
+  
+  // Round to nearest 500ms bucket (500, 1000, 1500...) 
+  // This prevents the GPS hardware subscription from restarting too frequently due to minor fluctuations.
+  return Math.round(clamped / 500) * 500;
+}
+
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371000; // Radius of the earth in meters
+  const R = 6371000; 
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a =
@@ -111,11 +161,9 @@ function deg2rad(deg: number) {
   return deg * (Math.PI / 180);
 }
 
-// Check if user is too far from all segments of the current route geometry
 function isUserOffRoute(userLat: number, userLng: number, geometry: [number, number][]): boolean {
   if (!geometry || geometry.length === 0) return false;
   
-  // Find the minimum distance from the user to any point along the route geometry
   let minDistance = Infinity;
   for (const [lat, lng] of geometry) {
     const dist = getDistanceFromLatLonInMeters(userLat, userLng, lat, lng);
@@ -123,35 +171,62 @@ function isUserOffRoute(userLat: number, userLng: number, geometry: [number, num
       minDistance = dist;
     }
   }
-
   return minDistance > OFF_ROUTE_THRESHOLD_METERS;
 }
+
+function buildingPoint(building: Building, entranceIndex: number): Point {
+  const entrance = building.entrances[entranceIndex];
+  return {
+    latitude: entrance.latitude,
+    longitude: entrance.longitude,
+    label: `${building.name} ${entrance.name}`,
+  };
+}
+
+function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
+  return routes.reduce(
+    (fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest,
+  );
+}
+
+function formatDistance(meters: number) {
+  return meters < 1000
+    ? `${Math.round(meters)} m`
+    : `${(meters / 1000).toFixed(1)} km`;
+}
+
+function formatDuration(seconds: number) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return minutes < 60
+    ? `${minutes} min`
+    : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
+}
+
+// --- Main Component ---
 
 export default function Home() {
   const samplesRef = useRef<Coordinates[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  
   const initialLocationSet = useRef(false);
   const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
-
   const [error, setError] = useState("");
-  const [originMode, setOriginMode] = useState<"current" | "building">("current");
-  const [originBuilding, setOriginBuilding] = useState("");
+
+  // Smart Polling State
+  const [pollingInterval, setPollingInterval] = useState(1000);
+
   const [destinationBuilding, setDestinationBuilding] = useState("");
   const [route, setRoute] = useState<RoutePlan | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
-  const autoRouteKeyRef = useRef("");
   
-  // Ref to track route geometry inside the background location listener without triggering re-subscriptions
+  const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
+  const isReroutingRef = useRef(false);
+
   useEffect(() => {
     routeGeometryRef.current = route?.geometry ?? null;
   }, [route]);
 
-  const isReroutingRef = useRef(false);
-
-  // Define planRoute so it can be called dynamically on re-route
   const planRoute = useCallback(async (currentCoords?: Coordinates) => {
     const activeCoords = currentCoords || coordinates;
     setRouteError("");
@@ -164,28 +239,19 @@ export default function Home() {
       return;
     }
 
-    const originSelection = WPI_BUILDINGS.find(
-      (building) => building.id === originBuilding,
-    );
-    if (originMode === "building" && !originSelection) {
-      setRouteError("Choose a WPI origin buildingcharts.");
-      return;
-    }
-
-    if (originMode === "current" && !activeCoords) {
+    if (!activeCoords) {
       setRouteError("Waiting for your current location before planning.");
       return;
     }
 
     setRouteLoading(true);
     try {
-      const origin = originMode === "current"
-        ? {
-            latitude: activeCoords!.latitude,
-            longitude: activeCoords!.longitude,
-            label: "Your current location",
-          }
-        : buildingPoint(originSelection!, 0);
+      const origin = {
+        latitude: activeCoords.latitude,
+        longitude: activeCoords.longitude,
+        label: "Your current location",
+      };
+      
       const destinationEntrances = destinationSelection.entrances.map((_, index) =>
         buildingPoint(destinationSelection, index),
       );
@@ -203,12 +269,15 @@ export default function Home() {
           }
         }),
       );
+
       const availableOutdoorRoutes = outdoorCandidates.filter(
         (candidate): candidate is RouteCandidate => candidate !== null,
       );
+
       if (availableOutdoorRoutes.length === 0) {
         throw new Error("The walking route service could not find a route. Try again.");
       }
+
       const outdoorRoute = fastestRoute(availableOutdoorRoutes);
       setRoute(outdoorRoute);
     } catch (routeRequestError) {
@@ -222,8 +291,9 @@ export default function Home() {
       setRouteLoading(false);
       isReroutingRef.current = false;
     }
-  }, [destinationBuilding, originBuilding, originMode, coordinates]);
+  }, [destinationBuilding, coordinates]);
 
+  // Track location continuously
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
 
@@ -236,9 +306,9 @@ export default function Home() {
 
       subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 2000,
-          distanceInterval: 1,
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: pollingInterval, // Injected dynamically from state
+          distanceInterval: 0, // Set to 0 so we rely entirely on our smart time interval
         },
         (location) => {
           const sample: Coordinates = {
@@ -267,7 +337,6 @@ export default function Home() {
               initialLocationSet.current = true;
             }
 
-            // Check if user is actively navigating and has drifted off-route
             if (
               routeGeometryRef.current && 
               !isReroutingRef.current && 
@@ -280,6 +349,15 @@ export default function Home() {
             }
           }
           setError("");
+
+          // --- Trigger Smart Polling Evaluation ---
+          const currentAccuracy = smoothed?.accuracy || location.coords.accuracy || 100;
+          const currentSpeed = location.coords.speed || 0;
+          const idealInterval = calculateSmartPollingInterval(currentAccuracy, currentSpeed);
+
+          if (idealInterval !== pollingInterval) {
+            setPollingInterval(idealInterval);
+          }
         }
       );
     }
@@ -288,26 +366,23 @@ export default function Home() {
     return () => {
       subscription?.remove();
     };
-  }, [destinationBuilding, planRoute]);
+  }, [destinationBuilding, planRoute, pollingInterval]); 
 
   useEffect(() => {
-    const hasOrigin = originMode === "current" ? Boolean(coordinates) : Boolean(originBuilding);
-    if (!destinationBuilding || !hasOrigin) {
+    if (!destinationBuilding || !coordinates) {
       return;
     }
 
-    const routeKey = `${originMode}:${originBuilding}:${destinationBuilding}`;
+    const routeKey = `current::${destinationBuilding}`;
     if (autoRouteKeyRef.current === routeKey) {
       return;
     }
 
     autoRouteKeyRef.current = routeKey;
     void planRoute();
-  }, [coordinates, destinationBuilding, originBuilding, originMode, planRoute]);
+  }, [coordinates, destinationBuilding, planRoute]);
 
   const handleDestinationChange = useCallback((buildingId: string) => {
-    setOriginMode("current");
-    setOriginBuilding("");
     setDestinationBuilding(buildingId);
   }, []);
 
@@ -338,20 +413,11 @@ export default function Home() {
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
             route={route}
-            walkwayDebug={WALKWAY_DEBUG}
           />
         )}
       </View>
 
       <View style={styles.plannerPanel}>
-        {/* TEST GPS ACCURACY START - Delete this block after testing */}
-        <View style={{ marginBottom: 12, padding: 8, backgroundColor: "#fee2e2", borderRadius: 6, borderWidth: 1, borderColor: "#fecaca" }}>
-          <Text style={{ fontSize: 12, color: "#991b1b", fontWeight: "bold" }}>
-            TEST GPS Accuracy: {coordinates ? `${Math.round(coordinates.accuracy)}m` : "Acquiring..."}
-          </Text>
-        </View>
-        {/* TEST GPS ACCURACY END */}
-
         <BuildingPicker
           buildings={WPI_BUILDINGS}
           value={destinationBuilding}
@@ -382,9 +448,21 @@ export default function Home() {
           </View>
         )}
       </View>
+
+      {/* GPS Debug Info Panel */}
+      <View style={styles.debugPanel}>
+        <Text style={styles.debugText}>
+          Accuracy: {coordinates?.accuracy ? `${coordinates.accuracy.toFixed(2)}m` : 'N/A'}
+        </Text>
+        <Text style={styles.debugText}>
+          Polling: {pollingInterval}ms
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
+
+// --- Subcomponents ---
 
 type BuildingPickerProps = {
   buildings: Building[];
@@ -397,6 +475,7 @@ const BuildingPicker = React.memo(({ buildings, value, onChange, placeholder }: 
   const selectedBuilding = buildings.find((b) => b.id === value);
   const [query, setQuery] = useState(selectedBuilding?.name ?? "");
   const [isOpen, setIsOpen] = useState(false);
+  
   const matchingBuildings = buildings.filter((b) =>
     b.name.toLowerCase().includes(query.trim().toLowerCase())
   );
@@ -435,34 +514,7 @@ const BuildingPicker = React.memo(({ buildings, value, onChange, placeholder }: 
   );
 });
 
-function buildingPoint(building: Building, entranceIndex: number): Point {
-  const entrance = building.entrances[entranceIndex];
-
-  return {
-    latitude: entrance.latitude,
-    longitude: entrance.longitude,
-    label: `${building.name} ${entrance.name}`,
-  };
-}
-
-function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
-  return routes.reduce(
-    (fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest,
-  );
-}
-
-function formatDistance(meters: number) {
-  return meters < 1000
-    ? `${Math.round(meters)} m`
-    : `${(meters / 1000).toFixed(1)} km`;
-}
-
-function formatDuration(seconds: number) {
-  const minutes = Math.max(1, Math.round(seconds / 60));
-  return minutes < 60
-    ? `${minutes} min`
-    : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
-}
+// --- Styling ---
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
@@ -511,5 +563,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#666",
+  },
+  debugPanel: {
+    position: "absolute",
+    bottom: 32,
+    left: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: 8,
+    borderRadius: 8,
+    zIndex: 100,
+  },
+  debugText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "monospace",
+    marginVertical: 2,
   },
 });
