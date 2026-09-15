@@ -50,99 +50,141 @@ type Coordinates = {
   timestamp: number;
 };
 
+type KalmanState = {
+  lat: number;
+  lng: number;
+  varianceLat: number;
+  varianceLng: number;
+  timestamp: number;
+};
+
 // --- Constants ---
 
 const SAMPLE_COUNT = 20; 
 const MAX_ACCURACY_THRESHOLD = 25; 
-const MAX_SAMPLE_AGE_MS = 20_000;
+const BASE_MAX_SAMPLE_AGE_MS = 20_000;
 const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 
-const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
-  id: building.name.toLowerCase().replaceAll(" ", "-"),
-  name: building.name,
-  entrances: building.entrances,
+const WPI_BUILDINGS: Building[] = buildingData.map((building) => (
+{
+  id: building.name.toLowerCase().replaceAll(" ", "-"), 
+  name: building.name, 
+  entrances: building.entrances, 
 }));
 
 // --- Utility Functions ---
 
-/**
- * Calculates a smoothed, weighted average of recent GPS coordinates 
- * to reduce jitter and prevent the user marker from jumping erratically.
- */
-function computeWeightedCoordinates(samples: Coordinates[], currentTimestamp: number): Coordinates | null {
-  if (samples.length === 0) return null;
+function processAdvancedCoordinates(
+  incomingSample: Coordinates, 
+  previousStateRef: React.MutableRefObject<KalmanState | null>, 
+  sampleBuffer: Coordinates[]
+): Coordinates | null {
+  const now = incomingSample.timestamp;
+  let adjustedAccuracy = incomingSample.accuracy;
+  let isResumingFromBackground = false;
 
-  let freshSamples = samples.filter((s) => currentTimestamp - s.timestamp <= MAX_SAMPLE_AGE_MS);
-  if (freshSamples.length === 0) {
-    freshSamples = [samples[samples.length - 1]];
+  if (previousStateRef.current) {
+    const prev = previousStateRef.current;
+    const dt = (now - prev.timestamp) / 1000; 
+
+    if (dt > (BASE_MAX_SAMPLE_AGE_MS / 1000)) {
+      previousStateRef.current = null;
+      isResumingFromBackground = true;
+    } 
+    else if (dt > 0) {
+      const distanceMovedMeters = getDistanceFromLatLonInMeters(prev.lat, prev.lng, incomingSample.latitude, incomingSample.longitude);
+      const assumedMaxSpeedMps = 7; 
+      const allowedJitterRadius = (assumedMaxSpeedMps * dt) + Math.max(incomingSample.accuracy, 5);
+
+      if (distanceMovedMeters > allowedJitterRadius && incomingSample.accuracy > MAX_ACCURACY_THRESHOLD) {
+        adjustedAccuracy *= 4.0; 
+      }
+    }
   }
 
-  const accurateSamples = freshSamples.filter((s) => s.accuracy <= MAX_ACCURACY_THRESHOLD);
-  const candidateSamples = accurateSamples.length > 0 ? accurateSamples : freshSamples;
+  if (!isResumingFromBackground && sampleBuffer.length >= 2) {
+    const p1 = sampleBuffer[sampleBuffer.length - 2];
+    const p2 = sampleBuffer[sampleBuffer.length - 1];
 
-  let totalWeight = 0;
-  let weightedLat = 0;
-  let weightedLng = 0;
-  let weightedAcc = 0;
+    const historicVecLat = p2.latitude - p1.latitude;
+    const historicVecLng = p2.longitude - p1.longitude;
+    const incomingVecLat = incomingSample.latitude - p2.latitude;
+    const incomingVecLng = incomingSample.longitude - p2.longitude;
 
-  for (const sample of candidateSamples) {
-    const weight = 1 / Math.pow(Math.max(sample.accuracy, 0.5), 2);
-    totalWeight += weight;
-    weightedLat += sample.latitude * weight;
-    weightedLng += sample.longitude * weight;
-    weightedAcc += sample.accuracy * weight;
+    const historicMag = Math.sqrt(historicVecLat ** 2 + historicVecLng ** 2);
+    const incomingMag = Math.sqrt(incomingVecLat ** 2 + incomingVecLng ** 2);
+
+    if (historicMag > 0.00001 && incomingMag > 0.00001) {
+      const dotProduct = (historicVecLat * incomingVecLat + historicVecLng * incomingVecLng) / (historicMag * incomingMag);
+      
+      if (dotProduct < 0.1 && (incomingSample.speed ?? 0) < 2) {
+        adjustedAccuracy *= 2.0; 
+      }
+    }
   }
 
-  const latestSample = candidateSamples[candidateSamples.length - 1];
-  const baseAccuracy = weightedAcc / totalWeight;
+  let currentLat = incomingSample.latitude;
+  let currentLng = incomingSample.longitude;
+  let currentVarLat = Math.pow(Math.max(adjustedAccuracy, 0.5), 2);
+  let currentVarLng = currentVarLat;
 
-  // CONFIDENCE BOOST: 
-  // If the user is relatively stationary, gathering multiple independent samples 
-  // exponentially increases our statistical confidence. Apply Standard Error of the Mean.
-  const isStationary = (latestSample.speed ?? 0) < 0.5;
-  let finalAccuracy = baseAccuracy;
+  if (previousStateRef.current) {
+    const prev = previousStateRef.current;
+    
+    const timeDeltaSec = Math.max(0.1, (now - prev.timestamp) / 1000);
+    const estimatedSpeedMps = (incomingSample.speed && incomingSample.speed > 0.5) ? incomingSample.speed : 1.5; 
+    const processNoise = Math.pow(estimatedSpeedMps * timeDeltaSec, 2);
 
-  if (isStationary && candidateSamples.length > 1) {
-    finalAccuracy = baseAccuracy / Math.sqrt(candidateSamples.length);
+    const predictedVarLat = prev.varianceLat + processNoise;
+    const predictedVarLng = prev.varianceLng + processNoise;
+
+    const kalmanGainLat = predictedVarLat / (predictedVarLat + currentVarLat);
+    const kalmanGainLng = predictedVarLng / (predictedVarLng + currentVarLng);
+
+    currentLat = prev.lat + kalmanGainLat * (incomingSample.latitude - prev.lat);
+    currentLng = prev.lng + kalmanGainLng * (incomingSample.longitude - prev.lng);
+
+    currentVarLat = (1 - kalmanGainLat) * predictedVarLat;
+    currentVarLng = (1 - kalmanGainLng) * predictedVarLng;
   }
 
-  // Clamp to a realistic hardware minimum so the radius doesn't visually disappear
-  finalAccuracy = Math.max(2, finalAccuracy);
+  previousStateRef.current = {
+    lat: currentLat,
+    lng: currentLng,
+    varianceLat: currentVarLat,
+    varianceLng: currentVarLng,
+    timestamp: now,
+  };
+
+  const isStationary = (incomingSample.speed ?? 0) < 0.5;
+  let finalAccuracy = Math.sqrt((currentVarLat + currentVarLng) / 2);
+
+  if (isStationary && sampleBuffer.length > 1) {
+    finalAccuracy = finalAccuracy / Math.sqrt(sampleBuffer.length);
+  }
+
+  finalAccuracy = Math.max(2, Math.min(finalAccuracy, 50));
 
   return {
-    ...latestSample,
-    latitude: weightedLat / totalWeight,
-    longitude: weightedLng / totalWeight,
+    ...incomingSample,
+    latitude: currentLat,
+    longitude: currentLng,
     accuracy: finalAccuracy,
   };
 }
 
-/**
- * SMART POLLING LOGIC
- * Calculates the ideal millisecond delay between GPS polls based on real-time factors.
- * 
- * - Poor Accuracy: Drops interval to poll faster and narrow down location.
- * - High Speed: Drops interval to keep up with user movement.
- * - Stopped & Accurate: Increases interval to save battery life.
- */
-function calculateSmartPollingInterval(accuracy: number, speed: number): number {
-  let interval = 4000; // Base interval (slowest baseline for battery saving)
+function calculateSmartPollingInterval(accuracy: number, speed: number, sampleCount: number): number {
+  if (sampleCount < SAMPLE_COUNT) {
+    return 500;
+  }
 
-  // 1. Accuracy Penalty: Subtract up to 2000ms if accuracy is worse than 50 meters
-  const accuracyPenalty = Math.min((accuracy / 50) * 2000, 2000);
-  interval -= accuracyPenalty;
+  const validSpeed = Math.max(0, speed);
+  const decayRate = 0.75;
+  const rawInterval = 4000 * Math.exp(-decayRate * validSpeed);
 
-  // 2. Speed Penalty: Subtract up to 1500ms if moving faster than 3 m/s (running pace)
-  const speedPenalty = Math.min((speed / 3) * 1500, 1500);
-  interval -= speedPenalty;
-
-  // Clamp the final value between 500ms (fastest) and 4000ms (slowest)
-  const clamped = Math.max(500, Math.min(interval, 4000));
-  
-  // Round to nearest 500ms bucket (500, 1000, 1500...) 
-  // This prevents the GPS hardware subscription from restarting too frequently due to minor fluctuations.
-  return Math.round(clamped / 500) * 500;
+  const clamped = Math.max(500, Math.min(rawInterval, 4000));
+  return Math.round(clamped / 250) * 250;
 }
 
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -159,6 +201,63 @@ function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number,
 
 function deg2rad(deg: number) {
   return deg * (Math.PI / 180);
+}
+
+// --- Map Matching / Snap-to-Route Helpers ---
+
+function getClosestPointOnSegment(
+  p: { lat: number; lng: number },
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+) {
+  const cosLat = Math.cos(deg2rad(a.lat));
+  const px = (p.lng - a.lng) * cosLat;
+  const py = p.lat - a.lat;
+  const bx = (b.lng - a.lng) * cosLat;
+  const by = b.lat - a.lat;
+
+  const segmentLengthSquared = bx * bx + by * by;
+  
+  if (segmentLengthSquared === 0) {
+    return { lat: a.lat, lng: a.lng, distance: getDistanceFromLatLonInMeters(p.lat, p.lng, a.lat, a.lng) };
+  }
+
+  let t = (px * bx + py * by) / segmentLengthSquared;
+  t = Math.max(0, Math.min(1, t)); 
+
+  const closestLat = a.lat + t * by;
+  const closestLng = a.lng + t * (b.lng - a.lng); 
+
+  return {
+    lat: closestLat,
+    lng: closestLng,
+    distance: getDistanceFromLatLonInMeters(p.lat, p.lng, closestLat, closestLng)
+  };
+}
+
+function snapToRouteGeometry(userLat: number, userLng: number, geometry: [number, number][], snapThresholdMeters = 12) {
+  if (!geometry || geometry.length < 2) return { lat: userLat, lng: userLng };
+
+  let bestPoint = { lat: userLat, lng: userLng };
+  let minDistance = Infinity;
+
+  for (let i = 0; i < geometry.length - 1; i++) {
+    const a = { lat: geometry[i][0], lng: geometry[i][1] };
+    const b = { lat: geometry[i+1][0], lng: geometry[i+1][1] };
+    
+    const closest = getClosestPointOnSegment({ lat: userLat, lng: userLng }, a, b);
+    
+    if (closest.distance < minDistance) {
+      minDistance = closest.distance;
+      bestPoint = { lat: closest.lat, lng: closest.lng };
+    }
+  }
+
+  if (minDistance <= snapThresholdMeters) {
+    return bestPoint;
+  }
+
+  return { lat: userLat, lng: userLng };
 }
 
 function isUserOffRoute(userLat: number, userLng: number, geometry: [number, number][]): boolean {
@@ -206,12 +305,12 @@ function formatDuration(seconds: number) {
 
 export default function Home() {
   const samplesRef = useRef<Coordinates[]>([]);
+  const kalmanStateRef = useRef<KalmanState | null>(null);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const initialLocationSet = useRef(false);
   const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
   const [error, setError] = useState("");
 
-  // Smart Polling State
   const [pollingInterval, setPollingInterval] = useState(1000);
 
   const [destinationBuilding, setDestinationBuilding] = useState("");
@@ -293,7 +392,6 @@ export default function Home() {
     }
   }, [destinationBuilding, coordinates]);
 
-  // Track location continuously
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
 
@@ -307,8 +405,8 @@ export default function Home() {
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: pollingInterval, // Injected dynamically from state
-          distanceInterval: 0, // Set to 0 so we rely entirely on our smart time interval
+          timeInterval: pollingInterval, 
+          distanceInterval: 0, 
         },
         (location) => {
           const sample: Coordinates = {
@@ -322,18 +420,36 @@ export default function Home() {
             timestamp: location.timestamp,
           };
 
-          const nextSamples = [...samplesRef.current, sample]
-            .filter((s) => location.timestamp - s.timestamp <= MAX_SAMPLE_AGE_MS)
-            .slice(-SAMPLE_COUNT);
-
-          samplesRef.current = nextSamples;
-          const smoothed = computeWeightedCoordinates(nextSamples, location.timestamp);
+          const processed = processAdvancedCoordinates(sample, kalmanStateRef, samplesRef.current);
           
-          if (smoothed) {
-            setCoordinates(smoothed);
+          if (processed) {
+            // Calculate a dynamic maximum age based on how slowly we are polling.
+            // If interval is 4000ms, samples can live up to 80 seconds.
+            const dynamicMaxAge = Math.max(BASE_MAX_SAMPLE_AGE_MS, SAMPLE_COUNT * pollingInterval);
+
+            const nextSamples = [...samplesRef.current, processed]
+              .filter((s) => location.timestamp - s.timestamp <= dynamicMaxAge)
+              .slice(-SAMPLE_COUNT);
+
+            samplesRef.current = nextSamples;
+
+            let displayLat = processed.latitude;
+            let displayLng = processed.longitude;
+
+            if (routeGeometryRef.current && !isReroutingRef.current && destinationBuilding !== "") {
+              const snapped = snapToRouteGeometry(displayLat, displayLng, routeGeometryRef.current);
+              displayLat = snapped.lat;
+              displayLng = snapped.lng;
+            }
+
+            setCoordinates({
+              ...processed,
+              latitude: displayLat,
+              longitude: displayLng,
+            });
             
             if (!initialLocationSet.current) {
-              setMapCenter({ latitude: smoothed.latitude, longitude: smoothed.longitude });
+              setMapCenter({ latitude: displayLat, longitude: displayLng });
               initialLocationSet.current = true;
             }
 
@@ -342,22 +458,21 @@ export default function Home() {
               !isReroutingRef.current && 
               destinationBuilding !== ""
             ) {
-              if (isUserOffRoute(smoothed.latitude, smoothed.longitude, routeGeometryRef.current)) {
+              if (isUserOffRoute(processed.latitude, processed.longitude, routeGeometryRef.current)) {
                 isReroutingRef.current = true;
-                void planRoute(smoothed);
+                void planRoute(processed);
               }
+            }
+
+            const currentAccuracy = processed?.accuracy || location.coords.accuracy || 100;
+            const currentSpeed = location.coords.speed || 0;
+            const idealInterval = calculateSmartPollingInterval(currentAccuracy, currentSpeed, nextSamples.length);
+
+            if (idealInterval !== pollingInterval) {
+              setPollingInterval(idealInterval);
             }
           }
           setError("");
-
-          // --- Trigger Smart Polling Evaluation ---
-          const currentAccuracy = smoothed?.accuracy || location.coords.accuracy || 100;
-          const currentSpeed = location.coords.speed || 0;
-          const idealInterval = calculateSmartPollingInterval(currentAccuracy, currentSpeed);
-
-          if (idealInterval !== pollingInterval) {
-            setPollingInterval(idealInterval);
-          }
         }
       );
     }
@@ -449,13 +564,15 @@ export default function Home() {
         )}
       </View>
 
-      {/* GPS Debug Info Panel */}
       <View style={styles.debugPanel}>
         <Text style={styles.debugText}>
           Accuracy: {coordinates?.accuracy ? `${coordinates.accuracy.toFixed(2)}m` : 'N/A'}
         </Text>
         <Text style={styles.debugText}>
           Polling: {pollingInterval}ms
+        </Text>
+        <Text style={styles.debugText}>
+          Buffer: {samplesRef.current.length}/{SAMPLE_COUNT}
         </Text>
       </View>
     </SafeAreaView>

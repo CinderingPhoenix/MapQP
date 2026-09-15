@@ -120,10 +120,10 @@ export default function LocationMap({
           }
         };
 
-        // Global function called by React Native to animate the camera back to the user
+        // Global function called by React Native to pan back to the user without altering current zoom
         window.resetView = function() {
           userMoved = false;
-          map.setView([${currentMarkerLat}, ${currentMarkerLng}], 16, { animate: true });
+          map.panTo(marker.getLatLng(), { animate: true });
         };
       </script>
     </body>
