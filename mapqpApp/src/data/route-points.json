@@ -1,0 +1,3879 @@
+{
+  "nodes": [
+    {"id":"quad-center","latitude":42.273833,"longitude":-71.8098},
+    {"id":"quad-rec-harrington","latitude":42.274122,"longitude":-71.810023},
+    {"id":"quad-rec-morgan","latitude":42.273671,"longitude":-71.810164},
+    {"id":"quad-daniels","latitude":42.273487,"longitude":-71.80987},
+    {"id":"quad-daniels-sanford","latitude":42.273408,"longitude":-71.80927},
+    {"id":"quad-bartlett","latitude":42.273752,"longitude":-71.80909},
+    {"id":"quad-innovation","latitude":42.27413,"longitude":-71.809142},
+    {"id":"innovation-higgins","latitude":42.274096,"longitude":-71.808564},
+    {"id":"innovation-higgins-campus-center","latitude":42.274547,"longitude":-71.808475},
+    {"id":"innovation-messenger","latitude":42.27463,"longitude":-71.809157},
+    {"id":"fountain-campus-center","latitude":42.274476,"longitude":-71.807801},
+    {"id":"fountain-olin","latitude":42.274493,"longitude":-71.807774},
+    {"id":"fountain-stratton","latitude":42.27446,"longitude":-71.80778},
+    {"id":"fountain-salisbury","latitude":42.274472,"longitude":-71.807753},
+    {"id":"olin-main-entrance","latitude":42.274887,"longitude":-71.807707},
+    {"id":"olin-atwater","latitude":42.275164,"longitude":-71.8076},
+    {"id":"olin-salisbury-street","latitude":42.275895,"longitude":-71.807331},
+    {"id":"fuller-upper","latitude":42.274843,"longitude":-71.806715},
+    {"id":"boynton","latitude":42.273566,"longitude":-71.807031},
+    {"id":"boynton-corner","latitude":42.273343,"longitude":-71.807171},
+    {"id":"alden","latitude":42.273473,"longitude":-71.808361},
+    {"id":"stratton-higgins","latitude":42.273813,"longitude":-71.807912},
+    {"id":"gordon","latitude":42.274262,"longitude":-71.806686},
+    {"id":"unity-lower","latitude":42.273622,"longitude":-71.805623},
+    {"id":"unity-upper","latitude":42.273803,"longitude":-71.806718},
+    {"id":"unity-upper-washburn","latitude":42.273818,"longitude":-71.806881},
+    {"id":"institute-park-salisbury-street","latitude":42.275228,"longitude":-71.805144},
+    {"id":"institute-park-humbolt-ave","latitude":42.275631,"longitude":-71.803006},
+    {"id":"boynton-stratton","latitude":42.273629,"longitude":-71.807567},
+    {"id":"stratton-higgins-entrance","latitude":42.274137,"longitude":-71.807842},
+    {"id":"higgins-entrance","latitude":42.274507,"longitude":-71.808149},
+    {"id":"alden-side-entrance","latitude":42.273397,"longitude":-71.808547},
+    {"id":"alden-west-street-entrance","latitude":42.273101,"longitude":-71.808117},
+    {"id":"washburn-entrance","latitude":42.274307,"longitude":-71.807026},
+    {"id":"salisbury-entrance","latitude":42.274385,"longitude":-71.807261},
+    {"id":"higgins-olin-cut","latitude":42.274657,"longitude":-71.80775},
+    {"id":"salisbury-side-1","latitude":42.274419,"longitude":-71.807479},
+    {"id":"salisbury-side-2","latitude":42.274591,"longitude":-71.807759},
+    {"id":"salisbury-side-3","latitude":42.275125,"longitude":-71.807644},
+    {"id":"salisbury-side-entrance","latitude":42.274733,"longitude":-71.807422},
+    {"id":"olin-atwater-cut","latitude":42.275105,"longitude":-71.807509},
+    {"id":"salisbury-side-4-1","latitude":42.27489,"longitude":-71.807378},
+    {"id":"gordon-washburn-cut","latitude":42.274107,"longitude":-71.806831},
+    {"id":"kaven-stairs","latitude":42.274892,"longitude":-71.806162},
+    {"id":"kaven-stairs-bottom","latitude":42.274605,"longitude":-71.805945},
+    {"id":"kaven-boynton-street","latitude":42.274652,"longitude":-71.805416},
+    {"id":"kaven-boynton-street-salisbury-street","latitude":42.275094,"longitude":-71.805326},
+    {"id":"kaven-side-entrance","latitude":42.274944,"longitude":-71.805731},
+    {"id":"fuller-side-stairs","latitude":42.274724,"longitude":-71.8066},
+    {"id":"skull-institute","latitude":42.272628,"longitude":-71.805837},
+    {"id":"institute-road-coombs","latitude":42.272513,"longitude":-71.806893},
+    {"id":"west-street-institute","latitude":42.27278,"longitude":-71.808021},
+    {"id":"sanford-quad-institute","latitude":42.272959,"longitude":-71.809449},
+    {"id":"morgan-daniels-institute","latitude":42.273043,"longitude":-71.810298},
+    {"id":"institute-morgan","latitude":42.273174,"longitude":-71.811598},
+    {"id":"alumni-field","latitude":42.273317,"longitude":-71.813003},
+    {"id":"alumni-field-park-ave","latitude":42.273535,"longitude":-71.813148},
+    {"id":"park-ave-salisbury-street","latitude":42.277487,"longitude":-71.809313},
+    {"id":"boynton-alden-stairs","latitude":42.273219,"longitude":-71.807687},
+    {"id":"boynton-alden-stairs-1","latitude":42.272979,"longitude":-71.807858},
+    {"id":"boynton-alden-stairs-2","latitude":42.272954,"longitude":-71.807987},
+    {"id":"boynton-coombs-1","latitude":42.27336,"longitude":-71.807322},
+    {"id":"boynton-coombs-2","latitude":42.272916,"longitude":-71.807372},
+    {"id":"boynton-coombs-3","latitude":42.272846,"longitude":-71.807338},
+    {"id":"boynton-coombs-4","latitude":42.27277,"longitude":-71.807163},
+    {"id":"boynton-coombs-5","latitude":42.272715,"longitude":-71.807115},
+    {"id":"bridge","latitude":42.273416,"longitude":-71.807854},
+    {"id":"boynton-stratton-walkway","latitude":42.2735,"longitude":-71.80771},
+    {"id":"institute-park-1","latitude":42.275253,"longitude":-71.804937},
+    {"id":"institute-park-2","latitude":42.275201,"longitude":-71.804547},
+    {"id":"institute-park-3","latitude":42.275214,"longitude":-71.804135},
+    {"id":"institute-park-4","latitude":42.275274,"longitude":-71.80387},
+    {"id":"institute-park-5","latitude":42.275575,"longitude":-71.803278},
+    {"id":"atwater-fuller-stairs","latitude":42.275461,"longitude":-71.80628},
+    {"id":"fuller-salisbury-street-stairs","latitude":42.275249,"longitude":-71.80573},
+    {"id":"kaven-entrance","latitude":42.27463,"longitude":-71.805655},
+    {"id":"stratton-entrance","latitude":42.273923,"longitude":-71.807888},
+    {"id":"node_hee3l4b","latitude":42.273789,"longitude":-71.810209},
+    {"id":"node_hbq0rz0","latitude":42.274018,"longitude":-71.810145},
+    {"id":"node_3v8ec98","latitude":42.274179,"longitude":-71.809862},
+    {"id":"node_22typhd","latitude":42.274189,"longitude":-71.809661},
+    {"id":"node_q79zhty","latitude":42.274172,"longitude":-71.809488},
+    {"id":"node_a18hyvk","latitude":42.273586,"longitude":-71.810081},
+    {"id":"node_3p4ghcj","latitude":42.273538,"longitude":-71.809993},
+    {"id":"node_zp5k7dm","latitude":42.27372,"longitude":-71.810295},
+    {"id":"node_gqs2k2b","latitude":42.273742,"longitude":-71.810519},
+    {"id":"node_8vkanxe","latitude":42.273734,"longitude":-71.810705},
+    {"id":"node_zkusfj9","latitude":42.273666,"longitude":-71.810877},
+    {"id":"node_zk4go50","latitude":42.273507,"longitude":-71.811157},
+    {"id":"node_5l94nm5","latitude":42.273305,"longitude":-71.811287},
+    {"id":"node_j6jv8xp","latitude":42.273238,"longitude":-71.811317},
+    {"id":"node_zhddnit","latitude":42.273253,"longitude":-71.811466},
+    {"id":"node_8tth6zp","latitude":42.27323,"longitude":-71.811537},
+    {"id":"node_uwbtr3l","latitude":42.274729,"longitude":-71.810085},
+    {"id":"node_qwnzoag","latitude":42.275017,"longitude":-71.809856},
+    {"id":"node_8jppe5t","latitude":42.274749,"longitude":-71.809655},
+    {"id":"node_8qpxnld","latitude":42.274673,"longitude":-71.809516},
+    {"id":"node_0dgf1d7","latitude":42.274388,"longitude":-71.810162},
+    {"id":"node_op0emm6","latitude":42.27434,"longitude":-71.810097},
+    {"id":"node_ipi0m0c","latitude":42.273232,"longitude":-71.811163},
+    {"id":"node_73sl55y","latitude":42.273189,"longitude":-71.811077},
+    {"id":"node_o9lgtgb","latitude":42.273111,"longitude":-71.811005},
+    {"id":"node_1q5p6cx","latitude":42.27308,"longitude":-71.810651},
+    {"id":"node_59pfkcz","latitude":42.272708,"longitude":-71.807838},
+    {"id":"node_tefblys","latitude":42.272637,"longitude":-71.807642},
+    {"id":"node_r4ihqj9","latitude":42.272578,"longitude":-71.807444},
+    {"id":"node_30hln1l","latitude":42.272534,"longitude":-71.807207},
+    {"id":"node_lqzozlf","latitude":42.272517,"longitude":-71.806699},
+    {"id":"node_r9l6gx1","latitude":42.272554,"longitude":-71.806435},
+    {"id":"node_r2wh5gt","latitude":42.272594,"longitude":-71.806209},
+    {"id":"node_802ap4p","latitude":42.272621,"longitude":-71.80596},
+    {"id":"node_zjwkw0c","latitude":42.273642,"longitude":-71.807565},
+    {"id":"node_nzgyw34","latitude":42.27416,"longitude":-71.807463},
+    {"id":"node_lfw5lpl","latitude":42.274269,"longitude":-71.807408},
+    {"id":"node_rgeb0go","latitude":42.274307,"longitude":-71.807391},
+    {"id":"node_5wn2t79","latitude":42.275572,"longitude":-71.802841},
+    {"id":"node_ibx0g3x","latitude":42.275394,"longitude":-71.80236},
+    {"id":"node_eken83e","latitude":42.275355,"longitude":-71.802244},
+    {"id":"node_2hdp633","latitude":42.275304,"longitude":-71.802071},
+    {"id":"node_d8ij4b6","latitude":42.275111,"longitude":-71.802034},
+    {"id":"node_52zjs3s","latitude":42.275067,"longitude":-71.801716},
+    {"id":"node_vtr2tpd","latitude":42.275673,"longitude":-71.802767},
+    {"id":"node_97yu309","latitude":42.275455,"longitude":-71.802181},
+    {"id":"node_o1cuzmc","latitude":42.275399,"longitude":-71.802092},
+    {"id":"node_ttc0h3j","latitude":42.274663,"longitude":-71.803653},
+    {"id":"node_gei4ndh","latitude":42.275167,"longitude":-71.805029},
+    {"id":"node_w1dxdn7","latitude":42.275033,"longitude":-71.805123},
+    {"id":"node_yub1zin","latitude":42.273951,"longitude":-71.805227},
+    {"id":"node_t8dx956","latitude":42.274076,"longitude":-71.805306},
+    {"id":"node_bd085mo","latitude":42.274094,"longitude":-71.805374},
+    {"id":"node_91wx4c4","latitude":42.273848,"longitude":-71.805424},
+    {"id":"node_fqu3g30","latitude":42.273855,"longitude":-71.805332},
+    {"id":"node_kncuyu5","latitude":42.273879,"longitude":-71.805276},
+    {"id":"node_kid1bbv","latitude":42.275003,"longitude":-71.805199},
+    {"id":"node_z7labb6","latitude":42.273384,"longitude":-71.80552},
+    {"id":"node_2dbrj35","latitude":42.27311,"longitude":-71.805577},
+    {"id":"node_re5j7af","latitude":42.273189,"longitude":-71.805451},
+    {"id":"node_q6836m6","latitude":42.273295,"longitude":-71.805433},
+    {"id":"node_chykcv5","latitude":42.272621,"longitude":-71.805678},
+    {"id":"node_3b0dzuo","latitude":42.273605,"longitude":-71.805475},
+    {"id":"node_1zy5gb1","latitude":42.273475,"longitude":-71.804364},
+    {"id":"node_mvxorkn","latitude":42.274204,"longitude":-71.802218},
+    {"id":"node_xou06c4","latitude":42.274263,"longitude":-71.802417},
+    {"id":"node_gryoui0","latitude":42.275033,"longitude":-71.802034},
+    {"id":"node_vbtl4d1","latitude":42.274739,"longitude":-71.802149},
+    {"id":"node_ar2z161","latitude":42.27437,"longitude":-71.802863},
+    {"id":"node_535ubn6","latitude":42.276031,"longitude":-71.807212},
+    {"id":"node_7gcgnl4","latitude":42.276147,"longitude":-71.807417},
+    {"id":"node_4gkzhj9","latitude":42.276027,"longitude":-71.807533},
+    {"id":"node_vsk10ty","latitude":42.275186,"longitude":-71.807686},
+    {"id":"node_orxruho","latitude":42.277608,"longitude":-71.809202},
+    {"id":"node_uap1r47","latitude":42.274661,"longitude":-71.804125},
+    {"id":"node_s6njde5","latitude":42.272548,"longitude":-71.804557},
+    {"id":"node_6iop1fz","latitude":42.272815,"longitude":-71.80819},
+    {"id":"node_9zpnuup","latitude":42.272851,"longitude":-71.8084},
+    {"id":"node_27y9pvw","latitude":42.275093,"longitude":-71.809866},
+    {"id":"node_0et65xg","latitude":42.275146,"longitude":-71.809902},
+    {"id":"node_oyc3qjo","latitude":42.274881,"longitude":-71.810042},
+    {"id":"node_reyam7q","latitude":42.274896,"longitude":-71.810168},
+    {"id":"node_hyl5hs8","latitude":42.274943,"longitude":-71.810246},
+    {"id":"node_xqidz7d","latitude":42.274992,"longitude":-71.810282},
+    {"id":"node_9q88fjk","latitude":42.275118,"longitude":-71.810283},
+    {"id":"node_sp6s7k3","latitude":42.275164,"longitude":-71.810355},
+    {"id":"node_2ajm8fw","latitude":42.275891,"longitude":-71.809624},
+    {"id":"node_6a1ic09","latitude":42.275858,"longitude":-71.809567},
+    {"id":"node_zk3z248","latitude":42.275993,"longitude":-71.80933},
+    {"id":"node_x5k1n82","latitude":42.275894,"longitude":-71.809523},
+    {"id":"node_cnfipvu","latitude":42.276038,"longitude":-71.809321},
+    {"id":"node_digypf3","latitude":42.276106,"longitude":-71.809264},
+    {"id":"node_0dr4gu8","latitude":42.276132,"longitude":-71.809206},
+    {"id":"node_ggamkj0","latitude":42.276452,"longitude":-71.80889},
+    {"id":"node_n4a5t3s","latitude":42.276709,"longitude":-71.808518},
+    {"id":"node_7eph337","latitude":42.276757,"longitude":-71.808475},
+    {"id":"node_r613m6t","latitude":42.274911,"longitude":-71.809927},
+    {"id":"node_w2l6w1o","latitude":42.274927,"longitude":-71.810369},
+    {"id":"node_4orn4w9","latitude":42.274558,"longitude":-71.810708},
+    {"id":"node_lizr19j","latitude":42.274995,"longitude":-71.811515},
+    {"id":"node_oiq953e","latitude":42.274746,"longitude":-71.811767},
+    {"id":"node_48u9iwg","latitude":42.274631,"longitude":-71.811941},
+    {"id":"node_clewoq5","latitude":42.273887,"longitude":-71.812665},
+    {"id":"node_ue4c4hc","latitude":42.273852,"longitude":-71.812617},
+    {"id":"node_37c1iaj","latitude":42.273608,"longitude":-71.812759},
+    {"id":"node_af6rb9j","latitude":42.273474,"longitude":-71.812972},
+    {"id":"node_lw603tl","latitude":42.273418,"longitude":-71.813138},
+    {"id":"node_tza73pb","latitude":42.273297,"longitude":-71.812291},
+    {"id":"node_trp00tj","latitude":42.273277,"longitude":-71.81219},
+    {"id":"node_f14l5ra","latitude":42.273351,"longitude":-71.811787},
+    {"id":"node_301m8vx","latitude":42.273405,"longitude":-71.811713},
+    {"id":"node_k1t32ov","latitude":42.274506,"longitude":-71.810639},
+    {"id":"node_si2bgw1","latitude":42.274716,"longitude":-71.810562},
+    {"id":"node_aonc5ww","latitude":42.274771,"longitude":-71.810327},
+    {"id":"node_uxddq5w","latitude":42.274782,"longitude":-71.810197},
+    {"id":"node_df0636c","latitude":42.27477,"longitude":-71.81005},
+    {"id":"node_44y8g76","latitude":42.275301,"longitude":-71.807876},
+    {"id":"node_obkjm7x","latitude":42.275274,"longitude":-71.807669},
+    {"id":"node_6k6gix3","latitude":42.27846,"longitude":-71.808573},
+    {"id":"node_zqrw6mj","latitude":42.278832,"longitude":-71.80845},
+    {"id":"node_aclfzeo","latitude":42.278741,"longitude":-71.807554},
+    {"id":"node_0hayt91","latitude":42.278764,"longitude":-71.807374},
+    {"id":"node_z67yd2v","latitude":42.278596,"longitude":-71.807351},
+    {"id":"node_cx2cktd","latitude":42.278749,"longitude":-71.80744},
+    {"id":"node_w143iqx","latitude":42.278694,"longitude":-71.807104},
+    {"id":"node_aa6fuaf","latitude":42.278794,"longitude":-71.807011},
+    {"id":"node_d6egan5","latitude":42.278792,"longitude":-71.806848},
+    {"id":"node_4a44tzz","latitude":42.278996,"longitude":-71.806204},
+    {"id":"node_zldxa9t","latitude":42.278985,"longitude":-71.805845},
+    {"id":"node_2oagz8p","latitude":42.278671,"longitude":-71.805222},
+    {"id":"node_texwq15","latitude":42.278553,"longitude":-71.804967},
+    {"id":"node_85o72ak","latitude":42.278274,"longitude":-71.804601},
+    {"id":"node_3gpwgnz","latitude":42.27798,"longitude":-71.804367},
+    {"id":"node_2tdexvl","latitude":42.277937,"longitude":-71.804295},
+    {"id":"node_ah7w4ip","latitude":42.277931,"longitude":-71.804202},
+    {"id":"node_webx3dq","latitude":42.278204,"longitude":-71.803601},
+    {"id":"node_wqjgtsv","latitude":42.27847,"longitude":-71.807904},
+    {"id":"node_pghw3s1","latitude":42.278409,"longitude":-71.808024},
+    {"id":"node_5reduqb","latitude":42.277917,"longitude":-71.808256},
+    {"id":"node_cj7a1xz","latitude":42.277649,"longitude":-71.80834},
+    {"id":"node_zj24m5r","latitude":42.277484,"longitude":-71.808336},
+    {"id":"node_1nowm59","latitude":42.277361,"longitude":-71.808294},
+    {"id":"node_vvjm8w9","latitude":42.277077,"longitude":-71.808563},
+    {"id":"node_vsv48oy","latitude":42.27728,"longitude":-71.808199},
+    {"id":"node_qpdtt45","latitude":42.277103,"longitude":-71.808141},
+    {"id":"node_iruk5p4","latitude":42.277042,"longitude":-71.808052},
+    {"id":"node_5bzfqek","latitude":42.276789,"longitude":-71.807966},
+    {"id":"node_dz607nw","latitude":42.276543,"longitude":-71.807943},
+    {"id":"node_out8vym","latitude":42.277245,"longitude":-71.808068},
+    {"id":"node_729gnpk","latitude":42.277219,"longitude":-71.807969},
+    {"id":"node_bwj5yvb","latitude":42.277202,"longitude":-71.807595},
+    {"id":"node_2vvpeb0","latitude":42.277283,"longitude":-71.807328},
+    {"id":"node_2l2s2zw","latitude":42.277315,"longitude":-71.807133},
+    {"id":"node_8so2u1x","latitude":42.277312,"longitude":-71.806876},
+    {"id":"node_iaows3s","latitude":42.27714,"longitude":-71.806445},
+    {"id":"node_gpe4qes","latitude":42.276727,"longitude":-71.806059},
+    {"id":"node_90nt0uu","latitude":42.276477,"longitude":-71.805815},
+    {"id":"node_z89mfb1","latitude":42.276141,"longitude":-71.805372},
+    {"id":"node_hg56var","latitude":42.275859,"longitude":-71.805003},
+    {"id":"node_ovyxtf7","latitude":42.275844,"longitude":-71.804622},
+    {"id":"node_oe6one1","latitude":42.275805,"longitude":-71.804529},
+    {"id":"node_7rk3129","latitude":42.275584,"longitude":-71.804432},
+    {"id":"node_p0ouxf5","latitude":42.275513,"longitude":-71.804241},
+    {"id":"node_mo83bdg","latitude":42.275679,"longitude":-71.803862},
+    {"id":"node_40b3qo9","latitude":42.275991,"longitude":-71.803667},
+    {"id":"node_nexhzqm","latitude":42.276236,"longitude":-71.80342},
+    {"id":"node_oe7t7uj","latitude":42.276301,"longitude":-71.803138},
+    {"id":"node_tx2tesu","latitude":42.276322,"longitude":-71.802914},
+    {"id":"node_o4lpo3s","latitude":42.276295,"longitude":-71.80272},
+    {"id":"node_weao2ri","latitude":42.276324,"longitude":-71.802438},
+    {"id":"node_4vh4dvn","latitude":42.276375,"longitude":-71.802312},
+    {"id":"node_mo4nufy","latitude":42.277179,"longitude":-71.802536},
+    {"id":"node_2168xrc","latitude":42.277303,"longitude":-71.802604},
+    {"id":"node_vdzecmb","latitude":42.27738,"longitude":-71.802638},
+    {"id":"node_x9v50uv","latitude":42.277506,"longitude":-71.80277},
+    {"id":"node_5thzuyf","latitude":42.277507,"longitude":-71.802841},
+    {"id":"node_y35ffux","latitude":42.277488,"longitude":-71.802889},
+    {"id":"node_oiiokod","latitude":42.277556,"longitude":-71.802953},
+    {"id":"node_78snb5d","latitude":42.277591,"longitude":-71.802907},
+    {"id":"node_4lu6j3v","latitude":42.277671,"longitude":-71.802911},
+    {"id":"node_g0opp30","latitude":42.278106,"longitude":-71.803368},
+    {"id":"node_ha7duyy","latitude":42.278119,"longitude":-71.803457},
+    {"id":"node_81j392u","latitude":42.278101,"longitude":-71.803495},
+    {"id":"node_ltpwu2c","latitude":42.2762,"longitude":-71.802643},
+    {"id":"node_biyca0k","latitude":42.276283,"longitude":-71.802527},
+    {"id":"node_3j5i9aa","latitude":42.274233,"longitude":-71.807038},
+    {"id":"node_f3hubup","latitude":42.274212,"longitude":-71.80689},
+    {"id":"node_a2gsuto","latitude":42.274293,"longitude":-71.806894},
+    {"id":"node_asqoh7a","latitude":42.274517,"longitude":-71.806825},
+    {"id":"node_5srbb6n","latitude":42.274795,"longitude":-71.806769},
+    {"id":"node_kwkop3p","latitude":42.274861,"longitude":-71.807172},
+    {"id":"node_hagy750","latitude":42.27339,"longitude":-71.807596},
+    {"id":"node_plt0mr7","latitude":42.273372,"longitude":-71.807422},
+    {"id":"node_l4ztgly","latitude":42.273406,"longitude":-71.807764},
+    {"id":"node_sgbqmqm","latitude":42.273676,"longitude":-71.807999},
+    {"id":"node_4nrt18t","latitude":42.273956,"longitude":-71.809091},
+    {"id":"node_f49xh9k","latitude":42.273142,"longitude":-71.807762},
+    {"id":"node_soofc5j","latitude":42.272958,"longitude":-71.807915},
+    {"id":"node_zmd4mc7","latitude":42.273199,"longitude":-71.811575},
+    {"id":"node_dyoqi4e","latitude":42.27324,"longitude":-71.811507},
+    {"id":"node_5nl0lhd","latitude":42.273408,"longitude":-71.811239},
+    {"id":"node_c71heo8","latitude":42.273709,"longitude":-71.810787},
+    {"id":"node_4akev87","latitude":42.273747,"longitude":-71.810611},
+    {"id":"node_6yuuubd","latitude":42.273625,"longitude":-71.810131},
+    {"id":"node_qkgksnv","latitude":42.273507,"longitude":-71.809926},
+    {"id":"node_z0wpa4j","latitude":42.273446,"longitude":-71.809275},
+    {"id":"node_bnxhiti","latitude":42.274187,"longitude":-71.809218},
+    {"id":"node_pmrkqln","latitude":42.274142,"longitude":-71.80923},
+    {"id":"node_vohp78g","latitude":42.274078,"longitude":-71.80926},
+    {"id":"node_mth37uv","latitude":42.274533,"longitude":-71.809151},
+    {"id":"node_72aykmt","latitude":42.274582,"longitude":-71.809112},
+    {"id":"node_z5ob5zv","latitude":42.274544,"longitude":-71.808765},
+    {"id":"node_ip2k9ds","latitude":42.274572,"longitude":-71.80868},
+    {"id":"node_09a917s","latitude":42.273497,"longitude":-71.809226},
+    {"id":"node_jorxvoq","latitude":42.273558,"longitude":-71.809173},
+    {"id":"node_bn8jsvn","latitude":42.273653,"longitude":-71.809122},
+    {"id":"node_zdiikry","latitude":42.273834,"longitude":-71.809081},
+    {"id":"node_o974n9c","latitude":42.274039,"longitude":-71.809108},
+    {"id":"node_tryf9dn","latitude":42.27378,"longitude":-71.807855},
+    {"id":"node_dy81aa5","latitude":42.273737,"longitude":-71.807829},
+    {"id":"node_u2psdyl","latitude":42.273585,"longitude":-71.807661},
+    {"id":"node_210xmnf","latitude":42.273343,"longitude":-71.807124},
+    {"id":"node_gwvnjmi","latitude":42.27336,"longitude":-71.807084},
+    {"id":"node_oyoxve0","latitude":42.272978,"longitude":-71.808141},
+    {"id":"node_3e9wsuc","latitude":42.274919,"longitude":-71.806093},
+    {"id":"node_igws1hk","latitude":42.275108,"longitude":-71.806094},
+    {"id":"node_21fkjot","latitude":42.275245,"longitude":-71.806161},
+    {"id":"node_xh5m26h","latitude":42.275319,"longitude":-71.806226},
+    {"id":"node_xu19r2d","latitude":42.275375,"longitude":-71.806293},
+    {"id":"node_rcmt8zs","latitude":42.275412,"longitude":-71.806301},
+    {"id":"node_9ngit6i","latitude":42.275361,"longitude":-71.806444},
+    {"id":"node_lzhi9a2","latitude":42.275059,"longitude":-71.806691},
+    {"id":"node_kuwf96m","latitude":42.274997,"longitude":-71.806745},
+    {"id":"node_0dv9bei","latitude":42.274885,"longitude":-71.806669},
+    {"id":"node_7x2h2f6","latitude":42.274927,"longitude":-71.806742},
+    {"id":"node_zc23uht","latitude":42.27494,"longitude":-71.806871},
+    {"id":"node_mrtsh89","latitude":42.27501,"longitude":-71.807153},
+    {"id":"node_fpqmuk8","latitude":42.275046,"longitude":-71.807129},
+    {"id":"node_8lkr0p8","latitude":42.275083,"longitude":-71.807209},
+    {"id":"node_98ruz7p","latitude":42.275124,"longitude":-71.807263},
+    {"id":"node_i02r4f6","latitude":42.275165,"longitude":-71.807354},
+    {"id":"node_h7baatk","latitude":42.275143,"longitude":-71.807406},
+    {"id":"node_0nr3ojf","latitude":42.275125,"longitude":-71.807431},
+    {"id":"node_gaz4s9p","latitude":42.275162,"longitude":-71.807529},
+    {"id":"node_7v9ru73","latitude":42.275224,"longitude":-71.807512},
+    {"id":"node_5cmr9fw","latitude":42.276047,"longitude":-71.807567},
+    {"id":"node_e6gldl7","latitude":42.276061,"longitude":-71.807608},
+    {"id":"node_noapuhm","latitude":42.276153,"longitude":-71.807752},
+    {"id":"node_7unuxon","latitude":42.275111,"longitude":-71.807229},
+    {"id":"node_ngx7whc","latitude":42.274951,"longitude":-71.806956},
+    {"id":"node_4x153s8","latitude":42.275048,"longitude":-71.807618},
+    {"id":"node_plhkfpm","latitude":42.275052,"longitude":-71.807662},
+    {"id":"node_1szi5s1","latitude":42.274772,"longitude":-71.807433},
+    {"id":"node_y1c24ar","latitude":42.274426,"longitude":-71.807558},
+    {"id":"node_azcybt8","latitude":42.27471,"longitude":-71.807446},
+    {"id":"node_f6zoakj","latitude":42.274561,"longitude":-71.808139},
+    {"id":"node_57ukh3n","latitude":42.274597,"longitude":-71.8081},
+    {"id":"node_fh4rxmj","latitude":42.274605,"longitude":-71.808088},
+    {"id":"node_obn6opa","latitude":42.274621,"longitude":-71.808056},
+    {"id":"node_jvz2lar","latitude":42.274656,"longitude":-71.807963},
+    {"id":"node_ayn82at","latitude":42.27466,"longitude":-71.807848},
+    {"id":"node_6626j9r","latitude":42.274642,"longitude":-71.807803},
+    {"id":"node_v6gpby8","latitude":42.27461,"longitude":-71.807772},
+    {"id":"node_hqwo2yn","latitude":42.274486,"longitude":-71.807882},
+    {"id":"node_ntq97gy","latitude":42.27465,"longitude":-71.808162},
+    {"id":"node_177odxa","latitude":42.274652,"longitude":-71.80811},
+    {"id":"node_5zk3m8v","latitude":42.274641,"longitude":-71.808081},
+    {"id":"node_sr6h759","latitude":42.274632,"longitude":-71.808031},
+    {"id":"node_kuh803t","latitude":42.274663,"longitude":-71.808027},
+    {"id":"node_ift8oi8","latitude":42.274676,"longitude":-71.808065},
+    {"id":"node_uyt0lmq","latitude":42.274704,"longitude":-71.808096},
+    {"id":"node_qw8wjlr","latitude":42.274686,"longitude":-71.808218},
+    {"id":"node_3erx9g5","latitude":42.274758,"longitude":-71.808159},
+    {"id":"node_zy8a13m","latitude":42.275302,"longitude":-71.808048},
+    {"id":"node_wxtxsy6","latitude":42.275314,"longitude":-71.808024},
+    {"id":"node_zzw9yu7","latitude":42.274617,"longitude":-71.808146},
+    {"id":"node_vu9wwu0","latitude":42.274592,"longitude":-71.808141},
+    {"id":"node_h9at3bk","latitude":42.274906,"longitude":-71.807363},
+    {"id":"node_qys0o1p","latitude":42.27492,"longitude":-71.807339},
+    {"id":"node_60cu9mh","latitude":42.274946,"longitude":-71.80727},
+    {"id":"node_273q4b0","latitude":42.27498,"longitude":-71.807204},
+    {"id":"node_ycelv86","latitude":42.274791,"longitude":-71.8067},
+    {"id":"node_h65mlhu","latitude":42.274733,"longitude":-71.806629},
+    {"id":"node_ndit8t0","latitude":42.274787,"longitude":-71.806599},
+    {"id":"node_u2bqxjm","latitude":42.27433,"longitude":-71.807218},
+    {"id":"node_9s661s1","latitude":42.27421,"longitude":-71.807425},
+    {"id":"node_4l04df4","latitude":42.274246,"longitude":-71.807418},
+    {"id":"node_9vomlnc","latitude":42.274397,"longitude":-71.80736},
+    {"id":"node_b5o8vmk","latitude":42.274319,"longitude":-71.807443},
+    {"id":"node_q2ylbrr","latitude":42.274409,"longitude":-71.807427},
+    {"id":"node_l7c028b","latitude":42.2743,"longitude":-71.807268},
+    {"id":"node_y2l71hr","latitude":42.27435,"longitude":-71.806856},
+    {"id":"node_8rzwzf7","latitude":42.274329,"longitude":-71.806881},
+    {"id":"node_rzwcnms","latitude":42.274005,"longitude":-71.806729},
+    {"id":"node_xv8pb3v","latitude":42.273807,"longitude":-71.806763},
+    {"id":"node_8usiaom","latitude":42.273652,"longitude":-71.806791},
+    {"id":"node_rsse5lo","latitude":42.273659,"longitude":-71.806847},
+    {"id":"node_uswdty3","latitude":42.273812,"longitude":-71.80682},
+    {"id":"node_n8l1pcj","latitude":42.273962,"longitude":-71.806737},
+    {"id":"node_r9lt83i","latitude":42.273958,"longitude":-71.806694},
+    {"id":"node_e17wwaa","latitude":42.274083,"longitude":-71.806813},
+    {"id":"node_omia147","latitude":42.273617,"longitude":-71.807618},
+    {"id":"node_adwvoj8","latitude":42.273507,"longitude":-71.807692},
+    {"id":"node_ax367z4","latitude":42.273402,"longitude":-71.807704},
+    {"id":"node_k767ddn","latitude":42.273567,"longitude":-71.806948},
+    {"id":"node_37ji0er","latitude":42.273476,"longitude":-71.806356},
+    {"id":"node_df56n4p","latitude":42.273458,"longitude":-71.806246},
+    {"id":"node_x3vrw3f","latitude":42.273424,"longitude":-71.806081},
+    {"id":"node_ms8krwf","latitude":42.273431,"longitude":-71.805811},
+    {"id":"node_bbw3mcz","latitude":42.27352,"longitude":-71.805804},
+    {"id":"node_1illzq6","latitude":42.273658,"longitude":-71.805784},
+    {"id":"node_ojkup50","latitude":42.273646,"longitude":-71.805685},
+    {"id":"node_cfaomhy","latitude":42.273634,"longitude":-71.805658},
+    {"id":"node_ybdusqm","latitude":42.273508,"longitude":-71.805685},
+    {"id":"node_l0pt5l6","latitude":42.273459,"longitude":-71.805694},
+    {"id":"node_mcqd34i","latitude":42.273452,"longitude":-71.805656},
+    {"id":"node_u1758nb","latitude":42.272823,"longitude":-71.805783},
+    {"id":"node_a2gf1u1","latitude":42.272785,"longitude":-71.805847},
+    {"id":"node_tzit9kf","latitude":42.272658,"longitude":-71.805977},
+    {"id":"node_xmt47re","latitude":42.272639,"longitude":-71.805997},
+    {"id":"node_lz7r6zo","latitude":42.272824,"longitude":-71.806048},
+    {"id":"node_ypa65hk","latitude":42.272861,"longitude":-71.806063},
+    {"id":"node_43ro1vp","latitude":42.272926,"longitude":-71.806028},
+    {"id":"node_f06j0q3","latitude":42.272881,"longitude":-71.80597},
+    {"id":"node_n67c1ii","latitude":42.272853,"longitude":-71.805905},
+    {"id":"node_c2u79yo","latitude":42.272828,"longitude":-71.805833},
+    {"id":"node_i3u1z49","latitude":42.272651,"longitude":-71.806169},
+    {"id":"node_vil74wc","latitude":42.272656,"longitude":-71.806246},
+    {"id":"node_9t9vmuh","latitude":42.272673,"longitude":-71.806494},
+    {"id":"node_0v3rd3b","latitude":42.27292,"longitude":-71.807339},
+    {"id":"node_lhf5b4f","latitude":42.272975,"longitude":-71.807442},
+    {"id":"node_30millj","latitude":42.27302,"longitude":-71.807507},
+    {"id":"node_fwrfjvr","latitude":42.273069,"longitude":-71.807569},
+    {"id":"node_9pnxquz","latitude":42.27312,"longitude":-71.80762},
+    {"id":"node_q3wo9t2","latitude":42.27317,"longitude":-71.807661},
+    {"id":"node_2fyb6lg","latitude":42.272954,"longitude":-71.806041},
+    {"id":"node_khumbm2","latitude":42.273326,"longitude":-71.806111},
+    {"id":"node_eusr7vc","latitude":42.273317,"longitude":-71.806135},
+    {"id":"node_v3ytg38","latitude":42.273331,"longitude":-71.8061},
+    {"id":"node_0wnl5ds","latitude":42.273557,"longitude":-71.806058},
+    {"id":"node_7ek5qjv","latitude":42.273565,"longitude":-71.806137},
+    {"id":"node_ie5p2cv","latitude":42.27327,"longitude":-71.806095},
+    {"id":"node_sw3k0xv","latitude":42.272655,"longitude":-71.80582},
+    {"id":"node_29lqvwu","latitude":42.273506,"longitude":-71.805646},
+    {"id":"node_37srtxw","latitude":42.273892,"longitude":-71.805637},
+    {"id":"node_0flfp47","latitude":42.273951,"longitude":-71.80618},
+    {"id":"node_z2xqiju","latitude":42.273965,"longitude":-71.806314},
+    {"id":"node_gj27bjl","latitude":42.274564,"longitude":-71.805499},
+    {"id":"node_79uynsf","latitude":42.274562,"longitude":-71.805433},
+    {"id":"node_klxrimn","latitude":42.274642,"longitude":-71.80551},
+    {"id":"node_w8rimys","latitude":42.274665,"longitude":-71.805668},
+    {"id":"node_8m417w2","latitude":42.274714,"longitude":-71.805525},
+    {"id":"node_8eyjaky","latitude":42.274746,"longitude":-71.805489},
+    {"id":"node_wa84csq","latitude":42.275047,"longitude":-71.805439},
+    {"id":"node_wybk4pz","latitude":42.275111,"longitude":-71.805364},
+    {"id":"node_i4pz3lm","latitude":42.275351,"longitude":-71.806004},
+    {"id":"node_btv4crv","latitude":42.275145,"longitude":-71.805995},
+    {"id":"node_xct2xxb","latitude":42.27507,"longitude":-71.806106},
+    {"id":"node_bm0rzd3","latitude":42.274901,"longitude":-71.806084},
+    {"id":"node_l03zamh","latitude":42.274877,"longitude":-71.806148},
+    {"id":"node_jpthmpk","latitude":42.275319,"longitude":-71.806487},
+    {"id":"node_nyh4ghj","latitude":42.275192,"longitude":-71.80659},
+    {"id":"node_l8vu0gc","latitude":42.275373,"longitude":-71.806392},
+    {"id":"node_82928o9","latitude":42.27538,"longitude":-71.806366},
+    {"id":"node_gsweuvz","latitude":42.275394,"longitude":-71.806331},
+    {"id":"node_3p67m8x","latitude":42.275433,"longitude":-71.806303},
+    {"id":"node_xc9mznp","latitude":42.275775,"longitude":-71.807058},
+    {"id":"node_1lf7of2","latitude":42.275715,"longitude":-71.807097},
+    {"id":"node_8rjrabg","latitude":42.27567,"longitude":-71.807142},
+    {"id":"node_zoy46rw","latitude":42.275656,"longitude":-71.807278},
+    {"id":"node_j8xkeas","latitude":42.275576,"longitude":-71.807455},
+    {"id":"node_tox64v1","latitude":42.275516,"longitude":-71.80746},
+    {"id":"node_vnoff05","latitude":42.275386,"longitude":-71.807481},
+    {"id":"node_8qzuegb","latitude":42.275897,"longitude":-71.807366},
+    {"id":"node_taotfh6","latitude":42.27588,"longitude":-71.807397},
+    {"id":"node_vp3tc7t","latitude":42.275827,"longitude":-71.80741},
+    {"id":"node_8y8mr0h","latitude":42.275863,"longitude":-71.807547},
+    {"id":"node_3jyuke5","latitude":42.275908,"longitude":-71.807537},
+    {"id":"node_yu9kvrn","latitude":42.275939,"longitude":-71.807525},
+    {"id":"node_b4o5ub0","latitude":42.275974,"longitude":-71.8075},
+    {"id":"node_6c0md61","latitude":42.275988,"longitude":-71.807492},
+    {"id":"node_ehs0ivi","latitude":42.276006,"longitude":-71.807502},
+    {"id":"node_tdql943","latitude":42.276081,"longitude":-71.807314},
+    {"id":"node_j2t6dq6","latitude":42.276259,"longitude":-71.807586},
+    {"id":"node_2xpm4em","latitude":42.276412,"longitude":-71.807785},
+    {"id":"node_b1mpnz6","latitude":42.276756,"longitude":-71.808191},
+    {"id":"node_7o0sk1a","latitude":42.276924,"longitude":-71.808388},
+    {"id":"node_7umx3ol","latitude":42.277257,"longitude":-71.808777},
+    {"id":"node_kjh344c","latitude":42.277597,"longitude":-71.809169},
+    {"id":"node_f7ae01r","latitude":42.276325,"longitude":-71.807675},
+    {"id":"node_v7ckxgd","latitude":42.275253,"longitude":-71.805273},
+    {"id":"node_iiv720t","latitude":42.275213,"longitude":-71.805155},
+    {"id":"node_5pfj0jr","latitude":42.2754,"longitude":-71.805654},
+    {"id":"node_2a1y0yn","latitude":42.275527,"longitude":-71.80599},
+    {"id":"node_9b1amiy","latitude":42.275664,"longitude":-71.806336},
+    {"id":"node_qz8ir74","latitude":42.2758,"longitude":-71.80667},
+    {"id":"node_0q43wil","latitude":42.275926,"longitude":-71.806976},
+    {"id":"node_vetksdb","latitude":42.275339,"longitude":-71.802209},
+    {"id":"node_p5qoldw","latitude":42.275338,"longitude":-71.802164},
+    {"id":"node_hq48fus","latitude":42.27535,"longitude":-71.802188},
+    {"id":"node_k6uh592","latitude":42.275447,"longitude":-71.802166},
+    {"id":"node_ijbrz6b","latitude":42.275108,"longitude":-71.801972},
+    {"id":"node_hggiuf3","latitude":42.275102,"longitude":-71.801897},
+    {"id":"node_ddxw0zb","latitude":42.275094,"longitude":-71.80179},
+    {"id":"node_1ziqiy7","latitude":42.274254,"longitude":-71.802537},
+    {"id":"node_qspv0z6","latitude":42.274252,"longitude":-71.802472},
+    {"id":"node_l4nneog","latitude":42.274769,"longitude":-71.801903},
+    {"id":"node_rnwn5ec","latitude":42.274573,"longitude":-71.802022},
+    {"id":"node_ut4l9pc","latitude":42.274415,"longitude":-71.802106},
+    {"id":"node_1omxsbl","latitude":42.274898,"longitude":-71.801827},
+    {"id":"node_24n54sl","latitude":42.274308,"longitude":-71.80239},
+    {"id":"node_96kldaz","latitude":42.274322,"longitude":-71.802371},
+    {"id":"node_p5rhl1b","latitude":42.274584,"longitude":-71.80223},
+    {"id":"node_9bq7wcj","latitude":42.274807,"longitude":-71.802118},
+    {"id":"node_inzjzcv","latitude":42.274927,"longitude":-71.802077},
+    {"id":"node_jfc6qmc","latitude":42.274948,"longitude":-71.802054},
+    {"id":"node_jvureqi","latitude":42.275034,"longitude":-71.805171},
+    {"id":"node_nb9vyfw","latitude":42.275041,"longitude":-71.805145},
+    {"id":"node_plly676","latitude":42.274707,"longitude":-71.804233},
+    {"id":"node_5rhlaen","latitude":42.27409,"longitude":-71.804249},
+    {"id":"node_uc7e0n1","latitude":42.274585,"longitude":-71.804138},
+    {"id":"node_p5z3zub","latitude":42.272566,"longitude":-71.804904},
+    {"id":"node_emm1a3c","latitude":42.273847,"longitude":-71.805379},
+    {"id":"node_d650fea","latitude":42.273865,"longitude":-71.805303},
+    {"id":"node_n37m0o7","latitude":42.273894,"longitude":-71.805256},
+    {"id":"node_nw8xixw","latitude":42.273929,"longitude":-71.805239},
+    {"id":"node_4kmuu5v","latitude":42.273985,"longitude":-71.80523},
+    {"id":"node_bn5va2q","latitude":42.274011,"longitude":-71.805233},
+    {"id":"node_4r2hdfn","latitude":42.274042,"longitude":-71.805256},
+    {"id":"node_7arlcsn","latitude":42.27406,"longitude":-71.805276},
+    {"id":"node_n5htz87","latitude":42.274088,"longitude":-71.805338},
+    {"id":"node_djxpnzl","latitude":42.273378,"longitude":-71.805494},
+    {"id":"node_299c6k5","latitude":42.273211,"longitude":-71.80544},
+    {"id":"node_dpakp7r","latitude":42.273109,"longitude":-71.805551},
+    {"id":"node_imorgxt","latitude":42.273246,"longitude":-71.805433},
+    {"id":"node_uylyvdv","latitude":42.273335,"longitude":-71.805459},
+    {"id":"node_s8i2qgs","latitude":42.27262,"longitude":-71.805886},
+    {"id":"node_zoipqu0","latitude":42.278119,"longitude":-71.808818},
+    {"id":"node_s4e787a","latitude":42.278672,"longitude":-71.808491},
+    {"id":"node_npdzggl","latitude":42.278742,"longitude":-71.80751},
+    {"id":"node_s0nwmhf","latitude":42.278684,"longitude":-71.807397},
+    {"id":"node_ga4ktfs","latitude":42.278655,"longitude":-71.80758},
+    {"id":"node_n1y4ivs","latitude":42.27861,"longitude":-71.807772},
+    {"id":"node_xal315c","latitude":42.278583,"longitude":-71.80785},
+    {"id":"node_zbyw586","latitude":42.278502,"longitude":-71.80796},
+    {"id":"node_xkotmlf","latitude":42.278288,"longitude":-71.808094},
+    {"id":"node_la36ldf","latitude":42.278152,"longitude":-71.808159},
+    {"id":"node_efgbflg","latitude":42.278027,"longitude":-71.808214},
+    {"id":"node_o8eytzg","latitude":42.276619,"longitude":-71.805955},
+    {"id":"node_ur6hsmh","latitude":42.276305,"longitude":-71.805594},
+    {"id":"node_5qoim60","latitude":42.276026,"longitude":-71.80521},
+    {"id":"node_an7lxcz","latitude":42.275738,"longitude":-71.804513},
+    {"id":"node_l0odvr3","latitude":42.275521,"longitude":-71.80431},
+    {"id":"node_5qxqvz8","latitude":42.275573,"longitude":-71.804091},
+    {"id":"node_p9ez9b2","latitude":42.275828,"longitude":-71.803753},
+    {"id":"node_hx0igye","latitude":42.276127,"longitude":-71.803556},
+    {"id":"node_3nmddtc","latitude":42.276015,"longitude":-71.803655},
+    {"id":"node_et9mcxo","latitude":42.276226,"longitude":-71.802271},
+    {"id":"node_8jc3dog","latitude":42.276408,"longitude":-71.802313},
+    {"id":"node_hn56wis","latitude":42.276309,"longitude":-71.802548},
+    {"id":"node_ij24m8x","latitude":42.276353,"longitude":-71.802343},
+    {"id":"node_ilbbblx","latitude":42.276361,"longitude":-71.802325},
+    {"id":"node_auk2r8r","latitude":42.278511,"longitude":-71.807776},
+    {"id":"node_jwgx2o9","latitude":42.278532,"longitude":-71.807626},
+    {"id":"node_0znqu4l","latitude":42.278558,"longitude":-71.807465},
+    {"id":"node_7ev2l2r","latitude":42.27836,"longitude":-71.804696},
+    {"id":"node_jl3gdsd","latitude":42.278471,"longitude":-71.804838},
+    {"id":"node_umgp607","latitude":42.27855,"longitude":-71.807916},
+    {"id":"node_x43habn","latitude":42.278331,"longitude":-71.808073},
+    {"id":"node_nkgqfke","latitude":42.278224,"longitude":-71.804549},
+    {"id":"node_s2cc831","latitude":42.277928,"longitude":-71.804243},
+    {"id":"node_5aibfda","latitude":42.277955,"longitude":-71.804335},
+    {"id":"node_aeffk8q","latitude":42.278211,"longitude":-71.803627},
+    {"id":"node_exo4l36","latitude":42.278121,"longitude":-71.803406},
+    {"id":"node_vlyzg2c","latitude":42.277633,"longitude":-71.802899},
+    {"id":"node_o0os4v7","latitude":42.277094,"longitude":-71.802501},
+    {"id":"node_iwz0eoy","latitude":42.276855,"longitude":-71.802421},
+    {"id":"node_d1txjpg","latitude":42.276584,"longitude":-71.802364},
+    {"id":"node_jnbpm97","latitude":42.275412,"longitude":-71.80353},
+    {"id":"node_c9euxuv","latitude":42.275595,"longitude":-71.803205},
+    {"id":"node_aqb02p8","latitude":42.275611,"longitude":-71.803091},
+    {"id":"node_jff0cc2","latitude":42.275537,"longitude":-71.803347},
+    {"id":"node_828oyhp","latitude":42.275325,"longitude":-71.803713},
+    {"id":"node_r41orfj","latitude":42.27524,"longitude":-71.803992},
+    {"id":"node_0cci4qu","latitude":42.275202,"longitude":-71.804285},
+    {"id":"node_0uo92cw","latitude":42.275247,"longitude":-71.804851},
+    {"id":"node_fb86w4f","latitude":42.275199,"longitude":-71.804429},
+    {"id":"node_8egul7j","latitude":42.275222,"longitude":-71.804718},
+    {"id":"node_jdbfuj1","latitude":42.27447,"longitude":-71.808491},
+    {"id":"node_v22xahn","latitude":42.274194,"longitude":-71.809786},
+    {"id":"node_iwanh6z","latitude":42.274152,"longitude":-71.809945},
+    {"id":"node_fazv9s9","latitude":42.274073,"longitude":-71.810089},
+    {"id":"node_im9avtd","latitude":42.273725,"longitude":-71.810191},
+    {"id":"node_rdb4o57","latitude":42.2743,"longitude":-71.810026},
+    {"id":"node_zeet1ad","latitude":42.273944,"longitude":-71.810191},
+    {"id":"node_bueq6wf","latitude":42.273872,"longitude":-71.810209},
+    {"id":"node_be7htvf","latitude":42.276578,"longitude":-71.808725},
+    {"id":"node_e22xfq7","latitude":42.275187,"longitude":-71.809975},
+    {"id":"node_9rybwts","latitude":42.27517,"longitude":-71.809934},
+    {"id":"node_1nsgzmf","latitude":42.275057,"longitude":-71.809857},
+    {"id":"node_iot0y78","latitude":42.274966,"longitude":-71.80988},
+    {"id":"node_jeowcco","latitude":42.274935,"longitude":-71.809904},
+    {"id":"node_h5ej85z","latitude":42.274893,"longitude":-71.809984},
+    {"id":"node_ntkw76b","latitude":42.274882,"longitude":-71.810106},
+    {"id":"node_xq1f4z3","latitude":42.274915,"longitude":-71.810208},
+    {"id":"node_0z153j4","latitude":42.274963,"longitude":-71.810264},
+    {"id":"node_auspm1w","latitude":42.275055,"longitude":-71.810295},
+    {"id":"node_sk7fscl","latitude":42.275085,"longitude":-71.810291},
+    {"id":"node_3rfud2k","latitude":42.275026,"longitude":-71.810292},
+    {"id":"node_e9kvrv3","latitude":42.275117,"longitude":-71.809878},
+    {"id":"node_ggxi67i","latitude":42.27476,"longitude":-71.810073},
+    {"id":"node_qdubhmd","latitude":42.274759,"longitude":-71.810392},
+    {"id":"node_fk0w19g","latitude":42.27478,"longitude":-71.810258},
+    {"id":"node_b3piy6t","latitude":42.27332,"longitude":-71.811852},
+    {"id":"node_lguv7x7","latitude":42.273296,"longitude":-71.811927},
+    {"id":"node_ok7ip36","latitude":42.273284,"longitude":-71.811964},
+    {"id":"node_f4omzc1","latitude":42.273273,"longitude":-71.812061},
+    {"id":"node_nhzznfr","latitude":42.27335,"longitude":-71.812485},
+    {"id":"node_7yojmcl","latitude":42.273441,"longitude":-71.812924},
+    {"id":"node_ppsmvpo","latitude":42.273356,"longitude":-71.813089},
+    {"id":"node_bm0sr15","latitude":42.273475,"longitude":-71.813156},
+    {"id":"node_oufgqj2","latitude":42.273353,"longitude":-71.813333},
+    {"id":"node_y938ci4","latitude":42.273343,"longitude":-71.813309},
+    {"id":"node_vp70l8a","latitude":42.273354,"longitude":-71.809264},
+    {"id":"node_n8fcrae","latitude":42.273324,"longitude":-71.809006},
+    {"id":"node_mnz53td","latitude":42.273321,"longitude":-71.808929},
+    {"id":"node_locurmh","latitude":42.273327,"longitude":-71.80888},
+    {"id":"node_g3jv3hk","latitude":42.273333,"longitude":-71.808855},
+    {"id":"node_89t2zxv","latitude":42.273457,"longitude":-71.808835},
+    {"id":"node_j8ul6md","latitude":42.273717,"longitude":-71.808776},
+    {"id":"node_q5vlww5","latitude":42.273978,"longitude":-71.808715},
+    {"id":"node_25h0nxj","latitude":42.273992,"longitude":-71.808551},
+    {"id":"node_m7egvzn","latitude":42.273924,"longitude":-71.80855},
+    {"id":"node_emtpcpa","latitude":42.273897,"longitude":-71.808532},
+    {"id":"node_p8ieekj","latitude":42.273882,"longitude":-71.808504},
+    {"id":"node_xwfx1qw","latitude":42.273856,"longitude":-71.808281},
+    {"id":"node_2plj7io","latitude":42.27368,"longitude":-71.808039},
+    {"id":"node_nra481x","latitude":42.273673,"longitude":-71.808077},
+    {"id":"node_uli0p68","latitude":42.273649,"longitude":-71.80811},
+    {"id":"node_dgxuyfa","latitude":42.273614,"longitude":-71.808123},
+    {"id":"node_r1z6eq0","latitude":42.273576,"longitude":-71.808133},
+    {"id":"node_uhvaskk","latitude":42.273534,"longitude":-71.808158},
+    {"id":"node_g03du3g","latitude":42.273502,"longitude":-71.808212},
+    {"id":"node_oprxfeh","latitude":42.273476,"longitude":-71.808271},
+    {"id":"node_0yxcpzc","latitude":42.27346,"longitude":-71.808219},
+    {"id":"node_6wa1iwi","latitude":42.273044,"longitude":-71.809449},
+    {"id":"node_bj9seza","latitude":42.273068,"longitude":-71.809393},
+    {"id":"node_867v76c","latitude":42.273081,"longitude":-71.809401},
+    {"id":"node_wgpp91e","latitude":42.273294,"longitude":-71.80936},
+    {"id":"node_c0d2z6c","latitude":42.27344,"longitude":-71.809475},
+    {"id":"node_y0g2xm5","latitude":42.273476,"longitude":-71.809318},
+    {"id":"node_0a7txln","latitude":42.273318,"longitude":-71.809347},
+    {"id":"node_fpjcar6","latitude":42.273335,"longitude":-71.809329},
+    {"id":"node_fu41s37","latitude":42.273343,"longitude":-71.809313},
+    {"id":"node_oyhmmot","latitude":42.273348,"longitude":-71.809293},
+    {"id":"node_3bxc22h","latitude":42.2735,"longitude":-71.809214},
+    {"id":"node_sta2qxp","latitude":42.27417,"longitude":-71.809052},
+    {"id":"node_fu5al4a","latitude":42.274142,"longitude":-71.80897},
+    {"id":"node_97g7g7n","latitude":42.273707,"longitude":-71.808656},
+    {"id":"node_vxiresd","latitude":42.273339,"longitude":-71.80886},
+    {"id":"node_21ibepr","latitude":42.27341,"longitude":-71.808675},
+    {"id":"node_jegn5t9","latitude":42.273305,"longitude":-71.808698},
+    {"id":"node_pw2g241","latitude":42.273322,"longitude":-71.808845},
+    {"id":"node_6mdlqde","latitude":42.273253,"longitude":-71.808706},
+    {"id":"node_czwdj77","latitude":42.273248,"longitude":-71.808662},
+    {"id":"node_0d5a909","latitude":42.273197,"longitude":-71.808667},
+    {"id":"node_qcv1bay","latitude":42.273195,"longitude":-71.808645},
+    {"id":"node_me9v5sb","latitude":42.27325,"longitude":-71.808634},
+    {"id":"node_gw5hprh","latitude":42.273249,"longitude":-71.808604},
+    {"id":"node_vfq65yt","latitude":42.2734,"longitude":-71.808572},
+    {"id":"node_ck7seeh","latitude":42.273156,"longitude":-71.808654},
+    {"id":"node_ypdcb19","latitude":42.273162,"longitude":-71.8087},
+    {"id":"node_0yyaddd","latitude":42.273088,"longitude":-71.808713},
+    {"id":"node_xf1f9ea","latitude":42.273089,"longitude":-71.808821},
+    {"id":"node_9j0h0mu","latitude":42.27308,"longitude":-71.808734},
+    {"id":"node_44oex3i","latitude":42.273427,"longitude":-71.808697},
+    {"id":"node_zhg8ikw","latitude":42.273378,"longitude":-71.808758},
+    {"id":"node_uj4smq5","latitude":42.273361,"longitude":-71.808786},
+    {"id":"node_5ghe1c9","latitude":42.273346,"longitude":-71.808818},
+    {"id":"node_aok1zd7","latitude":42.273076,"longitude":-71.809379},
+    {"id":"node_kr9k40z","latitude":42.273132,"longitude":-71.809368},
+    {"id":"node_v3wrtzx","latitude":42.273122,"longitude":-71.80927},
+    {"id":"node_h57ty2u","latitude":42.273109,"longitude":-71.809132},
+    {"id":"node_gw0rvph","latitude":42.272943,"longitude":-71.809304},
+    {"id":"node_7xbk1et","latitude":42.27293,"longitude":-71.809165},
+    {"id":"node_3dxlrla","latitude":42.272923,"longitude":-71.809084},
+    {"id":"node_qicrnd0","latitude":42.27302,"longitude":-71.809146},
+    {"id":"node_0cdptn7","latitude":42.273451,"longitude":-71.808731},
+    {"id":"node_2ck5ahb","latitude":42.273451,"longitude":-71.808667},
+    {"id":"node_omz17i7","latitude":42.273454,"longitude":-71.808802},
+    {"id":"node_2445w8a","latitude":42.273491,"longitude":-71.808698},
+    {"id":"node_wq8wxzn","latitude":42.273465,"longitude":-71.808646},
+    {"id":"node_x5v1ugs","latitude":42.273489,"longitude":-71.808579},
+    {"id":"node_7qt5vp4","latitude":42.273494,"longitude":-71.808522},
+    {"id":"node_9hu9euy","latitude":42.273472,"longitude":-71.808318},
+    {"id":"node_uqa8cc1","latitude":42.273469,"longitude":-71.808254},
+    {"id":"node_50l5kbq","latitude":42.274852,"longitude":-71.805225},
+    {"id":"node_jnnj9ua","latitude":42.278951,"longitude":-71.80841},
+    {"id":"node_b4nxzgs","latitude":42.278897,"longitude":-71.807942},
+    {"id":"node_4t86378","latitude":42.278885,"longitude":-71.807835},
+    {"id":"node_fj7qnwp","latitude":42.278882,"longitude":-71.807805},
+    {"id":"node_nmvr91l","latitude":42.278872,"longitude":-71.807695},
+    {"id":"node_fymgegf","latitude":42.278863,"longitude":-71.807579},
+    {"id":"node_6q22zbv","latitude":42.278874,"longitude":-71.807424},
+    {"id":"node_yfk4rj4","latitude":42.278916,"longitude":-71.807345},
+    {"id":"node_2b1rvjz","latitude":42.279009,"longitude":-71.807264},
+    {"id":"node_wixvjie","latitude":42.279289,"longitude":-71.807153},
+    {"id":"node_6jwefgi","latitude":42.279376,"longitude":-71.807131},
+    {"id":"node_hzrgx6e","latitude":42.279515,"longitude":-71.807125},
+    {"id":"node_9zsl25k","latitude":42.279616,"longitude":-71.807048},
+    {"id":"node_d8jv5g4","latitude":42.279632,"longitude":-71.807033},
+    {"id":"node_n64p46l","latitude":42.279666,"longitude":-71.80695},
+    {"id":"node_2wvtjnt","latitude":42.279545,"longitude":-71.807105},
+    {"id":"node_nin61rx","latitude":42.279445,"longitude":-71.80713},
+    {"id":"node_rx8hip1","latitude":42.278912,"longitude":-71.808075},
+    {"id":"node_oeujmra","latitude":42.27892,"longitude":-71.808166},
+    {"id":"node_81wrnaq","latitude":42.278927,"longitude":-71.808221},
+    {"id":"node_izguo0o","latitude":42.278981,"longitude":-71.80822},
+    {"id":"node_xvxg13v","latitude":42.279151,"longitude":-71.808383},
+    {"id":"node_as43xjd","latitude":42.279216,"longitude":-71.808377},
+    {"id":"node_ie2hl1t","latitude":42.279348,"longitude":-71.808374},
+    {"id":"node_4iy1bga","latitude":42.279548,"longitude":-71.808379},
+    {"id":"node_iw29r54","latitude":42.279551,"longitude":-71.808255},
+    {"id":"node_1qkzing","latitude":42.279554,"longitude":-71.808089},
+    {"id":"node_vl6kopl","latitude":42.279557,"longitude":-71.807946},
+    {"id":"node_dt2qg8p","latitude":42.279557,"longitude":-71.807974},
+    {"id":"node_1wothoi","latitude":42.279609,"longitude":-71.807977},
+    {"id":"node_z0q21qt","latitude":42.27966,"longitude":-71.807978},
+    {"id":"node_h4ywot9","latitude":42.279661,"longitude":-71.808017},
+    {"id":"node_fwjco46","latitude":42.279658,"longitude":-71.808091},
+    {"id":"node_q9yd7qx","latitude":42.279656,"longitude":-71.808181},
+    {"id":"node_wztzh6u","latitude":42.279655,"longitude":-71.808259},
+    {"id":"node_103zaeg","latitude":42.279651,"longitude":-71.808379},
+    {"id":"node_6evy5o7","latitude":42.279853,"longitude":-71.808387},
+    {"id":"node_ow018j4","latitude":42.279668,"longitude":-71.807064},
+    {"id":"node_2ya4e1m","latitude":42.279824,"longitude":-71.806996},
+    {"id":"node_ihpf7ma","latitude":42.279886,"longitude":-71.806988},
+    {"id":"node_8i3jjj4","latitude":42.27989,"longitude":-71.806922},
+    {"id":"node_jlim76l","latitude":42.279913,"longitude":-71.806831},
+    {"id":"node_uyd5ahy","latitude":42.279944,"longitude":-71.806783},
+    {"id":"node_xrikp0t","latitude":42.279928,"longitude":-71.806771},
+    {"id":"node_zoi3e97","latitude":42.279877,"longitude":-71.806785},
+    {"id":"node_cpzd4fr","latitude":42.279769,"longitude":-71.806793},
+    {"id":"node_d9t9xg8","latitude":42.279639,"longitude":-71.806753},
+    {"id":"node_d3zbw5h","latitude":42.279665,"longitude":-71.806805},
+    {"id":"node_i9sexf8","latitude":42.279602,"longitude":-71.806676},
+    {"id":"node_6v0kkru","latitude":42.279542,"longitude":-71.806605},
+    {"id":"node_l8gtmb8","latitude":42.279577,"longitude":-71.806535},
+    {"id":"node_zwmbw5j","latitude":42.279606,"longitude":-71.80621},
+    {"id":"node_jekthe7","latitude":42.279624,"longitude":-71.806198},
+    {"id":"node_dhh82qs","latitude":42.2798,"longitude":-71.80623},
+    {"id":"node_2rzl2ib","latitude":42.279866,"longitude":-71.806244},
+    {"id":"node_z2wgpm2","latitude":42.279842,"longitude":-71.806547},
+    {"id":"node_8vzvrlt","latitude":42.279778,"longitude":-71.806538},
+    {"id":"node_t5pic5p","latitude":42.279871,"longitude":-71.806175},
+    {"id":"node_ytx18q8","latitude":42.279979,"longitude":-71.806217},
+    {"id":"node_wr2l6qv","latitude":42.280079,"longitude":-71.806242},
+    {"id":"node_pwnzce6","latitude":42.280191,"longitude":-71.806272},
+    {"id":"node_clpyotw","latitude":42.280301,"longitude":-71.80632},
+    {"id":"node_d24q467","latitude":42.280277,"longitude":-71.806662},
+    {"id":"node_ed22n8p","latitude":42.280235,"longitude":-71.806688},
+    {"id":"node_h8esg57","latitude":42.280324,"longitude":-71.806668},
+    {"id":"node_uoeob4j","latitude":42.280348,"longitude":-71.8067},
+    {"id":"node_96l6ii5","latitude":42.280365,"longitude":-71.806705},
+    {"id":"node_2nnh2yn","latitude":42.280366,"longitude":-71.806825},
+    {"id":"node_8i8mz4y","latitude":42.280441,"longitude":-71.806835},
+    {"id":"node_bvotirh","latitude":42.280436,"longitude":-71.807133},
+    {"id":"node_ne7rlu7","latitude":42.280356,"longitude":-71.807214},
+    {"id":"node_3edn2dx","latitude":42.280356,"longitude":-71.807265},
+    {"id":"node_v7yda0b","latitude":42.28028,"longitude":-71.807268},
+    {"id":"node_m53fg6n","latitude":42.280224,"longitude":-71.807261},
+    {"id":"node_ofe4cnn","latitude":42.280108,"longitude":-71.807214},
+    {"id":"node_n0ug0lq","latitude":42.280086,"longitude":-71.807217},
+    {"id":"node_m4btlwn","latitude":42.280088,"longitude":-71.807127},
+    {"id":"node_fib5xzg","latitude":42.280103,"longitude":-71.80709},
+    {"id":"node_qwmt8kl","latitude":42.280116,"longitude":-71.807041},
+    {"id":"node_lcmqylz","latitude":42.280281,"longitude":-71.807043},
+    {"id":"node_43xmy7x","latitude":42.280282,"longitude":-71.806903},
+    {"id":"node_n2cofpi","latitude":42.280111,"longitude":-71.806866},
+    {"id":"node_6vzmh3o","latitude":42.280123,"longitude":-71.806937},
+    {"id":"node_zdu865k","latitude":42.280121,"longitude":-71.807002},
+    {"id":"node_wx40ky1","latitude":42.280092,"longitude":-71.806808},
+    {"id":"node_7totxsc","latitude":42.280086,"longitude":-71.806798},
+    {"id":"node_dws12j1","latitude":42.280095,"longitude":-71.80668},
+    {"id":"node_3gx6ugb","latitude":42.280113,"longitude":-71.806471},
+    {"id":"node_4bz8up6","latitude":42.280012,"longitude":-71.806452},
+    {"id":"node_b1an2ow","latitude":42.279986,"longitude":-71.806753},
+    {"id":"node_ejtkuj4","latitude":42.280029,"longitude":-71.806752},
+    {"id":"node_s8ii5h5","latitude":42.28006,"longitude":-71.806768},
+    {"id":"node_6tiv5ar","latitude":42.280074,"longitude":-71.807148},
+    {"id":"node_qh0ee06","latitude":42.280058,"longitude":-71.807166},
+    {"id":"node_rgx08kv","latitude":42.280018,"longitude":-71.807183},
+    {"id":"node_qks0u98","latitude":42.279986,"longitude":-71.807184},
+    {"id":"node_fi2tj3r","latitude":42.27995,"longitude":-71.807163},
+    {"id":"node_414dxd0","latitude":42.279919,"longitude":-71.807125},
+    {"id":"node_lqb3j7m","latitude":42.2799,"longitude":-71.807078},
+    {"id":"node_g7md996","latitude":42.279886,"longitude":-71.807005},
+    {"id":"node_nobl5q1","latitude":42.279986,"longitude":-71.807206},
+    {"id":"node_s0q353u","latitude":42.279982,"longitude":-71.807445},
+    {"id":"node_kwfcheh","latitude":42.280081,"longitude":-71.807446},
+    {"id":"node_z9ot8zz","latitude":42.279901,"longitude":-71.807222},
+    {"id":"node_5vkj3d8","latitude":42.279859,"longitude":-71.80725},
+    {"id":"node_q9dft64","latitude":42.279767,"longitude":-71.807278},
+    {"id":"node_v9dvgtn","latitude":42.279811,"longitude":-71.807649},
+    {"id":"node_qdc3eh1","latitude":42.279837,"longitude":-71.807642},
+    {"id":"node_je2kpps","latitude":42.279857,"longitude":-71.807645},
+    {"id":"node_yq2wfru","latitude":42.27988,"longitude":-71.807655},
+    {"id":"node_skb29lk","latitude":42.279895,"longitude":-71.807674},
+    {"id":"node_3k7r69w","latitude":42.279911,"longitude":-71.807693},
+    {"id":"node_00f46zn","latitude":42.279926,"longitude":-71.807727},
+    {"id":"node_3yz5fht","latitude":42.27996,"longitude":-71.807727},
+    {"id":"node_0ghzh4k","latitude":42.280028,"longitude":-71.807728},
+    {"id":"node_pjuk4s5","latitude":42.28005,"longitude":-71.807729},
+    {"id":"node_hi06dd2","latitude":42.280094,"longitude":-71.807731},
+    {"id":"node_yha3pgr","latitude":42.280117,"longitude":-71.807733},
+    {"id":"node_ci05n03","latitude":42.280165,"longitude":-71.807737},
+    {"id":"node_m7829r8","latitude":42.280183,"longitude":-71.807749},
+    {"id":"node_1g0xzoj","latitude":42.280232,"longitude":-71.807776},
+    {"id":"node_etjvyve","latitude":42.280271,"longitude":-71.807826},
+    {"id":"node_7bqo9o8","latitude":42.280303,"longitude":-71.807892},
+    {"id":"node_n9whbeb","latitude":42.280321,"longitude":-71.807988},
+    {"id":"node_p6hk9s9","latitude":42.280326,"longitude":-71.808404},
+    {"id":"node_wba4owb","latitude":42.280163,"longitude":-71.808396},
+    {"id":"node_42f351p","latitude":42.280164,"longitude":-71.808275},
+    {"id":"node_jhg6qiq","latitude":42.280169,"longitude":-71.808103},
+    {"id":"node_ujgoytl","latitude":42.28017,"longitude":-71.807994},
+    {"id":"node_cgmyoq8","latitude":42.280159,"longitude":-71.807992},
+    {"id":"node_8xhfrmx","latitude":42.28018,"longitude":-71.807974},
+    {"id":"node_efj2qoa","latitude":42.280112,"longitude":-71.80799},
+    {"id":"node_dad5pqr","latitude":42.280064,"longitude":-71.80799},
+    {"id":"node_k0jfzqa","latitude":42.280028,"longitude":-71.807955},
+    {"id":"node_2akmg3b","latitude":42.27998,"longitude":-71.807925},
+    {"id":"node_ubs8apf","latitude":42.279908,"longitude":-71.80784},
+    {"id":"node_js651u5","latitude":42.279925,"longitude":-71.807795},
+    {"id":"node_qprtj8w","latitude":42.279893,"longitude":-71.807858},
+    {"id":"node_gaiv420","latitude":42.279892,"longitude":-71.808005},
+    {"id":"node_741ll1e","latitude":42.279892,"longitude":-71.808095},
+    {"id":"node_o2oez2v","latitude":42.27989,"longitude":-71.808105},
+    {"id":"node_5yhsyi3","latitude":42.279859,"longitude":-71.808104},
+    {"id":"node_44a2aaf","latitude":42.279824,"longitude":-71.808104},
+    {"id":"node_2k0hed1","latitude":42.279824,"longitude":-71.808093},
+    {"id":"node_s3vsws1","latitude":42.279825,"longitude":-71.808013},
+    {"id":"node_7lavdg3","latitude":42.279828,"longitude":-71.807886},
+    {"id":"node_huvl77e","latitude":42.279871,"longitude":-71.807878},
+    {"id":"node_os7xtw2","latitude":42.279843,"longitude":-71.807884},
+    {"id":"node_4lnu7zz","latitude":42.27981,"longitude":-71.807881},
+    {"id":"node_o60i7gp","latitude":42.279784,"longitude":-71.807861},
+    {"id":"node_bgehtld","latitude":42.279754,"longitude":-71.80791},
+    {"id":"node_7mjzgol","latitude":42.279762,"longitude":-71.807831},
+    {"id":"node_vuwy3nt","latitude":42.279752,"longitude":-71.807795},
+    {"id":"node_4o396k0","latitude":42.279748,"longitude":-71.807747},
+    {"id":"node_czjr2xy","latitude":42.279755,"longitude":-71.80772},
+    {"id":"node_n7w1hc0","latitude":42.279767,"longitude":-71.807686},
+    {"id":"node_1oo0htv","latitude":42.279788,"longitude":-71.807664},
+    {"id":"node_l99n3j8","latitude":42.27968,"longitude":-71.807697},
+    {"id":"node_nmu4eac","latitude":42.279598,"longitude":-71.807697},
+    {"id":"node_ipeqdbq","latitude":42.279472,"longitude":-71.807722},
+    {"id":"node_c84e3go","latitude":42.279489,"longitude":-71.807786},
+    {"id":"node_yozvnk4","latitude":42.279491,"longitude":-71.807846},
+    {"id":"node_q7j881r","latitude":42.279432,"longitude":-71.807831},
+    {"id":"node_cjd38t6","latitude":42.279332,"longitude":-71.807865},
+    {"id":"node_sdtud1q","latitude":42.279332,"longitude":-71.807947},
+    {"id":"node_nco8zrw","latitude":42.279327,"longitude":-71.808071},
+    {"id":"node_znjntg5","latitude":42.279351,"longitude":-71.808085},
+    {"id":"node_ki2jdpo","latitude":42.279401,"longitude":-71.808126},
+    {"id":"node_gtl1h2l","latitude":42.279289,"longitude":-71.80807},
+    {"id":"node_h6zg55c","latitude":42.279224,"longitude":-71.808067},
+    {"id":"node_orwe0ss","latitude":42.279156,"longitude":-71.808065},
+    {"id":"node_xlu2tqp","latitude":42.279128,"longitude":-71.808063},
+    {"id":"node_pubgr7t","latitude":42.279124,"longitude":-71.808038},
+    {"id":"node_wrfizrg","latitude":42.2791,"longitude":-71.808086},
+    {"id":"node_l7ol8eu","latitude":42.279104,"longitude":-71.807819},
+    {"id":"node_retmzzp","latitude":42.278986,"longitude":-71.808158},
+    {"id":"node_z8u9ajx","latitude":42.278978,"longitude":-71.808052},
+    {"id":"node_dm866z6","latitude":42.278966,"longitude":-71.808051},
+    {"id":"node_fx567q5","latitude":42.278952,"longitude":-71.808066},
+    {"id":"node_zdjdyl8","latitude":42.279139,"longitude":-71.807781},
+    {"id":"node_7llxrli","latitude":42.27912,"longitude":-71.807638},
+    {"id":"node_7ldmqpt","latitude":42.279124,"longitude":-71.807576},
+    {"id":"node_w8j9zdx","latitude":42.279092,"longitude":-71.807512},
+    {"id":"node_8p420jv","latitude":42.279283,"longitude":-71.807454},
+    {"id":"node_y49eetq","latitude":42.279307,"longitude":-71.807605},
+    {"id":"node_22x75pf","latitude":42.279487,"longitude":-71.807425},
+    {"id":"node_7ymls4s","latitude":42.279585,"longitude":-71.807402},
+    {"id":"node_0bd5nz7","latitude":42.280057,"longitude":-71.808394},
+    {"id":"node_pm9n8xz","latitude":42.280058,"longitude":-71.808272},
+    {"id":"node_02cmx89","latitude":42.280061,"longitude":-71.808103},
+    {"id":"node_kizcqzk","latitude":42.280063,"longitude":-71.808029},
+    {"id":"node_0dv5jd8","latitude":42.28039,"longitude":-71.806668},
+    {"id":"node_n139bjh","latitude":42.280416,"longitude":-71.806366},
+    {"id":"node_zw5gpx8","latitude":42.280481,"longitude":-71.806377},
+    {"id":"node_afqniu9","latitude":42.280797,"longitude":-71.806566},
+    {"id":"node_090e3u6","latitude":42.280765,"longitude":-71.806514},
+    {"id":"node_9nbv7v9","latitude":42.280698,"longitude":-71.806484},
+    {"id":"node_284dipp","latitude":42.280611,"longitude":-71.806464},
+    {"id":"node_c47o1ew","latitude":42.280563,"longitude":-71.806437},
+    {"id":"node_96sxx9k","latitude":42.279142,"longitude":-71.807217},
+    {"id":"node_8sp26qr","latitude":42.280118,"longitude":-71.806901},
+    {"id":"node_3c2ua1y","latitude":42.280163,"longitude":-71.806688},
+    {"id":"node_nlcsyuc","latitude":42.279952,"longitude":-71.80677},
+    {"id":"node_u9r16pu","latitude":42.280264,"longitude":-71.807606},
+    {"id":"node_ctbr5qm","latitude":42.28021,"longitude":-71.807721},
+    {"id":"node_h2ngu4n","latitude":42.279664,"longitude":-71.807958},
+    {"id":"node_ztuiepx","latitude":42.279712,"longitude":-71.80793},
+    {"id":"node_k63wdq1","latitude":42.279912,"longitude":-71.808141},
+    {"id":"node_kaxwss7","latitude":42.279809,"longitude":-71.80812},
+    {"id":"node_3afoxx5","latitude":42.2798,"longitude":-71.808143},
+    {"id":"node_byr0aqv","latitude":42.279115,"longitude":-71.807938},
+    {"id":"node_sse1pug","latitude":42.279123,"longitude":-71.807605},
+    {"id":"node_9y315qa","latitude":42.279112,"longitude":-71.807545},
+    {"id":"node_0uykiw3","latitude":42.274535,"longitude":-71.80838},
+    {"id":"node_2hzaalz","latitude":42.273597,"longitude":-71.811007},
+    {"id":"node_6svo1qt","latitude":42.273468,"longitude":-71.811201},
+    {"id":"node_1671b2r","latitude":42.273254,"longitude":-71.811411},
+    {"id":"node_0qltq72","latitude":42.273594,"longitude":-71.807267},
+    {"id":"node_l4ia3xk","latitude":42.275016,"longitude":-71.806755},
+    {"id":"node_w0sxbai","latitude":42.27329,"longitude":-71.809344},
+    {"id":"node_2by55nj","latitude":42.273225,"longitude":-71.809357},
+    {"id":"node_18krvvn","latitude":42.273225,"longitude":-71.809372},
+    {"id":"node_ofi5umn","latitude":42.273609,"longitude":-71.810246},
+    {"id":"node_ib8np3q","latitude":42.273653,"longitude":-71.810196},
+    {"id":"node_ltor4t6","latitude":42.273498,"longitude":-71.809978},
+    {"id":"node_qfbebrk","latitude":42.273482,"longitude":-71.810215},
+    {"id":"node_o8o5kyx","latitude":42.27543,"longitude":-71.807815},
+    {"id":"node_dk5gq5j","latitude":42.275417,"longitude":-71.807714},
+    {"id":"node_kwb78zc","latitude":42.275414,"longitude":-71.80764},
+    {"id":"node_pbb5vep","latitude":42.274594,"longitude":-71.803945},
+    {"id":"node_xxxh94v","latitude":42.27436,"longitude":-71.803287},
+    {"id":"node_aay4znj","latitude":42.27431,"longitude":-71.803173},
+    {"id":"node_yytd9lc","latitude":42.274312,"longitude":-71.80315},
+    {"id":"node_q6ozgc6","latitude":42.274069,"longitude":-71.802535},
+    {"id":"node_c6b52mo","latitude":42.274562,"longitude":-71.809168}
+  ],
+  "connections": {
+    "quad-center": [
+      "quad-rec-harrington",
+      "quad-rec-morgan",
+      "quad-daniels",
+      "node_vohp78g",
+      "node_y0g2xm5"
+    ],
+    "quad-rec-harrington": [
+      "node_iwanh6z",
+      "node_fazv9s9",
+      "node_rdb4o57"
+    ],
+    "quad-rec-morgan": [
+      "node_im9avtd",
+      "node_6yuuubd"
+    ],
+    "quad-daniels": [
+      "node_qkgksnv",
+      "node_c0d2z6c",
+      {
+        "to": "node_ltor4t6",
+        "accessible": false
+      }
+    ],
+    "quad-daniels-sanford": [
+      "node_z0wpa4j",
+      "node_vp70l8a"
+    ],
+    "quad-bartlett": [
+      "node_bn8jsvn",
+      "node_zdiikry"
+    ],
+    "quad-innovation": [
+      "node_vohp78g",
+      "node_bnxhiti",
+      "node_o974n9c",
+      "node_pmrkqln",
+      "node_sta2qxp"
+    ],
+    "innovation-higgins": [
+      "node_jdbfuj1",
+      "node_25h0nxj"
+    ],
+    "innovation-higgins-campus-center": [
+      "node_jdbfuj1",
+      "node_0uykiw3"
+    ],
+    "innovation-messenger": [
+      "innovation-higgins-campus-center",
+      "node_8qpxnld",
+      {
+        "to": "node_c6b52mo",
+        "accessible": false
+      }
+    ],
+    "fountain-campus-center": [
+      "fountain-olin",
+      "fountain-stratton",
+      "node_hqwo2yn"
+    ],
+    "fountain-olin": [
+      "fountain-salisbury",
+      "salisbury-side-2"
+    ],
+    "fountain-salisbury": [
+      "fountain-stratton",
+      "node_y1c24ar"
+    ],
+    "fountain-stratton": [
+      "stratton-higgins-entrance"
+    ],
+    "olin-main-entrance": [
+      "higgins-olin-cut",
+      "salisbury-side-entrance",
+      "node_plhkfpm",
+      "Olin Hall-entrance-0"
+    ],
+    "olin-salisbury-street": [
+      "node_535ubn6",
+      "node_8qzuegb",
+      "node_xc9mznp"
+    ],
+    "olin-atwater": [
+      "salisbury-side-3",
+      "node_vsk10ty",
+      "node_gaz4s9p"
+    ],
+    "fuller-upper": [
+      "node_5srbb6n",
+      "node_0dv9bei"
+    ],
+    "gordon": [
+      "fuller-side-stairs",
+      "node_a2gsuto",
+      "node_rzwcnms",
+      "Gordon Library-entrance-0"
+    ],
+    "unity-upper-washburn": [
+      "node_e17wwaa",
+      "node_k767ddn",
+      {
+        "to": "node_uswdty3",
+        "accessible": false
+      }
+    ],
+    "boynton": [
+      "node_gwvnjmi",
+      "node_k767ddn"
+    ],
+    "boynton-corner": [
+      "boynton-coombs-1",
+      "node_210xmnf",
+      "Boynton Hall-entrance-1"
+    ],
+    "unity-lower": [
+      "kaven-boynton-street",
+      "node_3b0dzuo",
+      "node_cfaomhy",
+      "node_29lqvwu"
+    ],
+    "unity-upper": [
+      "node_r9lt83i",
+      "node_xv8pb3v",
+      "Unity Hall-entrance-0"
+    ],
+    "stratton-higgins": [
+      "stratton-entrance",
+      "node_sgbqmqm",
+      "node_tryf9dn"
+    ],
+    "alden": [
+      "node_9hu9euy"
+    ],
+    "boynton-stratton": [
+      "node_zjwkw0c",
+      "node_omia147"
+    ],
+    "stratton-higgins-entrance": [
+      "stratton-entrance",
+      "Higgins Laboratories-entrance-1"
+    ],
+    "higgins-entrance": [
+      "node_f6zoakj",
+      "node_hqwo2yn"
+    ],
+    "alden-side-entrance": [],
+    "alden-west-street-entrance": [
+      {
+        "to": "node_sgbqmqm",
+        "accessible": false
+      },
+      {
+        "to": "node_oyoxve0",
+        "accessible": false
+      },
+      "Alden Memorial-entrance-2"
+    ],
+    "washburn-entrance": [
+      {
+        "to": "node_3j5i9aa",
+        "accessible": false
+      },
+      "node_a2gsuto",
+      "node_u2bqxjm"
+    ],
+    "salisbury-entrance": [
+      "node_u2bqxjm",
+      "node_9vomlnc",
+      "node_l7c028b"
+    ],
+    "higgins-olin-cut": [
+      "salisbury-side-2",
+      "node_ayn82at"
+    ],
+    "salisbury-side-1": [
+      "salisbury-side-entrance",
+      "node_y1c24ar",
+      "node_9vomlnc"
+    ],
+    "salisbury-side-2": [
+      "node_azcybt8",
+      "node_v6gpby8"
+    ],
+    "salisbury-side-3": [
+      "node_vsk10ty",
+      "node_plhkfpm"
+    ],
+    "salisbury-side-entrance": [
+      "salisbury-side-4-1",
+      "node_1szi5s1",
+      "node_azcybt8"
+    ],
+    "olin-atwater-cut": [
+      "node_0nr3ojf",
+      "node_4x153s8"
+    ],
+    "salisbury-side-4-1": [
+      "node_h9at3bk"
+    ],
+    "gordon-washburn-cut": [
+      "node_f3hubup",
+      "node_e17wwaa"
+    ],
+    "kaven-stairs": [
+      {
+        "to": "fuller-side-stairs",
+        "accessible": false
+      },
+      "node_3e9wsuc",
+      "node_l03zamh"
+    ],
+    "kaven-stairs-bottom": [
+      "kaven-entrance",
+      "node_l03zamh"
+    ],
+    "kaven-boynton-street": [
+      "kaven-boynton-street-salisbury-street",
+      "node_klxrimn"
+    ],
+    "kaven-boynton-street-salisbury-street": [
+      "node_wybk4pz",
+      "node_jvureqi"
+    ],
+    "kaven-side-entrance": [
+      "node_wa84csq",
+      "Kaven Hall-entrance-1"
+    ],
+    "fuller-side-stairs": [
+      "node_ndit8t0",
+      "node_h65mlhu",
+      {
+        "to": "kaven-stairs",
+        "accessible": false
+      }
+    ],
+    "institute-park-salisbury-street": [
+      "institute-park-1",
+      "node_iiv720t"
+    ],
+    "institute-park-humbolt-ave": [
+      "node_ttc0h3j",
+      "node_5wn2t79",
+      "node_ltpwu2c",
+      "node_aqb02p8"
+    ],
+    "skull-institute": [
+      "node_chykcv5",
+      "node_sw3k0xv",
+      "node_s8i2qgs"
+    ],
+    "institute-road-coombs": [
+      "node_30hln1l",
+      "node_lqzozlf"
+    ],
+    "west-street-institute": [
+      "boynton-alden-stairs-2",
+      "node_59pfkcz",
+      "node_6iop1fz"
+    ],
+    "sanford-quad-institute": [
+      "morgan-daniels-institute",
+      {
+        "to": "node_6wa1iwi",
+        "accessible": false
+      },
+      {
+        "to": "node_gw0rvph",
+        "accessible": false
+      }
+    ],
+    "morgan-daniels-institute": [
+      "node_1q5p6cx",
+      "Daniels Hall-entrance-0"
+    ],
+    "institute-morgan": [
+      "alumni-field",
+      "node_o9lgtgb",
+      "node_zmd4mc7"
+    ],
+    "alumni-field": [],
+    "alumni-field-park-ave": [
+      "park-ave-salisbury-street",
+      "node_bm0sr15"
+    ],
+    "park-ave-salisbury-street": [
+      "node_orxruho",
+      "node_7eph337"
+    ],
+    "boynton-alden-stairs": [
+      "node_l4ztgly",
+      "node_hagy750",
+      {
+        "to": "node_f49xh9k",
+        "accessible": false
+      },
+      "node_ax367z4",
+      "node_q3wo9t2"
+    ],
+    "boynton-alden-stairs-1": [
+      {
+        "to": "node_f49xh9k",
+        "accessible": false
+      },
+      {
+        "to": "node_soofc5j",
+        "accessible": false
+      }
+    ],
+    "boynton-alden-stairs-2": [
+      {
+        "to": "node_soofc5j",
+        "accessible": false
+      },
+      "node_oyoxve0"
+    ],
+    "boynton-coombs-1": [
+      "node_plt0mr7",
+      "node_0v3rd3b"
+    ],
+    "boynton-coombs-2": [
+      "boynton-coombs-3",
+      "node_0v3rd3b"
+    ],
+    "boynton-coombs-3": [
+      "boynton-coombs-4"
+    ],
+    "boynton-coombs-4": [
+      "boynton-coombs-5"
+    ],
+    "boynton-coombs-5": [
+      "node_9t9vmuh"
+    ],
+    "bridge": [
+      {
+        "to": "node_l4ztgly",
+        "accessible": false
+      },
+      {
+        "to": "node_0yxcpzc",
+        "accessible": false
+      }
+    ],
+    "boynton-stratton-walkway": [
+      "node_l4ztgly",
+      "node_adwvoj8",
+      "node_ax367z4"
+    ],
+    "institute-park-1": [
+      "node_0uo92cw"
+    ],
+    "institute-park-2": [
+      "node_fb86w4f",
+      "node_8egul7j"
+    ],
+    "institute-park-3": [
+      "node_r41orfj",
+      "node_0cci4qu"
+    ],
+    "institute-park-4": [
+      "node_828oyhp",
+      "node_r41orfj"
+    ],
+    "institute-park-5": [
+      "node_c9euxuv",
+      "node_jff0cc2"
+    ],
+    "atwater-fuller-stairs": [
+      "node_i4pz3lm",
+      "node_3p67m8x",
+      "node_xc9mznp"
+    ],
+    "fuller-salisbury-street-stairs": [
+      "node_wybk4pz",
+      "node_i4pz3lm",
+      "node_btv4crv"
+    ],
+    "kaven-entrance": [
+      "node_klxrimn",
+      "node_w8rimys"
+    ],
+    "node_hee3l4b": [
+      "node_im9avtd",
+      "node_bueq6wf"
+    ],
+    "node_hbq0rz0": [
+      "node_fazv9s9",
+      "node_zeet1ad"
+    ],
+    "node_3v8ec98": [
+      "node_v22xahn",
+      "node_iwanh6z",
+      "node_rdb4o57"
+    ],
+    "node_22typhd": [
+      "node_q79zhty",
+      "node_v22xahn"
+    ],
+    "node_q79zhty": [
+      "node_pmrkqln"
+    ],
+    "node_a18hyvk": [
+      "node_3p4ghcj",
+      "node_6yuuubd"
+    ],
+    "node_3p4ghcj": [
+      "node_qkgksnv"
+    ],
+    "node_zp5k7dm": [
+      "node_gqs2k2b",
+      "node_im9avtd"
+    ],
+    "node_gqs2k2b": [],
+    "node_8vkanxe": [
+      "node_4akev87",
+      "node_c71heo8"
+    ],
+    "node_zkusfj9": [],
+    "node_zk4go50": [
+      "node_2hzaalz"
+    ],
+    "node_5l94nm5": [
+      "node_j6jv8xp",
+      "node_ipi0m0c"
+    ],
+    "node_j6jv8xp": [],
+    "node_zhddnit": [
+      "node_1671b2r"
+    ],
+    "node_uwbtr3l": [
+      {
+        "to": "node_0dgf1d7",
+        "accessible": false
+      },
+      "node_ggxi67i"
+    ],
+    "node_qwnzoag": [
+      {
+        "to": "node_8jppe5t",
+        "accessible": false
+      },
+      "node_iot0y78"
+    ],
+    "node_8jppe5t": [
+      {
+        "to": "node_8qpxnld",
+        "accessible": false
+      },
+      {
+        "to": "node_qwnzoag",
+        "accessible": false
+      }
+    ],
+    "node_0dgf1d7": [
+      "node_op0emm6",
+      {
+        "to": "node_uwbtr3l",
+        "accessible": false
+      }
+    ],
+    "node_op0emm6": [
+      "node_rdb4o57"
+    ],
+    "node_ipi0m0c": [
+      "node_73sl55y"
+    ],
+    "node_73sl55y": [
+      "node_o9lgtgb"
+    ],
+    "node_o9lgtgb": [
+      "node_1q5p6cx"
+    ],
+    "node_59pfkcz": [
+      "node_tefblys"
+    ],
+    "node_tefblys": [
+      "node_r4ihqj9"
+    ],
+    "node_r4ihqj9": [
+      "node_30hln1l"
+    ],
+    "node_lqzozlf": [
+      "node_r9l6gx1"
+    ],
+    "node_r9l6gx1": [
+      "node_r2wh5gt",
+      "node_9t9vmuh"
+    ],
+    "node_r2wh5gt": [
+      "node_802ap4p",
+      "node_i3u1z49"
+    ],
+    "node_802ap4p": [
+      "node_xmt47re",
+      "node_s8i2qgs"
+    ],
+    "node_zjwkw0c": [
+      "node_nzgyw34"
+    ],
+    "node_nzgyw34": [
+      "node_9s661s1"
+    ],
+    "node_lfw5lpl": [
+      {
+        "to": "node_rgeb0go",
+        "accessible": false
+      },
+      "node_4l04df4"
+    ],
+    "node_rgeb0go": [
+      "node_9vomlnc",
+      "node_b5o8vmk",
+      "node_l7c028b",
+      {
+        "to": "node_lfw5lpl",
+        "accessible": false
+      }
+    ],
+    "node_5wn2t79": [
+      "node_vtr2tpd",
+      "node_ibx0g3x"
+    ],
+    "node_ibx0g3x": [
+      "node_eken83e"
+    ],
+    "node_eken83e": [
+      "node_97yu309",
+      "node_vetksdb"
+    ],
+    "node_2hdp633": [
+      "node_o1cuzmc",
+      "node_d8ij4b6",
+      "node_p5qoldw"
+    ],
+    "node_d8ij4b6": [
+      "node_gryoui0",
+      "node_ijbrz6b"
+    ],
+    "node_52zjs3s": [
+      "node_ddxw0zb",
+      "node_1omxsbl"
+    ],
+    "node_vtr2tpd": [
+      "node_97yu309"
+    ],
+    "node_97yu309": [
+      "node_k6uh592"
+    ],
+    "node_o1cuzmc": [
+      "node_k6uh592",
+      "node_et9mcxo"
+    ],
+    "node_ttc0h3j": [
+      "node_gei4ndh",
+      "node_ar2z161"
+    ],
+    "node_gei4ndh": [
+      "node_w1dxdn7",
+      "node_iiv720t"
+    ],
+    "node_w1dxdn7": [
+      "node_plly676",
+      "node_nb9vyfw"
+    ],
+    "node_yub1zin": [
+      "node_nw8xixw",
+      "node_4kmuu5v"
+    ],
+    "node_t8dx956": [
+      "node_7arlcsn",
+      "node_n5htz87"
+    ],
+    "node_bd085mo": [
+      "node_91wx4c4",
+      "node_n5htz87"
+    ],
+    "node_91wx4c4": [
+      "node_3b0dzuo",
+      "node_emm1a3c"
+    ],
+    "node_fqu3g30": [
+      "node_emm1a3c",
+      "node_d650fea"
+    ],
+    "node_kncuyu5": [
+      "node_d650fea",
+      "node_n37m0o7"
+    ],
+    "node_kid1bbv": [
+      "node_jvureqi"
+    ],
+    "node_z7labb6": [
+      "node_2dbrj35",
+      "node_3b0dzuo",
+      "node_djxpnzl"
+    ],
+    "node_2dbrj35": [
+      "node_chykcv5",
+      "node_dpakp7r"
+    ],
+    "node_re5j7af": [
+      "node_299c6k5",
+      "node_dpakp7r"
+    ],
+    "node_q6836m6": [
+      "node_uylyvdv",
+      "node_imorgxt"
+    ],
+    "node_chykcv5": [
+      "node_p5z3zub"
+    ],
+    "node_3b0dzuo": [
+      "node_1zy5gb1"
+    ],
+    "node_1zy5gb1": [
+      "node_s6njde5",
+      "node_5rhlaen"
+    ],
+    "node_mvxorkn": [
+      "node_xou06c4",
+      "node_ut4l9pc"
+    ],
+    "node_xou06c4": [
+      "node_qspv0z6"
+    ],
+    "node_gryoui0": [
+      "node_jfc6qmc"
+    ],
+    "node_vbtl4d1": [
+      "node_9bq7wcj",
+      "node_p5rhl1b"
+    ],
+    "node_ar2z161": [
+      "node_1ziqiy7"
+    ],
+    "node_535ubn6": [
+      "node_tdql943",
+      "node_0q43wil"
+    ],
+    "node_7gcgnl4": [
+      "node_4gkzhj9",
+      "node_j2t6dq6",
+      "node_tdql943"
+    ],
+    "node_4gkzhj9": [
+      "node_5cmr9fw",
+      "node_ehs0ivi"
+    ],
+    "node_vsk10ty": [
+      "node_obkjm7x"
+    ],
+    "node_orxruho": [
+      "node_kjh344c",
+      "node_zoipqu0"
+    ],
+    "node_uap1r47": [
+      "node_uc7e0n1",
+      "node_plly676",
+      "node_pbb5vep"
+    ],
+    "node_s6njde5": [
+      "node_p5z3zub"
+    ],
+    "node_6iop1fz": [
+      "node_9zpnuup",
+      {
+        "to": "node_oyoxve0",
+        "accessible": false
+      }
+    ],
+    "node_27y9pvw": [
+      "node_1nsgzmf"
+    ],
+    "node_oyc3qjo": [
+      "node_ntkw76b"
+    ],
+    "node_reyam7q": [
+      "node_xq1f4z3"
+    ],
+    "node_hyl5hs8": [
+      "node_0z153j4"
+    ],
+    "node_xqidz7d": [
+      "node_w2l6w1o",
+      "node_3rfud2k"
+    ],
+    "node_9q88fjk": [
+      "node_sp6s7k3"
+    ],
+    "node_sp6s7k3": [
+      "node_2ajm8fw"
+    ],
+    "node_2ajm8fw": [
+      "node_6a1ic09"
+    ],
+    "node_6a1ic09": [
+      "node_x5k1n82"
+    ],
+    "node_zk3z248": [
+      "node_cnfipvu",
+      "node_x5k1n82"
+    ],
+    "node_cnfipvu": [
+      "node_digypf3"
+    ],
+    "node_digypf3": [
+      "node_0dr4gu8"
+    ],
+    "node_0dr4gu8": [
+      "node_ggamkj0"
+    ],
+    "node_ggamkj0": [
+      "node_be7htvf"
+    ],
+    "node_n4a5t3s": [
+      "node_7eph337"
+    ],
+    "node_7eph337": [
+      "node_noapuhm"
+    ],
+    "node_r613m6t": [
+      "node_df0636c",
+      "node_jeowcco",
+      "node_h5ej85z"
+    ],
+    "node_w2l6w1o": [
+      "node_df0636c",
+      "node_si2bgw1"
+    ],
+    "node_4orn4w9": [
+      "node_k1t32ov",
+      "node_lizr19j",
+      "node_si2bgw1"
+    ],
+    "node_lizr19j": [
+      "node_oiq953e"
+    ],
+    "node_oiq953e": [
+      "node_48u9iwg"
+    ],
+    "node_48u9iwg": [
+      "node_clewoq5"
+    ],
+    "node_clewoq5": [
+      "node_ue4c4hc"
+    ],
+    "node_ue4c4hc": [
+      "node_37c1iaj"
+    ],
+    "node_37c1iaj": [
+      "node_af6rb9j"
+    ],
+    "node_af6rb9j": [
+      "node_lw603tl",
+      "node_7yojmcl"
+    ],
+    "node_tza73pb": [
+      "node_trp00tj",
+      "node_nhzznfr"
+    ],
+    "node_trp00tj": [
+      "node_f4omzc1"
+    ],
+    "node_f14l5ra": [
+      "node_301m8vx"
+    ],
+    "node_301m8vx": [
+      "node_k1t32ov"
+    ],
+    "node_si2bgw1": [],
+    "node_aonc5ww": [
+      "node_qdubhmd"
+    ],
+    "node_uxddq5w": [
+      "node_fk0w19g"
+    ],
+    "node_44y8g76": [
+      "node_obkjm7x",
+      "node_wxtxsy6",
+      "Olin Hall-entrance-2"
+    ],
+    "node_obkjm7x": [],
+    "node_6k6gix3": [
+      "node_s4e787a"
+    ],
+    "node_zqrw6mj": [
+      "node_aclfzeo",
+      "node_jnnj9ua"
+    ],
+    "node_aclfzeo": [
+      "node_npdzggl",
+      "node_fymgegf"
+    ],
+    "node_0hayt91": [
+      "node_cx2cktd",
+      "node_6q22zbv",
+      "node_fymgegf"
+    ],
+    "node_z67yd2v": [
+      "node_cx2cktd",
+      "node_w143iqx",
+      "node_0znqu4l"
+    ],
+    "node_cx2cktd": [
+      "node_npdzggl",
+      "node_6q22zbv"
+    ],
+    "node_w143iqx": [
+      "node_aa6fuaf"
+    ],
+    "node_aa6fuaf": [
+      "node_d6egan5"
+    ],
+    "node_d6egan5": [
+      "node_4a44tzz"
+    ],
+    "node_4a44tzz": [
+      "node_zldxa9t"
+    ],
+    "node_zldxa9t": [
+      "node_2oagz8p"
+    ],
+    "node_2oagz8p": [
+      "node_texwq15"
+    ],
+    "node_texwq15": [
+      "node_jl3gdsd"
+    ],
+    "node_85o72ak": [
+      "node_7ev2l2r",
+      "node_nkgqfke"
+    ],
+    "node_3gpwgnz": [
+      "node_nkgqfke",
+      "node_5aibfda"
+    ],
+    "node_2tdexvl": [
+      "node_5aibfda",
+      "node_s2cc831"
+    ],
+    "node_ah7w4ip": [
+      "node_s2cc831",
+      "node_aeffk8q"
+    ],
+    "node_webx3dq": [
+      "node_81j392u",
+      "node_aeffk8q"
+    ],
+    "node_wqjgtsv": [
+      "node_pghw3s1",
+      "node_auk2r8r"
+    ],
+    "node_pghw3s1": [
+      "node_zbyw586",
+      "node_x43habn"
+    ],
+    "node_5reduqb": [
+      "node_cj7a1xz",
+      "node_efgbflg"
+    ],
+    "node_cj7a1xz": [
+      "node_zj24m5r"
+    ],
+    "node_zj24m5r": [
+      "node_1nowm59"
+    ],
+    "node_1nowm59": [
+      "node_vvjm8w9",
+      "node_vsv48oy"
+    ],
+    "node_vvjm8w9": [
+      "node_7umx3ol",
+      "node_7o0sk1a"
+    ],
+    "node_vsv48oy": [
+      "node_qpdtt45",
+      "node_out8vym"
+    ],
+    "node_qpdtt45": [
+      "node_iruk5p4"
+    ],
+    "node_iruk5p4": [
+      "node_5bzfqek"
+    ],
+    "node_5bzfqek": [
+      "node_dz607nw"
+    ],
+    "node_dz607nw": [
+      "node_b1mpnz6",
+      "node_2xpm4em"
+    ],
+    "node_out8vym": [
+      "node_729gnpk"
+    ],
+    "node_729gnpk": [
+      "node_bwj5yvb"
+    ],
+    "node_bwj5yvb": [
+      "node_2vvpeb0"
+    ],
+    "node_2vvpeb0": [
+      "node_2l2s2zw"
+    ],
+    "node_2l2s2zw": [
+      "node_8so2u1x"
+    ],
+    "node_8so2u1x": [
+      "node_iaows3s"
+    ],
+    "node_iaows3s": [
+      "node_gpe4qes"
+    ],
+    "node_gpe4qes": [
+      "node_o8eytzg"
+    ],
+    "node_90nt0uu": [
+      "node_o8eytzg",
+      "node_ur6hsmh"
+    ],
+    "node_z89mfb1": [
+      "node_ur6hsmh",
+      "node_5qoim60"
+    ],
+    "node_hg56var": [
+      "node_ovyxtf7",
+      "node_5qoim60"
+    ],
+    "node_ovyxtf7": [
+      "node_oe6one1"
+    ],
+    "node_oe6one1": [
+      "node_an7lxcz"
+    ],
+    "node_7rk3129": [
+      "node_an7lxcz",
+      "node_l0odvr3"
+    ],
+    "node_p0ouxf5": [
+      "node_l0odvr3",
+      "node_5qxqvz8"
+    ],
+    "node_mo83bdg": [
+      "node_5qxqvz8",
+      "node_p9ez9b2"
+    ],
+    "node_40b3qo9": [
+      "node_p9ez9b2",
+      "node_3nmddtc"
+    ],
+    "node_nexhzqm": [
+      "node_oe7t7uj",
+      "node_hx0igye"
+    ],
+    "node_oe7t7uj": [
+      "node_tx2tesu"
+    ],
+    "node_tx2tesu": [
+      "node_o4lpo3s"
+    ],
+    "node_o4lpo3s": [
+      "node_hn56wis"
+    ],
+    "node_weao2ri": [
+      "node_biyca0k",
+      "node_hn56wis",
+      "node_ij24m8x"
+    ],
+    "node_4vh4dvn": [
+      "node_ilbbblx",
+      "node_8jc3dog",
+      "node_et9mcxo"
+    ],
+    "node_mo4nufy": [
+      "node_2168xrc",
+      "node_o0os4v7"
+    ],
+    "node_2168xrc": [
+      "node_vdzecmb"
+    ],
+    "node_vdzecmb": [
+      "node_x9v50uv"
+    ],
+    "node_x9v50uv": [
+      "node_5thzuyf"
+    ],
+    "node_5thzuyf": [
+      "node_y35ffux"
+    ],
+    "node_y35ffux": [
+      "node_oiiokod"
+    ],
+    "node_oiiokod": [
+      "node_78snb5d"
+    ],
+    "node_78snb5d": [
+      "node_vlyzg2c"
+    ],
+    "node_4lu6j3v": [
+      "node_g0opp30",
+      "node_vlyzg2c"
+    ],
+    "node_g0opp30": [
+      "node_exo4l36"
+    ],
+    "node_ha7duyy": [
+      "node_81j392u",
+      "node_exo4l36"
+    ],
+    "node_ltpwu2c": [
+      "node_biyca0k"
+    ],
+    "node_3j5i9aa": [
+      "node_f3hubup",
+      {
+        "to": "washburn-entrance",
+        "accessible": false
+      },
+      "Washburn Shops-entrance-0"
+    ],
+    "node_f3hubup": [
+      "node_a2gsuto"
+    ],
+    "node_a2gsuto": [
+      "node_8rzwzf7"
+    ],
+    "node_asqoh7a": [
+      "node_5srbb6n",
+      "node_y2l71hr"
+    ],
+    "node_hagy750": [
+      "node_plt0mr7",
+      "node_ax367z4"
+    ],
+    "node_l4ztgly": [
+      "node_ax367z4",
+      {
+        "to": "bridge",
+        "accessible": false
+      }
+    ],
+    "node_4nrt18t": [
+      "node_o974n9c",
+      "node_zdiikry"
+    ],
+    "node_z0wpa4j": [
+      "node_09a917s"
+    ],
+    "node_bnxhiti": [
+      "node_mth37uv",
+      "node_pmrkqln"
+    ],
+    "node_pmrkqln": [
+      "node_vohp78g"
+    ],
+    "node_mth37uv": [
+      "node_72aykmt",
+      {
+        "to": "node_c6b52mo",
+        "accessible": false
+      }
+    ],
+    "node_72aykmt": [
+      "node_z5ob5zv"
+    ],
+    "node_z5ob5zv": [
+      "node_ip2k9ds"
+    ],
+    "node_09a917s": [
+      "node_y0g2xm5",
+      "node_3bxc22h"
+    ],
+    "node_jorxvoq": [
+      "node_bn8jsvn"
+    ],
+    "node_u2psdyl": [
+      "node_adwvoj8",
+      "node_omia147"
+    ],
+    "node_210xmnf": [
+      "node_gwvnjmi"
+    ],
+    "node_3e9wsuc": [
+      "node_xct2xxb",
+      "node_bm0rzd3"
+    ],
+    "node_igws1hk": [
+      "node_21fkjot",
+      "node_xct2xxb",
+      {
+        "to": "node_btv4crv",
+        "accessible": false
+      }
+    ],
+    "node_21fkjot": [
+      "node_xh5m26h"
+    ],
+    "node_xh5m26h": [
+      "node_xu19r2d"
+    ],
+    "node_xu19r2d": [
+      "node_rcmt8zs"
+    ],
+    "node_rcmt8zs": [
+      "node_gsweuvz",
+      "node_3p67m8x"
+    ],
+    "node_9ngit6i": [
+      "node_l8vu0gc",
+      "node_jpthmpk"
+    ],
+    "node_lzhi9a2": [
+      {
+        "to": "node_kuwf96m",
+        "accessible": false
+      },
+      {
+        "to": "node_nyh4ghj",
+        "accessible": false
+      }
+    ],
+    "node_kuwf96m": [
+      "node_7x2h2f6",
+      {
+        "to": "node_lzhi9a2",
+        "accessible": false
+      }
+    ],
+    "node_0dv9bei": [
+      "node_7x2h2f6",
+      "node_ndit8t0",
+      "Fuller Laboratories-entrance-1"
+    ],
+    "node_7x2h2f6": [
+      "node_zc23uht"
+    ],
+    "node_zc23uht": [
+      "node_fpqmuk8",
+      "node_ngx7whc"
+    ],
+    "node_mrtsh89": [
+      {
+        "to": "node_fpqmuk8",
+        "accessible": false
+      },
+      "node_0nr3ojf",
+      "node_ngx7whc",
+      "node_273q4b0"
+    ],
+    "node_fpqmuk8": [
+      "node_8lkr0p8",
+      {
+        "to": "node_mrtsh89",
+        "accessible": false
+      }
+    ],
+    "node_8lkr0p8": [
+      "node_7unuxon"
+    ],
+    "node_98ruz7p": [
+      "node_i02r4f6",
+      "node_7unuxon"
+    ],
+    "node_i02r4f6": [
+      "node_7v9ru73",
+      "node_h7baatk"
+    ],
+    "node_h7baatk": [
+      {
+        "to": "node_0nr3ojf",
+        "accessible": false
+      }
+    ],
+    "node_0nr3ojf": [
+      "node_gaz4s9p",
+      {
+        "to": "node_h7baatk",
+        "accessible": false
+      }
+    ],
+    "node_gaz4s9p": [
+      "node_7v9ru73"
+    ],
+    "node_7v9ru73": [
+      "node_vnoff05"
+    ],
+    "node_5cmr9fw": [
+      "node_e6gldl7"
+    ],
+    "node_e6gldl7": [
+      "node_noapuhm"
+    ],
+    "node_4x153s8": [
+      "node_plhkfpm",
+      "node_1szi5s1"
+    ],
+    "node_f6zoakj": [
+      "node_57ukh3n",
+      "node_vu9wwu0"
+    ],
+    "node_57ukh3n": [
+      "node_fh4rxmj"
+    ],
+    "node_fh4rxmj": [
+      "node_obn6opa",
+      "node_hqwo2yn",
+      "node_ntq97gy"
+    ],
+    "node_obn6opa": [
+      "node_jvz2lar"
+    ],
+    "node_jvz2lar": [
+      "node_ayn82at",
+      "node_kuh803t"
+    ],
+    "node_ayn82at": [
+      "node_6626j9r"
+    ],
+    "node_6626j9r": [
+      "node_v6gpby8"
+    ],
+    "node_ntq97gy": [
+      "node_177odxa",
+      "node_qw8wjlr",
+      "node_zzw9yu7"
+    ],
+    "node_177odxa": [
+      "node_5zk3m8v"
+    ],
+    "node_5zk3m8v": [
+      "node_sr6h759"
+    ],
+    "node_kuh803t": [
+      "node_ift8oi8"
+    ],
+    "node_ift8oi8": [
+      "node_uyt0lmq"
+    ],
+    "node_uyt0lmq": [
+      "node_qw8wjlr"
+    ],
+    "node_qw8wjlr": [
+      "node_3erx9g5"
+    ],
+    "node_3erx9g5": [
+      "node_zy8a13m"
+    ],
+    "node_zy8a13m": [
+      "node_wxtxsy6"
+    ],
+    "node_zzw9yu7": [
+      "node_vu9wwu0"
+    ],
+    "node_h9at3bk": [
+      "node_qys0o1p"
+    ],
+    "node_qys0o1p": [
+      "node_60cu9mh"
+    ],
+    "node_60cu9mh": [
+      "node_273q4b0"
+    ],
+    "node_ycelv86": [
+      "node_h65mlhu"
+    ],
+    "node_u2bqxjm": [
+      "node_l7c028b"
+    ],
+    "node_9s661s1": [
+      "node_4l04df4"
+    ],
+    "node_b5o8vmk": [
+      "node_q2ylbrr"
+    ],
+    "node_y2l71hr": [
+      "node_8rzwzf7"
+    ],
+    "node_rzwcnms": [
+      "node_n8l1pcj",
+      "node_e17wwaa"
+    ],
+    "node_xv8pb3v": [
+      "node_n8l1pcj",
+      "node_8usiaom",
+      {
+        "to": "node_uswdty3",
+        "accessible": false
+      }
+    ],
+    "node_8usiaom": [
+      "node_rsse5lo"
+    ],
+    "node_rsse5lo": [
+      "node_uswdty3"
+    ],
+    "node_n8l1pcj": [
+      {
+        "to": "node_r9lt83i",
+        "accessible": false
+      }
+    ],
+    "node_adwvoj8": [
+      "node_ax367z4"
+    ],
+    "node_k767ddn": [
+      {
+        "to": "node_37ji0er",
+        "accessible": false
+      }
+    ],
+    "node_37ji0er": [
+      {
+        "to": "node_df56n4p",
+        "accessible": false
+      },
+      {
+        "to": "node_k767ddn",
+        "accessible": false
+      }
+    ],
+    "node_df56n4p": [
+      {
+        "to": "node_x3vrw3f",
+        "accessible": false
+      },
+      {
+        "to": "node_37ji0er",
+        "accessible": false
+      }
+    ],
+    "node_x3vrw3f": [
+      {
+        "to": "node_ms8krwf",
+        "accessible": false
+      },
+      "node_0wnl5ds",
+      "node_v3ytg38",
+      {
+        "to": "node_df56n4p",
+        "accessible": false
+      }
+    ],
+    "node_ms8krwf": [
+      "node_bbw3mcz",
+      {
+        "to": "node_x3vrw3f",
+        "accessible": false
+      }
+    ],
+    "node_bbw3mcz": [
+      "node_1illzq6",
+      "node_ybdusqm"
+    ],
+    "node_1illzq6": [
+      "node_ojkup50"
+    ],
+    "node_ojkup50": [
+      "node_cfaomhy",
+      "node_37srtxw"
+    ],
+    "node_cfaomhy": [
+      "node_ybdusqm"
+    ],
+    "node_ybdusqm": [
+      "node_l0pt5l6",
+      "node_29lqvwu"
+    ],
+    "node_l0pt5l6": [
+      "node_mcqd34i"
+    ],
+    "node_mcqd34i": [
+      "node_u1758nb",
+      "node_29lqvwu"
+    ],
+    "node_u1758nb": [
+      "node_a2gf1u1",
+      "node_c2u79yo",
+      "node_sw3k0xv"
+    ],
+    "node_a2gf1u1": [
+      "node_tzit9kf"
+    ],
+    "node_tzit9kf": [
+      "node_xmt47re",
+      "node_lz7r6zo"
+    ],
+    "node_xmt47re": [
+      "node_i3u1z49"
+    ],
+    "node_lz7r6zo": [
+      "node_i3u1z49",
+      "node_ypa65hk"
+    ],
+    "node_ypa65hk": [
+      "node_43ro1vp"
+    ],
+    "node_43ro1vp": [
+      "node_f06j0q3",
+      "node_2fyb6lg"
+    ],
+    "node_f06j0q3": [
+      "node_n67c1ii"
+    ],
+    "node_n67c1ii": [
+      "node_c2u79yo"
+    ],
+    "node_i3u1z49": [
+      "node_vil74wc"
+    ],
+    "node_vil74wc": [
+      "node_9t9vmuh"
+    ],
+    "node_0v3rd3b": [
+      "node_lhf5b4f"
+    ],
+    "node_lhf5b4f": [
+      "node_30millj"
+    ],
+    "node_30millj": [
+      "node_fwrfjvr"
+    ],
+    "node_fwrfjvr": [
+      "node_9pnxquz"
+    ],
+    "node_9pnxquz": [
+      "node_q3wo9t2"
+    ],
+    "node_2fyb6lg": [
+      "node_ie5p2cv"
+    ],
+    "node_khumbm2": [
+      "node_v3ytg38",
+      "node_eusr7vc",
+      "node_ie5p2cv"
+    ],
+    "node_0wnl5ds": [
+      "node_7ek5qjv"
+    ],
+    "node_37srtxw": [
+      "node_0flfp47",
+      "node_gj27bjl"
+    ],
+    "node_0flfp47": [
+      {
+        "to": "node_z2xqiju",
+        "accessible": false
+      }
+    ],
+    "node_gj27bjl": [
+      "node_klxrimn",
+      "node_79uynsf"
+    ],
+    "node_w8rimys": [
+      "node_8m417w2"
+    ],
+    "node_8m417w2": [
+      "node_8eyjaky"
+    ],
+    "node_8eyjaky": [
+      "node_wa84csq"
+    ],
+    "node_wa84csq": [
+      "node_wybk4pz"
+    ],
+    "node_wybk4pz": [
+      "node_v7ckxgd"
+    ],
+    "node_bm0rzd3": [
+      "node_l03zamh"
+    ],
+    "node_jpthmpk": [
+      {
+        "to": "node_nyh4ghj",
+        "accessible": false
+      }
+    ],
+    "node_l8vu0gc": [
+      "node_82928o9"
+    ],
+    "node_82928o9": [
+      "node_gsweuvz"
+    ],
+    "node_xc9mznp": [
+      {
+        "to": "node_1lf7of2",
+        "accessible": false
+      }
+    ],
+    "node_1lf7of2": [
+      {
+        "to": "node_8rjrabg",
+        "accessible": false
+      },
+      {
+        "to": "node_xc9mznp",
+        "accessible": false
+      }
+    ],
+    "node_8rjrabg": [
+      {
+        "to": "node_zoy46rw",
+        "accessible": false
+      },
+      {
+        "to": "node_1lf7of2",
+        "accessible": false
+      }
+    ],
+    "node_zoy46rw": [
+      {
+        "to": "node_j8xkeas",
+        "accessible": false
+      },
+      {
+        "to": "node_8rjrabg",
+        "accessible": false
+      }
+    ],
+    "node_j8xkeas": [
+      "node_tox64v1",
+      "node_vp3tc7t",
+      {
+        "to": "node_zoy46rw",
+        "accessible": false
+      }
+    ],
+    "node_tox64v1": [
+      "node_vnoff05"
+    ],
+    "node_8qzuegb": [
+      "node_6c0md61",
+      "node_taotfh6",
+      "olin-salisbury-street"
+    ],
+    "node_taotfh6": [
+      "node_vp3tc7t",
+      "node_8qzuegb"
+    ],
+    "node_8y8mr0h": [
+      "node_3jyuke5"
+    ],
+    "node_3jyuke5": [
+      "node_yu9kvrn",
+      "node_8y8mr0h"
+    ],
+    "node_yu9kvrn": [
+      "node_b4o5ub0",
+      "node_3jyuke5"
+    ],
+    "node_b4o5ub0": [
+      "node_6c0md61",
+      "node_yu9kvrn"
+    ],
+    "node_6c0md61": [
+      "node_ehs0ivi",
+      "node_b4o5ub0"
+    ],
+    "node_j2t6dq6": [
+      "node_f7ae01r"
+    ],
+    "node_2xpm4em": [
+      "node_f7ae01r"
+    ],
+    "node_b1mpnz6": [
+      "node_7o0sk1a"
+    ],
+    "node_7umx3ol": [
+      "node_kjh344c"
+    ],
+    "node_v7ckxgd": [
+      "node_5pfj0jr",
+      "node_iiv720t"
+    ],
+    "node_5pfj0jr": [
+      "node_2a1y0yn"
+    ],
+    "node_2a1y0yn": [
+      "node_9b1amiy"
+    ],
+    "node_9b1amiy": [
+      "node_qz8ir74"
+    ],
+    "node_qz8ir74": [
+      "node_0q43wil"
+    ],
+    "node_vetksdb": [
+      "node_p5qoldw"
+    ],
+    "node_p5qoldw": [
+      "node_hq48fus"
+    ],
+    "node_hq48fus": [
+      "node_k6uh592"
+    ],
+    "node_ijbrz6b": [
+      "node_hggiuf3"
+    ],
+    "node_hggiuf3": [
+      "node_ddxw0zb"
+    ],
+    "node_1ziqiy7": [
+      "node_qspv0z6"
+    ],
+    "node_l4nneog": [
+      "node_1omxsbl",
+      "node_rnwn5ec"
+    ],
+    "node_rnwn5ec": [
+      "node_ut4l9pc"
+    ],
+    "node_24n54sl": [
+      "node_96kldaz",
+      "node_xou06c4"
+    ],
+    "node_96kldaz": [
+      "node_p5rhl1b"
+    ],
+    "node_9bq7wcj": [
+      "node_inzjzcv"
+    ],
+    "node_inzjzcv": [
+      "node_jfc6qmc"
+    ],
+    "node_jvureqi": [
+      "node_nb9vyfw"
+    ],
+    "node_5rhlaen": [
+      "node_uc7e0n1"
+    ],
+    "node_n37m0o7": [
+      "node_nw8xixw"
+    ],
+    "node_4kmuu5v": [
+      "node_bn5va2q"
+    ],
+    "node_bn5va2q": [
+      "node_4r2hdfn"
+    ],
+    "node_4r2hdfn": [
+      "node_7arlcsn"
+    ],
+    "node_djxpnzl": [
+      "node_uylyvdv"
+    ],
+    "node_299c6k5": [
+      "node_imorgxt"
+    ],
+    "node_npdzggl": [
+      "node_ga4ktfs",
+      "node_6q22zbv",
+      "node_fymgegf"
+    ],
+    "node_ga4ktfs": [
+      "node_n1y4ivs"
+    ],
+    "node_n1y4ivs": [
+      "node_xal315c"
+    ],
+    "node_xal315c": [
+      "node_umgp607"
+    ],
+    "node_zbyw586": [
+      "node_umgp607"
+    ],
+    "node_xkotmlf": [
+      "node_x43habn",
+      "node_la36ldf"
+    ],
+    "node_la36ldf": [
+      "node_efgbflg"
+    ],
+    "node_hx0igye": [
+      "node_3nmddtc"
+    ],
+    "node_8jc3dog": [
+      "node_d1txjpg"
+    ],
+    "node_ij24m8x": [
+      "node_ilbbblx"
+    ],
+    "node_auk2r8r": [
+      "node_jwgx2o9"
+    ],
+    "node_jwgx2o9": [
+      "node_0znqu4l"
+    ],
+    "node_7ev2l2r": [
+      "node_jl3gdsd"
+    ],
+    "node_o0os4v7": [
+      "node_iwz0eoy"
+    ],
+    "node_iwz0eoy": [
+      "node_d1txjpg"
+    ],
+    "node_jnbpm97": [
+      "node_jff0cc2",
+      "node_828oyhp"
+    ],
+    "node_c9euxuv": [
+      "node_aqb02p8"
+    ],
+    "node_0cci4qu": [
+      "node_fb86w4f"
+    ],
+    "node_0uo92cw": [
+      "node_8egul7j"
+    ],
+    "node_v22xahn": [
+      "node_rdb4o57"
+    ],
+    "node_iwanh6z": [
+      "node_rdb4o57"
+    ],
+    "node_fazv9s9": [
+      "node_rdb4o57"
+    ],
+    "node_zeet1ad": [
+      "node_bueq6wf"
+    ],
+    "node_be7htvf": [
+      "node_n4a5t3s"
+    ],
+    "node_e22xfq7": [
+      "node_9rybwts"
+    ],
+    "node_0et65xg": [
+      "node_9rybwts",
+      "node_e9kvrv3"
+    ],
+    "node_1nsgzmf": [
+      "node_qwnzoag"
+    ],
+    "node_e9kvrv3": [
+      "node_27y9pvw"
+    ],
+    "node_iot0y78": [
+      "node_jeowcco"
+    ],
+    "node_h5ej85z": [
+      "node_oyc3qjo"
+    ],
+    "node_ntkw76b": [
+      "node_reyam7q"
+    ],
+    "node_xq1f4z3": [
+      "node_hyl5hs8"
+    ],
+    "node_0z153j4": [
+      "node_xqidz7d"
+    ],
+    "node_3rfud2k": [
+      "node_auspm1w"
+    ],
+    "node_auspm1w": [
+      "node_sk7fscl"
+    ],
+    "node_sk7fscl": [
+      "node_9q88fjk"
+    ],
+    "node_df0636c": [
+      "node_ggxi67i"
+    ],
+    "node_ggxi67i": [
+      "node_uxddq5w",
+      "node_uwbtr3l"
+    ],
+    "node_fk0w19g": [
+      "node_aonc5ww"
+    ],
+    "node_qdubhmd": [
+      "node_si2bgw1"
+    ],
+    "node_7yojmcl": [
+      "node_nhzznfr"
+    ],
+    "node_f4omzc1": [
+      "node_ok7ip36"
+    ],
+    "node_lguv7x7": [
+      "node_ok7ip36",
+      "node_b3piy6t"
+    ],
+    "node_b3piy6t": [
+      "node_f14l5ra"
+    ],
+    "node_bm0sr15": [
+      "node_lw603tl"
+    ],
+    "node_lw603tl": [
+      "node_ppsmvpo"
+    ],
+    "node_ppsmvpo": [
+      "alumni-field"
+    ],
+    "node_oufgqj2": [
+      "alumni-field-park-ave"
+    ],
+    "node_y938ci4": [
+      "node_oufgqj2",
+      "alumni-field"
+    ],
+    "node_25h0nxj": [
+      "node_m7egvzn",
+      "Higgins Laboratories-entrance-3"
+    ],
+    "node_m7egvzn": [
+      "node_emtpcpa"
+    ],
+    "node_emtpcpa": [
+      "node_p8ieekj"
+    ],
+    "node_p8ieekj": [
+      "node_xwfx1qw"
+    ],
+    "node_xwfx1qw": [
+      "stratton-higgins",
+      "Higgins Laboratories-entrance-2"
+    ],
+    "node_tryf9dn": [
+      "node_dy81aa5"
+    ],
+    "node_dy81aa5": [
+      "boynton-stratton-walkway"
+    ],
+    "node_6wa1iwi": [
+      {
+        "to": "node_bj9seza",
+        "accessible": false
+      },
+      {
+        "to": "sanford-quad-institute",
+        "accessible": false
+      }
+    ],
+    "node_867v76c": [
+      {
+        "to": "node_bj9seza",
+        "accessible": false
+      },
+      "node_18krvvn"
+    ],
+    "node_wgpp91e": [
+      "node_c0d2z6c",
+      "node_y0g2xm5",
+      "node_18krvvn",
+      "node_w0sxbai"
+    ],
+    "node_c0d2z6c": [
+      "node_y0g2xm5",
+      "quad-daniels-sanford"
+    ],
+    "node_y0g2xm5": [
+      "node_z0wpa4j"
+    ],
+    "node_vp70l8a": [
+      "node_oyhmmot",
+      "node_n8fcrae"
+    ],
+    "node_oyhmmot": [
+      "node_fu41s37"
+    ],
+    "node_fu41s37": [
+      "node_fpjcar6"
+    ],
+    "node_0a7txln": [
+      "node_fpjcar6",
+      "node_wgpp91e"
+    ],
+    "node_3bxc22h": [
+      "node_jorxvoq",
+      "node_89t2zxv"
+    ],
+    "node_89t2zxv": [
+      "node_j8ul6md",
+      "node_vxiresd",
+      "node_omz17i7"
+    ],
+    "node_j8ul6md": [
+      "node_q5vlww5"
+    ],
+    "node_q5vlww5": [
+      "innovation-higgins"
+    ],
+    "node_sta2qxp": [
+      "node_bnxhiti",
+      "node_fu5al4a"
+    ],
+    "node_fu5al4a": [
+      "innovation-higgins"
+    ],
+    "node_vxiresd": [
+      "node_g3jv3hk"
+    ],
+    "node_locurmh": [
+      "node_g3jv3hk",
+      "node_mnz53td"
+    ],
+    "node_mnz53td": [
+      "node_n8fcrae"
+    ],
+    "node_97g7g7n": [
+      "node_j8ul6md",
+      "innovation-higgins"
+    ],
+    "node_g3jv3hk": [
+      "node_pw2g241"
+    ],
+    "node_5ghe1c9": [
+      "node_g3jv3hk",
+      "node_uj4smq5"
+    ],
+    "node_uj4smq5": [
+      "node_zhg8ikw"
+    ],
+    "node_zhg8ikw": [
+      "node_44oex3i"
+    ],
+    "node_44oex3i": [
+      "node_21ibepr",
+      "node_0cdptn7"
+    ],
+    "node_21ibepr": [
+      "node_vfq65yt"
+    ],
+    "node_vfq65yt": [
+      "alden-side-entrance",
+      "node_gw5hprh"
+    ],
+    "node_gw5hprh": [
+      "node_me9v5sb"
+    ],
+    "node_czwdj77": [
+      "node_6mdlqde",
+      "node_0d5a909"
+    ],
+    "node_6mdlqde": [
+      "node_jegn5t9"
+    ],
+    "node_jegn5t9": [
+      "node_21ibepr",
+      "node_pw2g241"
+    ],
+    "node_0d5a909": [
+      "node_qcv1bay"
+    ],
+    "node_qcv1bay": [
+      "node_me9v5sb",
+      "node_ck7seeh"
+    ],
+    "node_ck7seeh": [
+      "node_ypdcb19"
+    ],
+    "node_ypdcb19": [
+      "node_0yyaddd"
+    ],
+    "node_0yyaddd": [
+      "node_9j0h0mu"
+    ],
+    "node_9j0h0mu": [
+      "node_xf1f9ea"
+    ],
+    "node_v3wrtzx": [
+      "node_kr9k40z",
+      "node_h57ty2u",
+      "node_gw0rvph"
+    ],
+    "node_kr9k40z": [
+      "node_aok1zd7"
+    ],
+    "node_aok1zd7": [
+      "node_bj9seza"
+    ],
+    "node_7xbk1et": [
+      {
+        "to": "node_gw0rvph",
+        "accessible": false
+      },
+      {
+        "to": "node_3dxlrla",
+        "accessible": false
+      }
+    ],
+    "node_qicrnd0": [
+      "node_7xbk1et"
+    ],
+    "node_3dxlrla": [
+      {
+        "to": "node_9zpnuup",
+        "accessible": false
+      },
+      {
+        "to": "node_7xbk1et",
+        "accessible": false
+      }
+    ],
+    "node_omz17i7": [
+      "node_0cdptn7"
+    ],
+    "node_0cdptn7": [
+      "node_2445w8a",
+      "node_2ck5ahb"
+    ],
+    "node_2445w8a": [
+      "node_97g7g7n"
+    ],
+    "node_2ck5ahb": [
+      "node_44oex3i",
+      "node_wq8wxzn"
+    ],
+    "node_wq8wxzn": [
+      "node_x5v1ugs"
+    ],
+    "node_7qt5vp4": [
+      "node_x5v1ugs",
+      "alden"
+    ],
+    "node_9hu9euy": [
+      "node_oprxfeh"
+    ],
+    "node_g03du3g": [
+      "node_oprxfeh"
+    ],
+    "node_uhvaskk": [
+      "node_g03du3g",
+      "node_r1z6eq0"
+    ],
+    "node_r1z6eq0": [
+      "node_dgxuyfa"
+    ],
+    "node_dgxuyfa": [
+      "node_uli0p68"
+    ],
+    "node_uli0p68": [
+      "node_nra481x"
+    ],
+    "node_nra481x": [
+      "node_2plj7io"
+    ],
+    "node_2plj7io": [
+      "node_sgbqmqm"
+    ],
+    "node_oprxfeh": [
+      "node_uqa8cc1"
+    ],
+    "node_uqa8cc1": [
+      "node_0yxcpzc"
+    ],
+    "node_0yxcpzc": [
+      {
+        "to": "bridge",
+        "accessible": false
+      }
+    ],
+    "node_50l5kbq": [
+      "node_kid1bbv",
+      "node_bd085mo"
+    ],
+    "node_zoipqu0": [
+      "node_6k6gix3"
+    ],
+    "node_s4e787a": [
+      "node_zqrw6mj"
+    ],
+    "node_jnnj9ua": [
+      "node_81wrnaq"
+    ],
+    "node_81wrnaq": [
+      "node_izguo0o"
+    ],
+    "node_retmzzp": [
+      "node_z8u9ajx"
+    ],
+    "node_z8u9ajx": [
+      "node_dm866z6"
+    ],
+    "node_fx567q5": [
+      "node_dm866z6",
+      "node_rx8hip1"
+    ],
+    "node_rx8hip1": [
+      "node_oeujmra",
+      "node_b4nxzgs"
+    ],
+    "node_oeujmra": [
+      "node_81wrnaq",
+      "node_retmzzp"
+    ],
+    "node_b4nxzgs": [
+      "node_4t86378"
+    ],
+    "node_fj7qnwp": [
+      "node_nmvr91l"
+    ],
+    "node_nmvr91l": [
+      "node_fymgegf"
+    ],
+    "node_fymgegf": [
+      "node_6q22zbv",
+      "node_cx2cktd"
+    ],
+    "node_6q22zbv": [
+      "node_yfk4rj4"
+    ],
+    "node_yfk4rj4": [
+      "node_2b1rvjz"
+    ],
+    "node_2b1rvjz": [],
+    "node_96sxx9k": [
+      "node_2b1rvjz",
+      "node_wixvjie"
+    ],
+    "node_wixvjie": [
+      "node_6jwefgi"
+    ],
+    "node_6jwefgi": [
+      "node_nin61rx"
+    ],
+    "node_nin61rx": [
+      "node_22x75pf"
+    ],
+    "node_7ymls4s": [
+      "node_22x75pf",
+      "node_2wvtjnt"
+    ],
+    "node_hzrgx6e": [
+      "node_2wvtjnt",
+      "node_nin61rx"
+    ],
+    "node_2wvtjnt": [
+      "node_9zsl25k"
+    ],
+    "node_9zsl25k": [
+      "node_d8jv5g4",
+      "node_ow018j4"
+    ],
+    "node_d8jv5g4": [
+      "node_n64p46l"
+    ],
+    "node_n64p46l": [
+      "node_d3zbw5h"
+    ],
+    "node_d3zbw5h": [
+      "node_d9t9xg8"
+    ],
+    "node_i9sexf8": [
+      "node_d9t9xg8",
+      "node_6v0kkru"
+    ],
+    "node_6v0kkru": [
+      "node_l8gtmb8"
+    ],
+    "node_l8gtmb8": [
+      "node_zwmbw5j"
+    ],
+    "node_zwmbw5j": [
+      "node_jekthe7"
+    ],
+    "node_dhh82qs": [
+      "node_jekthe7",
+      "node_2rzl2ib"
+    ],
+    "node_2rzl2ib": [
+      "node_t5pic5p",
+      "node_z2wgpm2"
+    ],
+    "node_z2wgpm2": [
+      "node_8vzvrlt"
+    ],
+    "node_8vzvrlt": [
+      "node_dhh82qs"
+    ],
+    "node_t5pic5p": [
+      "node_ytx18q8"
+    ],
+    "node_ytx18q8": [
+      "node_wr2l6qv"
+    ],
+    "node_wr2l6qv": [
+      "node_pwnzce6"
+    ],
+    "node_pwnzce6": [
+      "node_clpyotw"
+    ],
+    "node_clpyotw": [
+      "node_d24q467",
+      "node_n139bjh"
+    ],
+    "node_h8esg57": [
+      "node_uoeob4j",
+      "node_d24q467"
+    ],
+    "node_96l6ii5": [
+      "node_0dv5jd8",
+      "node_2nnh2yn"
+    ],
+    "node_uoeob4j": [
+      "node_96l6ii5"
+    ],
+    "node_n139bjh": [
+      "node_zw5gpx8"
+    ],
+    "node_0dv5jd8": [
+      "node_zw5gpx8"
+    ],
+    "node_zw5gpx8": [
+      "node_c47o1ew"
+    ],
+    "node_c47o1ew": [
+      "node_284dipp"
+    ],
+    "node_284dipp": [
+      "node_9nbv7v9"
+    ],
+    "node_090e3u6": [
+      "node_9nbv7v9",
+      "node_afqniu9"
+    ],
+    "node_d24q467": [
+      "node_ed22n8p"
+    ],
+    "node_ed22n8p": [],
+    "node_dws12j1": [
+      "node_3gx6ugb",
+      "node_3c2ua1y"
+    ],
+    "node_3gx6ugb": [
+      "node_4bz8up6"
+    ],
+    "node_4bz8up6": [
+      "node_b1an2ow"
+    ],
+    "node_ejtkuj4": [
+      "node_b1an2ow",
+      "node_s8ii5h5"
+    ],
+    "node_s8ii5h5": [
+      "node_7totxsc"
+    ],
+    "node_7totxsc": [
+      "node_dws12j1"
+    ],
+    "node_wx40ky1": [
+      "node_7totxsc",
+      "node_n2cofpi"
+    ],
+    "node_3c2ua1y": [
+      "node_ed22n8p"
+    ],
+    "node_n2cofpi": [
+      "node_8sp26qr"
+    ],
+    "node_8sp26qr": [
+      "node_6vzmh3o",
+      "node_43xmy7x"
+    ],
+    "node_43xmy7x": [
+      "node_lcmqylz"
+    ],
+    "node_lcmqylz": [
+      "node_qwmt8kl"
+    ],
+    "node_qwmt8kl": [
+      "node_zdu865k",
+      "node_fib5xzg"
+    ],
+    "node_zdu865k": [
+      "node_6vzmh3o"
+    ],
+    "node_fib5xzg": [
+      "node_m4btlwn"
+    ],
+    "node_m4btlwn": [
+      "node_n0ug0lq"
+    ],
+    "node_n0ug0lq": [
+      "node_kwfcheh"
+    ],
+    "node_kwfcheh": [
+      "node_s0q353u"
+    ],
+    "node_s0q353u": [
+      "node_nobl5q1"
+    ],
+    "node_qks0u98": [
+      "node_nobl5q1",
+      "node_rgx08kv",
+      "node_fi2tj3r"
+    ],
+    "node_rgx08kv": [
+      "node_qh0ee06"
+    ],
+    "node_qh0ee06": [
+      "node_6tiv5ar"
+    ],
+    "node_6tiv5ar": [
+      "node_m4btlwn"
+    ],
+    "node_nobl5q1": [
+      "node_z9ot8zz"
+    ],
+    "node_5vkj3d8": [
+      "node_z9ot8zz",
+      "node_q9dft64"
+    ],
+    "node_q9dft64": [
+      "node_v9dvgtn"
+    ],
+    "node_fi2tj3r": [
+      "node_414dxd0"
+    ],
+    "node_414dxd0": [
+      "node_lqb3j7m"
+    ],
+    "node_g7md996": [
+      "node_ihpf7ma",
+      "node_lqb3j7m"
+    ],
+    "node_ihpf7ma": [
+      "node_8i3jjj4"
+    ],
+    "node_8i3jjj4": [
+      "node_jlim76l"
+    ],
+    "node_jlim76l": [
+      "node_uyd5ahy"
+    ],
+    "node_uyd5ahy": [
+      "node_nlcsyuc",
+      "node_xrikp0t"
+    ],
+    "node_b1an2ow": [
+      "node_nlcsyuc"
+    ],
+    "node_xrikp0t": [
+      "node_zoi3e97"
+    ],
+    "node_zoi3e97": [
+      "node_cpzd4fr"
+    ],
+    "node_cpzd4fr": [
+      "node_d9t9xg8"
+    ],
+    "node_ow018j4": [
+      "node_2ya4e1m"
+    ],
+    "node_2ya4e1m": [
+      "node_ihpf7ma"
+    ],
+    "node_2nnh2yn": [
+      "node_8i8mz4y"
+    ],
+    "node_8i8mz4y": [
+      "node_bvotirh"
+    ],
+    "node_ne7rlu7": [
+      "node_3edn2dx",
+      "node_bvotirh"
+    ],
+    "node_3edn2dx": [
+      "node_v7yda0b"
+    ],
+    "node_v7yda0b": [
+      "node_m53fg6n"
+    ],
+    "node_m53fg6n": [
+      "node_ofe4cnn"
+    ],
+    "node_ofe4cnn": [
+      "node_n0ug0lq"
+    ],
+    "node_u9r16pu": [
+      "node_v7yda0b",
+      "node_ctbr5qm"
+    ],
+    "node_ctbr5qm": [
+      "node_ci05n03"
+    ],
+    "node_ci05n03": [
+      "node_yha3pgr",
+      "node_m7829r8"
+    ],
+    "node_yha3pgr": [
+      "node_hi06dd2"
+    ],
+    "node_hi06dd2": [
+      "node_pjuk4s5"
+    ],
+    "node_pjuk4s5": [
+      "node_0ghzh4k"
+    ],
+    "node_0ghzh4k": [
+      "node_3yz5fht"
+    ],
+    "node_3yz5fht": [
+      "node_00f46zn"
+    ],
+    "node_m7829r8": [
+      "node_1g0xzoj"
+    ],
+    "node_1g0xzoj": [
+      "node_etjvyve"
+    ],
+    "node_etjvyve": [
+      "node_7bqo9o8"
+    ],
+    "node_7bqo9o8": [
+      "node_n9whbeb"
+    ],
+    "node_n9whbeb": [
+      "node_p6hk9s9"
+    ],
+    "node_p6hk9s9": [
+      "node_wba4owb"
+    ],
+    "node_wba4owb": [
+      "node_0bd5nz7"
+    ],
+    "node_0bd5nz7": [
+      "node_pm9n8xz",
+      "node_6evy5o7"
+    ],
+    "node_pm9n8xz": [
+      "node_02cmx89"
+    ],
+    "node_02cmx89": [
+      "node_kizcqzk"
+    ],
+    "node_dad5pqr": [
+      "node_kizcqzk",
+      "node_efj2qoa",
+      "node_k0jfzqa"
+    ],
+    "node_efj2qoa": [
+      "node_cgmyoq8"
+    ],
+    "node_8xhfrmx": [
+      "node_cgmyoq8"
+    ],
+    "node_ujgoytl": [
+      "node_cgmyoq8",
+      "node_jhg6qiq"
+    ],
+    "node_42f351p": [
+      "node_jhg6qiq",
+      "node_wba4owb"
+    ],
+    "node_2akmg3b": [
+      "node_k0jfzqa",
+      "node_ubs8apf"
+    ],
+    "node_js651u5": [
+      "node_ubs8apf",
+      "node_00f46zn"
+    ],
+    "node_6evy5o7": [
+      "node_103zaeg"
+    ],
+    "node_4iy1bga": [
+      "node_103zaeg",
+      "node_ie2hl1t",
+      "node_iw29r54"
+    ],
+    "node_ie2hl1t": [
+      "node_as43xjd"
+    ],
+    "node_as43xjd": [
+      "node_xvxg13v"
+    ],
+    "node_xvxg13v": [
+      "node_jnnj9ua"
+    ],
+    "node_znjntg5": [
+      "node_ki2jdpo"
+    ],
+    "node_iw29r54": [
+      "node_1qkzing"
+    ],
+    "node_1qkzing": [
+      "node_dt2qg8p"
+    ],
+    "node_vl6kopl": [
+      "node_dt2qg8p"
+    ],
+    "node_dt2qg8p": [
+      "node_1wothoi"
+    ],
+    "node_1wothoi": [
+      "node_z0q21qt"
+    ],
+    "node_h4ywot9": [
+      "node_z0q21qt",
+      "node_fwjco46"
+    ],
+    "node_fwjco46": [
+      "node_q9yd7qx"
+    ],
+    "node_q9yd7qx": [
+      "node_wztzh6u"
+    ],
+    "node_wztzh6u": [
+      "node_103zaeg"
+    ],
+    "node_z0q21qt": [
+      "node_h2ngu4n"
+    ],
+    "node_h2ngu4n": [
+      "node_ztuiepx"
+    ],
+    "node_ztuiepx": [
+      "node_bgehtld"
+    ],
+    "node_bgehtld": [
+      "node_o60i7gp"
+    ],
+    "node_o60i7gp": [
+      "node_4lnu7zz"
+    ],
+    "node_4lnu7zz": [
+      "node_7lavdg3"
+    ],
+    "node_7lavdg3": [
+      "node_os7xtw2"
+    ],
+    "node_os7xtw2": [
+      "node_huvl77e"
+    ],
+    "node_huvl77e": [
+      "node_qprtj8w"
+    ],
+    "node_qprtj8w": [
+      "node_ubs8apf",
+      "node_gaiv420"
+    ],
+    "node_gaiv420": [
+      "node_741ll1e"
+    ],
+    "node_741ll1e": [
+      "node_o2oez2v"
+    ],
+    "node_o2oez2v": [
+      "node_k63wdq1"
+    ],
+    "node_5yhsyi3": [
+      "node_o2oez2v",
+      "node_44a2aaf"
+    ],
+    "node_kaxwss7": [
+      "node_44a2aaf",
+      "node_3afoxx5"
+    ],
+    "node_44a2aaf": [
+      "node_2k0hed1"
+    ],
+    "node_s3vsws1": [
+      "node_2k0hed1",
+      "node_7lavdg3"
+    ],
+    "node_v9dvgtn": [
+      "node_qdc3eh1",
+      "node_1oo0htv"
+    ],
+    "node_qdc3eh1": [
+      "node_je2kpps"
+    ],
+    "node_je2kpps": [
+      "node_yq2wfru"
+    ],
+    "node_yq2wfru": [
+      "node_skb29lk"
+    ],
+    "node_skb29lk": [
+      "node_3k7r69w"
+    ],
+    "node_3k7r69w": [
+      "node_00f46zn"
+    ],
+    "node_1oo0htv": [
+      "node_n7w1hc0"
+    ],
+    "node_n7w1hc0": [
+      "node_czjr2xy"
+    ],
+    "node_czjr2xy": [
+      "node_4o396k0",
+      "node_l99n3j8"
+    ],
+    "node_4o396k0": [
+      "node_vuwy3nt"
+    ],
+    "node_vuwy3nt": [
+      "node_7mjzgol"
+    ],
+    "node_7mjzgol": [
+      "node_o60i7gp"
+    ],
+    "node_l99n3j8": [
+      "node_nmu4eac"
+    ],
+    "node_nmu4eac": [
+      "node_ipeqdbq"
+    ],
+    "node_ipeqdbq": [
+      "node_c84e3go"
+    ],
+    "node_c84e3go": [
+      "node_yozvnk4"
+    ],
+    "node_yozvnk4": [
+      "node_q7j881r"
+    ],
+    "node_q7j881r": [
+      "node_cjd38t6"
+    ],
+    "node_cjd38t6": [
+      "node_sdtud1q"
+    ],
+    "node_sdtud1q": [
+      "node_nco8zrw"
+    ],
+    "node_nco8zrw": [
+      "node_znjntg5",
+      "node_gtl1h2l"
+    ],
+    "node_gtl1h2l": [
+      "node_h6zg55c"
+    ],
+    "node_h6zg55c": [
+      "node_orwe0ss"
+    ],
+    "node_orwe0ss": [
+      "node_xlu2tqp"
+    ],
+    "node_xlu2tqp": [
+      "node_pubgr7t"
+    ],
+    "node_pubgr7t": [
+      "node_wrfizrg"
+    ],
+    "node_byr0aqv": [
+      "node_pubgr7t",
+      "node_l7ol8eu"
+    ],
+    "node_zdjdyl8": [
+      "node_7llxrli"
+    ],
+    "node_7llxrli": [
+      "node_sse1pug"
+    ],
+    "node_7ldmqpt": [
+      "node_9y315qa"
+    ],
+    "node_w8j9zdx": [
+      "node_8p420jv"
+    ],
+    "node_8p420jv": [
+      "node_y49eetq"
+    ],
+    "node_sse1pug": [
+      "node_7ldmqpt"
+    ],
+    "node_9y315qa": [
+      "node_w8j9zdx"
+    ],
+    "node_l7ol8eu": [
+      "node_zdjdyl8"
+    ],
+    "node_jdbfuj1": [
+      "node_0uykiw3"
+    ],
+    "node_0uykiw3": [
+      "higgins-entrance"
+    ],
+    "node_vp3tc7t": [
+      "node_taotfh6",
+      "node_j8xkeas"
+    ],
+    "node_f49xh9k": [
+      {
+        "to": "boynton-alden-stairs-1",
+        "accessible": false
+      },
+      {
+        "to": "boynton-alden-stairs",
+        "accessible": false
+      }
+    ],
+    "node_soofc5j": [
+      {
+        "to": "boynton-alden-stairs-1",
+        "accessible": false
+      },
+      {
+        "to": "boynton-alden-stairs-2",
+        "accessible": false
+      }
+    ],
+    "node_oyoxve0": [
+      {
+        "to": "node_6iop1fz",
+        "accessible": false
+      },
+      {
+        "to": "alden-west-street-entrance",
+        "accessible": false
+      }
+    ],
+    "node_sgbqmqm": [
+      {
+        "to": "alden-west-street-entrance",
+        "accessible": false
+      }
+    ],
+    "node_bj9seza": [
+      {
+        "to": "node_867v76c",
+        "accessible": false
+      },
+      {
+        "to": "node_6wa1iwi",
+        "accessible": false
+      }
+    ],
+    "node_9zpnuup": [
+      {
+        "to": "node_3dxlrla",
+        "accessible": false
+      }
+    ],
+    "node_gw0rvph": [
+      {
+        "to": "node_7xbk1et",
+        "accessible": false
+      },
+      {
+        "to": "sanford-quad-institute",
+        "accessible": false
+      }
+    ],
+    "node_nyh4ghj": [
+      {
+        "to": "node_lzhi9a2",
+        "accessible": false
+      },
+      {
+        "to": "node_jpthmpk",
+        "accessible": false
+      }
+    ],
+    "node_8qpxnld": [
+      {
+        "to": "node_8jppe5t",
+        "accessible": false
+      }
+    ],
+    "node_uswdty3": [
+      {
+        "to": "unity-upper-washburn",
+        "accessible": false
+      },
+      {
+        "to": "node_xv8pb3v",
+        "accessible": false
+      }
+    ],
+    "node_r9lt83i": [
+      {
+        "to": "node_n8l1pcj",
+        "accessible": false
+      }
+    ],
+    "node_z2xqiju": [
+      {
+        "to": "node_0flfp47",
+        "accessible": false
+      }
+    ],
+    "node_4akev87": [
+      "node_gqs2k2b"
+    ],
+    "node_c71heo8": [
+      "node_zkusfj9"
+    ],
+    "node_6svo1qt": [
+      "node_zk4go50",
+      "node_5nl0lhd"
+    ],
+    "node_2hzaalz": [
+      "node_zkusfj9"
+    ],
+    "node_5nl0lhd": [
+      "node_5l94nm5"
+    ],
+    "node_zmd4mc7": [
+      "node_8tth6zp"
+    ],
+    "node_8tth6zp": [
+      "node_dyoqi4e"
+    ],
+    "node_dyoqi4e": [
+      "node_zhddnit"
+    ],
+    "node_1671b2r": [
+      "node_j6jv8xp"
+    ],
+    "Unity Hall-entrance-1": [
+      "node_1illzq6",
+      "Unity Hall-entrance-0"
+    ],
+    "Unity Hall-entrance-2": [
+      "node_7ek5qjv"
+    ],
+    "Kaven Hall-entrance-0": [
+      "node_w8rimys"
+    ],
+    "Kaven Hall-entrance-1": [
+      "kaven-side-entrance"
+    ],
+    "node_btv4crv": [
+      "Kaven Hall-entrance-2",
+      {
+        "to": "node_igws1hk",
+        "accessible": false
+      }
+    ],
+    "Fuller Laboratories-entrance-0": [
+      "node_igws1hk",
+      "Fuller Laboratories-entrance-1"
+    ],
+    "Alden Memorial-entrance-0": [
+      "alden"
+    ],
+    "Alden Memorial-entrance-1": [
+      "alden-side-entrance"
+    ],
+    "node_plt0mr7": [
+      "Boynton Hall-entrance-2"
+    ],
+    "node_0qltq72": [
+      "boynton",
+      "Boynton Hall-entrance-0",
+      "boynton-stratton"
+    ],
+    "node_l4ia3xk": [
+      "node_kuwf96m"
+    ],
+    "Atwater Kent Laboratories-entrance-1": [
+      "node_l4ia3xk"
+    ],
+    "Atwater Kent Laboratories-entrance-0": [
+      "node_98ruz7p"
+    ],
+    "Goddard Hall-entrance-1": [
+      "node_8y8mr0h"
+    ],
+    "Olin Hall-entrance-1": [
+      "node_vsk10ty"
+    ],
+    "Higgins Laboratories-entrance-0": [
+      "higgins-entrance"
+    ],
+    "stratton-entrance": [
+      "Stratton Hall-entrance-0"
+    ],
+    "Project Center-entrance-0": [
+      "node_y1c24ar"
+    ],
+    "Project Center-entrance-1": [
+      "node_lfw5lpl"
+    ],
+    "Innovation Studios-entrance-1": [
+      "node_jdbfuj1"
+    ],
+    "Innovation Studios-entrance-0": [
+      "node_sta2qxp",
+      "Innovation Studios-entrance-1"
+    ],
+    "node_18krvvn": [
+      "node_2by55nj"
+    ],
+    "node_2by55nj": [
+      "node_w0sxbai",
+      "Sandford Riley Hall-entrance-1"
+    ],
+    "Sandford Riley Hall-entrance-0": [
+      "node_n8fcrae"
+    ],
+    "Morgan Hall-entrance-1": [
+      "node_1q5p6cx"
+    ],
+    "Morgan Hall-entrance-0": [
+      "node_ofi5umn",
+      {
+        "to": "node_qfbebrk",
+        "accessible": false
+      }
+    ],
+    "node_ib8np3q": [
+      "node_ofi5umn",
+      "quad-rec-morgan"
+    ],
+    "node_qfbebrk": [
+      {
+        "to": "node_ltor4t6",
+        "accessible": false
+      },
+      {
+        "to": "Morgan Hall-entrance-0",
+        "accessible": false
+      }
+    ],
+    "node_ltor4t6": [
+      {
+        "to": "quad-daniels",
+        "accessible": false
+      },
+      {
+        "to": "node_qfbebrk",
+        "accessible": false
+      }
+    ],
+    "Daniels Hall-entrance-1": [
+      "quad-daniels"
+    ],
+    "Goddard Hall-entrance-0": [
+      "node_o8o5kyx"
+    ],
+    "node_o8o5kyx": [
+      "node_dk5gq5j"
+    ],
+    "node_dk5gq5j": [
+      "node_kwb78zc"
+    ],
+    "node_kwb78zc": [
+      "node_obkjm7x",
+      "node_8y8mr0h"
+    ],
+    "node_pbb5vep": [
+      "node_xxxh94v"
+    ],
+    "node_xxxh94v": [
+      "node_aay4znj"
+    ],
+    "node_yytd9lc": [
+      "node_aay4znj",
+      "node_q6ozgc6"
+    ],
+    "node_q6ozgc6": [
+      "node_xou06c4"
+    ],
+    "node_ngx7whc": [
+      "node_mrtsh89"
+    ],
+    "node_kwkop3p": [
+      "node_mrtsh89"
+    ],
+    "node_c6b52mo": [
+      {
+        "to": "node_mth37uv",
+        "accessible": false
+      },
+      {
+        "to": "innovation-messenger",
+        "accessible": false
+      }
+    ]
+  }
+}

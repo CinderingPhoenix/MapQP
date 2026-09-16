@@ -1,0 +1,361 @@
+[
+  {
+    "name": "Alden Memorial",
+    "entrances": [
+      {
+        "latitude": 42.273437,
+        "longitude": -71.808369,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.273393,
+        "longitude": -71.808508,
+        "name": "Sanford Riley Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.27311,
+        "longitude": -71.808206,
+        "name": "West Street Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
+  },
+  {
+    "name": "Atwater Kent Laboratories",
+    "entrances": [
+      {
+        "latitude": 42.275146,
+        "longitude": -71.807245,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.275067,
+        "longitude": -71.806877,
+        "name": "Fuller Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
+  },
+  {
+    "name": "Boynton Hall",
+    "entrances": [
+      {
+        "latitude": 42.273553,
+        "longitude": -71.807276,
+        "name": "Washburn Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.273367,
+        "longitude": -71.807166,
+        "name": "South Corner Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.273402,
+        "longitude": -71.807416,
+        "name": "South Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Daniels Hall",
+    "entrances": [
+      {
+        "latitude": 42.273172,
+        "longitude": -71.810278,
+        "name": "Institute Road Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.273334,
+        "longitude": -71.809909,
+        "name": "Quad Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "East Hall",
+    "entrances": []
+  },
+  {
+    "name": "Fuller Laboratories",
+    "entrances": [
+      {
+        "latitude": 42.275092,
+        "longitude": -71.806135,
+        "name": "Salisbury Street Entrance",
+        "floor": 0,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274901,
+        "longitude": -71.806635,
+        "name": "Salisbury Labs Entrance",
+        "floor": 2,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Goddard Hall",
+    "entrances": [
+      {
+        "latitude": 42.27546,
+        "longitude": -71.80781,
+        "name": "Olin Hall Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.275785,
+        "longitude": -71.807711,
+        "name": "Salisbury Street Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
+  },
+  {
+    "name": "Gordon Library",
+    "entrances": [
+      {
+        "latitude": 42.274251,
+        "longitude": -71.806631,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Higgins Laboratories",
+    "entrances": [
+      {
+        "latitude": 42.274464,
+        "longitude": -71.80816,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.274163,
+        "longitude": -71.808084,
+        "name": "Stratton Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.273895,
+        "longitude": -71.808274,
+        "name": "Alden Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.274042,
+        "longitude": -71.808504,
+        "name": "Innovation Studios Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Innovation Studios",
+    "entrances": [
+      {
+        "latitude": 42.274197,
+        "longitude": -71.808994,
+        "name": "Quad Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274424,
+        "longitude": -71.808582,
+        "name": "Campus Center Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Kaven Hall",
+    "entrances": [
+      {
+        "latitude": 42.274719,
+        "longitude": -71.805708,
+        "name": "Boynton Lot Entrance",
+        "floor": 1.5,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.274934,
+        "longitude": -71.805761,
+        "name": "Salisbury Street Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.275096,
+        "longitude": -71.805962,
+        "name": "Fuller Salisbury Street Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
+  },
+  {
+    "name": "Morgan Hall",
+    "entrances": [
+      {
+        "latitude": 42.273466,
+        "longitude": -71.810364,
+        "name": "Quad Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.273231,
+        "longitude": -71.810622,
+        "name": "Institute Road Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Olin Hall",
+    "entrances": [
+      {
+        "latitude": 42.274896,
+        "longitude": -71.80782,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.275195,
+        "longitude": -71.807769,
+        "name": "Basement Entrance",
+        "floor": 0,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.27529,
+        "longitude": -71.807877,
+        "name": "Goddard Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Project Center",
+    "entrances": [
+      {
+        "latitude": 42.27437,
+        "longitude": -71.807569,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274278,
+        "longitude": -71.807488,
+        "name": "Washburn Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
+  },
+  {
+    "name": "Salisbury Laboratories",
+    "entrances": []
+  },
+  {
+    "name": "Sandford Riley Hall",
+    "entrances": [
+      {
+        "latitude": 42.273261,
+        "longitude": -71.809018,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.273225,
+        "longitude": -71.809345,
+        "name": "Main Entrance",
+        "floor": 0,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Stratton Hall",
+    "entrances": [
+      {
+        "latitude": 42.273909,
+        "longitude": -71.807762,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Unity Hall",
+    "entrances": [
+      {
+        "latitude": 42.273798,
+        "longitude": -71.806686,
+        "name": "Floor 5 Entrance",
+        "floor": 5,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.273661,
+        "longitude": -71.805812,
+        "name": "Floor 1 Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.273586,
+        "longitude": -71.806136,
+        "name": "Floor 2 Side Entrance",
+        "floor": 2,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Washburn Shops",
+    "entrances": [
+      {
+        "latitude": 42.274221,
+        "longitude": -71.80704,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  }
+]
