@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Keyboard } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Keyboard,
+  Animated,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import LocationMap from "../components/location-map";
@@ -61,13 +71,11 @@ type KalmanState = {
 // --- Constants ---
 
 const SAMPLE_COUNT = 20; 
-const MAX_ACCURACY_THRESHOLD = 25; 
 const BASE_MAX_SAMPLE_AGE_MS = 20_000;
 const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 
-const WPI_BUILDINGS: Building[] = buildingData.map((building) => (
-{
+const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"), 
   name: building.name, 
   entrances: building.entrances, 
@@ -76,101 +84,90 @@ const WPI_BUILDINGS: Building[] = buildingData.map((building) => (
 // --- Utility Functions ---
 
 function processAdvancedCoordinates(
-  incomingSample: Coordinates, 
-  previousStateRef: React.MutableRefObject<KalmanState | null>, 
+  incomingSample: Coordinates,
+  previousStateRef: React.MutableRefObject<KalmanState | null>,
   sampleBuffer: Coordinates[]
 ): Coordinates | null {
   const now = incomingSample.timestamp;
-  let adjustedAccuracy = incomingSample.accuracy;
+  let adjustedAccuracy = Math.max(incomingSample.accuracy, 1.0);
   let isResumingFromBackground = false;
 
   if (previousStateRef.current) {
     const prev = previousStateRef.current;
-    const dt = (now - prev.timestamp) / 1000; 
+    const dt = (now - prev.timestamp) / 1000;
 
     if (dt > (BASE_MAX_SAMPLE_AGE_MS / 1000)) {
       previousStateRef.current = null;
       isResumingFromBackground = true;
-    } 
-    else if (dt > 0) {
-      const distanceMovedMeters = getDistanceFromLatLonInMeters(prev.lat, prev.lng, incomingSample.latitude, incomingSample.longitude);
-      const assumedMaxSpeedMps = 7; 
-      const allowedJitterRadius = (assumedMaxSpeedMps * dt) + Math.max(incomingSample.accuracy, 5);
+    } else if (dt > 0) {
+      const distanceMovedMeters = getDistanceFromLatLonInMeters(
+        prev.lat, prev.lng, incomingSample.latitude, incomingSample.longitude
+      );
+      const impliedSpeed = distanceMovedMeters / dt;
 
-      if (distanceMovedMeters > allowedJitterRadius && incomingSample.accuracy > MAX_ACCURACY_THRESHOLD) {
-        adjustedAccuracy *= 4.0; 
-      }
-    }
-  }
-
-  if (!isResumingFromBackground && sampleBuffer.length >= 2) {
-    const p1 = sampleBuffer[sampleBuffer.length - 2];
-    const p2 = sampleBuffer[sampleBuffer.length - 1];
-
-    const historicVecLat = p2.latitude - p1.latitude;
-    const historicVecLng = p2.longitude - p1.longitude;
-    const incomingVecLat = incomingSample.latitude - p2.latitude;
-    const incomingVecLng = incomingSample.longitude - p2.longitude;
-
-    const historicMag = Math.sqrt(historicVecLat ** 2 + historicVecLng ** 2);
-    const incomingMag = Math.sqrt(incomingVecLat ** 2 + incomingVecLng ** 2);
-
-    if (historicMag > 0.00001 && incomingMag > 0.00001) {
-      const dotProduct = (historicVecLat * incomingVecLat + historicVecLng * incomingVecLng) / (historicMag * incomingMag);
-      
-      if (dotProduct < 0.1 && (incomingSample.speed ?? 0) < 2) {
-        adjustedAccuracy *= 2.0; 
+      if (impliedSpeed > 7.0) { 
+        const penaltyFactor = Math.min(impliedSpeed / 2, 10);
+        adjustedAccuracy *= penaltyFactor;
       }
     }
   }
 
   let currentLat = incomingSample.latitude;
   let currentLng = incomingSample.longitude;
-  let currentVarLat = Math.pow(Math.max(adjustedAccuracy, 0.5), 2);
-  let currentVarLng = currentVarLat;
+  let currentVar = Math.pow(adjustedAccuracy, 2);
 
-  if (previousStateRef.current) {
+  if (previousStateRef.current && !isResumingFromBackground) {
     const prev = previousStateRef.current;
-    
-    const timeDeltaSec = Math.max(0.1, (now - prev.timestamp) / 1000);
-    const estimatedSpeedMps = (incomingSample.speed && incomingSample.speed > 0.5) ? incomingSample.speed : 1.5; 
-    const processNoise = Math.pow(estimatedSpeedMps * timeDeltaSec, 2);
+    const dtSec = Math.max(0.1, (now - prev.timestamp) / 1000);
 
-    const predictedVarLat = prev.varianceLat + processNoise;
-    const predictedVarLng = prev.varianceLng + processNoise;
+    let predictedLat = prev.lat;
+    let predictedLng = prev.lng;
 
-    const kalmanGainLat = predictedVarLat / (predictedVarLat + currentVarLat);
-    const kalmanGainLng = predictedVarLng / (predictedVarLng + currentVarLng);
+    if (incomingSample.speed !== null && incomingSample.heading !== null && incomingSample.speed > 0.2) {
+      const headingRad = incomingSample.heading * (Math.PI / 180);
+      const vLatMps = incomingSample.speed * Math.cos(headingRad);
+      const vLngMps = incomingSample.speed * Math.sin(headingRad);
 
-    currentLat = prev.lat + kalmanGainLat * (incomingSample.latitude - prev.lat);
-    currentLng = prev.lng + kalmanGainLng * (incomingSample.longitude - prev.lng);
+      const dLat = (vLatMps * dtSec) / 111320;
+      const dLng = (vLngMps * dtSec) / (111320 * Math.cos(prev.lat * (Math.PI / 180)));
 
-    currentVarLat = (1 - kalmanGainLat) * predictedVarLat;
-    currentVarLng = (1 - kalmanGainLng) * predictedVarLng;
+      predictedLat += dLat;
+      predictedLng += dLng;
+    }
+
+    const estimatedSpeedMps = incomingSample.speed !== null ? incomingSample.speed : 1.2;
+    const processNoiseSpeed = Math.max(0.5, estimatedSpeedMps * 0.5);
+    const processNoiseVar = Math.pow(processNoiseSpeed * dtSec, 2);
+
+    const predictedVar = prev.varianceLat + processNoiseVar;
+    const kalmanGain = predictedVar / (predictedVar + currentVar);
+
+    currentLat = predictedLat + kalmanGain * (incomingSample.latitude - predictedLat);
+    currentLng = predictedLng + kalmanGain * (incomingSample.longitude - predictedLng);
+
+    currentVar = (1 - kalmanGain) * predictedVar;
   }
 
   previousStateRef.current = {
     lat: currentLat,
     lng: currentLng,
-    varianceLat: currentVarLat,
-    varianceLng: currentVarLng,
+    varianceLat: currentVar,
+    varianceLng: currentVar, 
     timestamp: now,
   };
 
   const isStationary = (incomingSample.speed ?? 0) < 0.5;
-  let finalAccuracy = Math.sqrt((currentVarLat + currentVarLng) / 2);
+  let finalAccuracy = Math.sqrt(currentVar);
 
   if (isStationary && sampleBuffer.length > 1) {
-    finalAccuracy = finalAccuracy / Math.sqrt(sampleBuffer.length);
+    finalAccuracy = finalAccuracy / Math.sqrt(Math.min(sampleBuffer.length, 5));
   }
-
-  finalAccuracy = Math.max(2, Math.min(finalAccuracy, 50));
 
   return {
     ...incomingSample,
     latitude: currentLat,
     longitude: currentLng,
-    accuracy: finalAccuracy,
+    accuracy: Math.max(2, Math.min(finalAccuracy, 50)),
   };
 }
 
@@ -318,9 +315,43 @@ export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
   
+  const [showRecenter, setShowRecenter] = useState(false);
+  const [recenterSignal, setRecenterSignal] = useState(0);
+
   const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
   const isReroutingRef = useRef(false);
+
+  // Keyboard offset animation with native timing sync
+  const keyboardTranslateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const targetOffset = -(e.endCoordinates.height + 10);
+      
+      Animated.timing(keyboardTranslateY, {
+        toValue: targetOffset,
+        duration: e.duration || 175,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      Animated.timing(keyboardTranslateY, {
+        toValue: 0,
+        duration: e.duration || 200,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardTranslateY]);
 
   useEffect(() => {
     routeGeometryRef.current = route?.geometry ?? null;
@@ -423,8 +454,6 @@ export default function Home() {
           const processed = processAdvancedCoordinates(sample, kalmanStateRef, samplesRef.current);
           
           if (processed) {
-            // Calculate a dynamic maximum age based on how slowly we are polling.
-            // If interval is 4000ms, samples can live up to 80 seconds.
             const dynamicMaxAge = Math.max(BASE_MAX_SAMPLE_AGE_MS, SAMPLE_COUNT * pollingInterval);
 
             const nextSamples = [...samplesRef.current, processed]
@@ -507,6 +536,11 @@ export default function Home() {
     autoRouteKeyRef.current = "";
   }, []);
 
+  const handleRecenter = useCallback(() => {
+    setShowRecenter(false);
+    setRecenterSignal((prev) => prev + 1);
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View 
@@ -528,11 +562,27 @@ export default function Home() {
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
             route={route}
+            recenterSignal={recenterSignal}
+            onUserDragged={() => setShowRecenter(true)}
           />
         )}
       </View>
 
-      <View style={styles.plannerPanel}>
+      <Animated.View
+        style={[
+          styles.plannerPanel,
+          { transform: [{ translateY: keyboardTranslateY }] },
+        ]}
+      >
+        {showRecenter && (
+          <TouchableOpacity
+            style={styles.recenterButton}
+            onPress={handleRecenter}
+          >
+            <Text style={styles.recenterText}>Recenter</Text>
+          </TouchableOpacity>
+        )}
+        
         <BuildingPicker
           buildings={WPI_BUILDINGS}
           value={destinationBuilding}
@@ -562,19 +612,7 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
-
-      <View style={styles.debugPanel}>
-        <Text style={styles.debugText}>
-          Accuracy: {coordinates?.accuracy ? `${coordinates.accuracy.toFixed(2)}m` : 'N/A'}
-        </Text>
-        <Text style={styles.debugText}>
-          Polling: {pollingInterval}ms
-        </Text>
-        <Text style={styles.debugText}>
-          Buffer: {samplesRef.current.length}/{SAMPLE_COUNT}
-        </Text>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -592,6 +630,14 @@ const BuildingPicker = React.memo(({ buildings, value, onChange, placeholder }: 
   const selectedBuilding = buildings.find((b) => b.id === value);
   const [query, setQuery] = useState(selectedBuilding?.name ?? "");
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!value) {
+      setQuery("");
+    } else if (selectedBuilding) {
+      setQuery(selectedBuilding.name);
+    }
+  }, [value, selectedBuilding]);
   
   const matchingBuildings = buildings.filter((b) =>
     b.name.toLowerCase().includes(query.trim().toLowerCase())
@@ -599,6 +645,24 @@ const BuildingPicker = React.memo(({ buildings, value, onChange, placeholder }: 
 
   return (
     <View style={styles.pickerContainer}>
+      {isOpen && query.length > 0 && (
+        <ScrollView style={styles.dropdown} keyboardShouldPersistTaps="handled">
+          {matchingBuildings.map((building) => (
+            <TouchableOpacity
+              key={building.id}
+              style={styles.dropdownItem}
+              onPress={() => {
+                Keyboard.dismiss();
+                onChange(building.id);
+                setQuery(building.name);
+                setIsOpen(false);
+              }}
+            >
+              <Text>{building.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
       <TextInput
         style={styles.input}
         value={query}
@@ -610,23 +674,6 @@ const BuildingPicker = React.memo(({ buildings, value, onChange, placeholder }: 
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
       />
-      {isOpen && query.length > 0 && (
-        <ScrollView style={styles.dropdown} keyboardShouldPersistTaps="handled">
-          {matchingBuildings.map((building) => (
-            <TouchableOpacity
-              key={building.id}
-              style={styles.dropdownItem}
-              onPress={() => {
-                onChange(building.id);
-                setQuery(building.name);
-                setIsOpen(false);
-              }}
-            >
-              <Text>{building.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
     </View>
   );
 });
@@ -639,7 +686,7 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   plannerPanel: {
     position: "absolute",
-    top: 32,
+    bottom: 16,
     left: 16,
     right: 16,
     zIndex: 10,
@@ -654,9 +701,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
+  recenterButton: {
+    position: "absolute",
+    top: -56,
+    right: 0,
+    backgroundColor: "white",
+    padding: 12,
+    borderRadius: 8,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    zIndex: 20,
+  },
+  recenterText: { fontWeight: "bold", color: "#333" },
   pickerContainer: { zIndex: 10, position: "relative" },
   input: { height: 48, borderColor: "#ccc", borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, backgroundColor: "#fff" },
-  dropdown: { maxHeight: 150, backgroundColor: "#fff", borderColor: "#ccc", borderWidth: 1, borderRadius: 8, marginTop: 4 },
+  dropdown: { 
+    maxHeight: 150, 
+    backgroundColor: "#fff", 
+    borderColor: "#ccc", 
+    borderWidth: 1, 
+    borderRadius: 8, 
+    marginBottom: 4 
+  },
   dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
   routeOrigin: { marginTop: 12 },
   smallText: { fontSize: 12, color: "#666" },
@@ -680,20 +748,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#666",
-  },
-  debugPanel: {
-    position: "absolute",
-    bottom: 32,
-    left: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    padding: 8,
-    borderRadius: 8,
-    zIndex: 100,
-  },
-  debugText: {
-    color: "#fff",
-    fontSize: 12,
-    fontFamily: "monospace",
-    marginVertical: 2,
   },
 });
