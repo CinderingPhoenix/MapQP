@@ -1,4 +1,3 @@
-import React from "react";
 import {
   View,
   Text,
@@ -6,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -27,6 +27,18 @@ export default function LandingPage() {
     Linking.openURL("https://accessmap.uom.gr/maps/demo-building/ground");
   };
 
+  const openEcotarium = () => {
+  if (Platform.OS === "ios") {
+    Linking.openURL(
+      "https://apps.apple.com/us/app/ecotarium-explorer/id6478123975"
+    );
+  } else {
+    Linking.openURL(
+      "https://play.google.com/store/apps/details?id=org.ecotarium.ecotariumapp&pcampaignid=web_share"
+    );
+  }
+};
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -43,68 +55,6 @@ export default function LandingPage() {
             Find your way around campus with navigation designed with
             accessibility in mind.
           </Text>
-        </View>
-
-        {/* Previous Apps */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Previous Apps</Text>
-
-          <TouchableOpacity
-            style={styles.previousApp}
-            onPress={openWpiMap}
-            activeOpacity={0.8}
-          >
-            <View style={styles.appIcon}>
-              <Text style={styles.appIconText}>W</Text>
-            </View>
-
-            <View style={styles.previousAppText}>
-              <Text style={styles.previousAppTitle}>WPI Campus</Text>
-              <Text style={styles.previousAppDescription}>
-                WPI Interactive Map
-              </Text>
-            </View>
-
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.previousApp}
-            onPress={openAAUMap}
-            activeOpacity={0.8}
-          >
-            <View style={styles.appIcon}>
-              <Text style={styles.appIconText}>A</Text>
-            </View>
-
-            <View style={styles.previousAppText}>
-              <Text style={styles.previousAppTitle}>AAU Map</Text>
-              <Text style={styles.previousAppDescription}>
-                Aalborg University Copenhagen Map
-              </Text>
-            </View>
-
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.previousApp}
-            onPress={openUoMMap}
-            activeOpacity={0.8}
-          >
-            <View style={styles.appIcon}>
-              <Text style={styles.appIconText}>A</Text>
-            </View>
-
-            <View style={styles.previousAppText}>
-              <Text style={styles.previousAppTitle}>AccessMap</Text>
-              <Text style={styles.previousAppDescription}>
-                University of Macedonia Map Demo
-              </Text>
-            </View>
-
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Navigation Options */}
@@ -149,6 +99,86 @@ export default function LandingPage() {
               </Text>
               <Text style={styles.navigationDescription}>
                 Larger controls, text, and navigation elements.
+              </Text>
+            </View>
+
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Related Maps */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Related Maps</Text>
+
+          <TouchableOpacity
+            style={styles.previousApp}
+            onPress={openWpiMap}
+            activeOpacity={0.8}
+          >
+            <View style={styles.appIcon}>
+              <Text style={styles.appIconText}>W</Text>
+            </View>
+
+            <View style={styles.previousAppText}>
+              <Text style={styles.previousAppTitle}>WPI Campus</Text>
+              <Text style={styles.previousAppDescription}>
+                WPI Interactive Map
+              </Text>
+            </View>
+
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.previousApp}
+            onPress={openEcotarium}
+          >
+            <View style={styles.appIcon}>
+              <Text style={styles.appIconText}>E</Text>
+            </View>
+
+            <View style={styles.previousAppText}>
+              <Text style={styles.previousAppTitle}>EcoTarium</Text>
+                <Text style={styles.previousAppDescription}>
+                  EcoTarium Explorer App
+                </Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.previousApp}
+            onPress={openAAUMap}
+            activeOpacity={0.8}
+          >
+            <View style={styles.appIcon}>
+              <Text style={styles.appIconText}>A</Text>
+            </View>
+
+            <View style={styles.previousAppText}>
+              <Text style={styles.previousAppTitle}>AAU Map</Text>
+              <Text style={styles.previousAppDescription}>
+                Aalborg University Copenhagen Map
+              </Text>
+            </View>
+
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.previousApp}
+            onPress={openUoMMap}
+            activeOpacity={0.8}
+          >
+            <View style={styles.appIcon}>
+              <Text style={styles.appIconText}>A</Text>
+            </View>
+
+            <View style={styles.previousAppText}>
+              <Text style={styles.previousAppTitle}>AccessMap</Text>
+              <Text style={styles.previousAppDescription}>
+                University of Macedonia Map Demo
               </Text>
             </View>
 
