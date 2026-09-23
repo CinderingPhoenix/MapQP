@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
-import { DeviceMotion } from "expo-sensors";
+import * as Location from "expo-location";
 
 // --- Types ---
 
@@ -11,7 +11,7 @@ type LocationMapProps = {
   userLatitude?: number;
   userLongitude?: number;
   accuracy: number;
-  heading?: number | null;
+  heading?: number | null; 
   route?: {
     origin: { latitude: number; longitude: number };
     destination: { latitude: number; longitude: number };
@@ -38,43 +38,43 @@ export default function LocationMap({
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
+  const lastInjectedHeading = useRef<number | null>(null);
 
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
 
-  // Real-time 3D fused motion tracking
+  // OS-Level Hardware Compass with Bridge Throttling
   useEffect(() => {
-    let subscription: ReturnType<typeof DeviceMotion.addListener> | null = null;
-    let lastValidHeading = 0;
+    let subscription: Location.LocationSubscription | null = null;
 
     if (isHeadingFocused) {
-      DeviceMotion.setUpdateInterval(80);
+      (async () => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
 
-      subscription = DeviceMotion.addListener((motionData) => {
-        if (!motionData.rotation) return;
+        subscription = await Location.watchHeadingAsync((headingData) => {
+          let headingDeg = headingData.trueHeading >= 0 
+            ? headingData.trueHeading 
+            : headingData.magHeading;
 
-        const { alpha, beta } = motionData.rotation;
+          if (isNaN(headingDeg)) return;
 
-        if (Math.abs(beta) > 1.15) {
-          return;
-        }
+          // Deadband filter: Ignore micro-fluctuations under 0.8 degrees to prevent bridge overload
+          if (
+            lastInjectedHeading.current === null ||
+            Math.abs(headingDeg - lastInjectedHeading.current) > 0.8
+          ) {
+            lastInjectedHeading.current = headingDeg;
 
-        let headingDeg = alpha * (180 / Math.PI);
-        headingDeg = (360 - headingDeg) % 360;
-
-        if (isNaN(headingDeg)) return;
-
-        const diff = (headingDeg - lastValidHeading + 540) % 360 - 180;
-        if (Math.abs(diff) < 1.0) return;
-
-        const smoothedHeading = (lastValidHeading + diff * 0.2 + 360) % 360;
-        lastValidHeading = smoothedHeading;
-
-        webViewRef.current?.injectJavaScript(`
-          if (window.setTargetHeading) window.setTargetHeading(${smoothedHeading.toFixed(1)});
-          true;
-        `);
-      });
+            webViewRef.current?.injectJavaScript(`
+              if (window.setTargetHeading) window.setTargetHeading(${headingDeg.toFixed(1)});
+              true;
+            `);
+          }
+        });
+      })();
+    } else {
+      lastInjectedHeading.current = null;
     }
 
     return () => {
@@ -148,10 +148,7 @@ export default function LocationMap({
         }
 
         function splitRouteAtUser(userLat, userLng, geometry) {
-          if (!geometry || geometry.length < 2) {
-            return { traversed: [], remaining: geometry || [] };
-          }
-
+          if (!geometry || geometry.length < 2) return { traversed: [], remaining: geometry || [] };
           var bestSegmentIndex = 0;
           var minDistanceSq = Infinity;
           var snappedPoint = [userLat, userLng];
@@ -167,23 +164,18 @@ export default function LocationMap({
 
           var traversed = geometry.slice(0, bestSegmentIndex + 1);
           traversed.push(snappedPoint);
-
           var remaining = [snappedPoint].concat(geometry.slice(bestSegmentIndex + 1));
-
           return { traversed: traversed, remaining: remaining };
         }
 
         function initRoute(rData, uLat, uLng) {
           if (!rData) return;
           var split = splitRouteAtUser(uLat, uLng, rData.geometry);
-
           traversedPolyline = L.polyline(split.traversed, { color: '#888888', weight: 6, opacity: 0.6 }).addTo(map);
           remainingPolyline = L.polyline(split.remaining, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
-
           destMarker = L.circleMarker([rData.destination.latitude, rData.destination.longitude], {
             radius: 9, color: '#fffdf8', fillColor: '#1d5962', fillOpacity: 1, weight: 3
           }).addTo(map);
-
           map.fitBounds(remainingPolyline.getBounds(), { padding: [36, 36] });
         }
 
@@ -191,36 +183,33 @@ export default function LocationMap({
           initRoute(routeData, ${currentMarkerLat}, ${currentMarkerLng});
         }
 
+        // Continuous Smooth Animation Loop
         function updateHeadingAnimation() {
-          if (!isHeadingFocused || targetHeading === null || isNaN(targetHeading)) {
+          if (!isHeadingFocused) {
             animFrameId = null;
             return;
           }
 
-          var diff = (targetHeading - currentBearing + 540) % 360 - 180;
-          if (isNaN(diff)) {
-            animFrameId = null;
-            return;
+          if (targetHeading !== null && !isNaN(targetHeading)) {
+            var diff = (targetHeading - currentBearing + 540) % 360 - 180;
+            
+            // Interpolate smoothly with low pass dampening (0.08)
+            if (Math.abs(diff) > 0.05) {
+              currentBearing += diff * 0.08;
+              currentBearing = (currentBearing + 360) % 360;
+              map.setBearing(-currentBearing);
+            }
           }
 
-          if (Math.abs(diff) < 0.1) {
-            currentBearing = targetHeading;
-            map.setBearing(-currentBearing);
-            animFrameId = null;
-            return;
-          }
-
-          currentBearing += diff * 0.12;
-          currentBearing = (currentBearing + 360) % 360;
-
-          map.setBearing(-currentBearing);
           animFrameId = requestAnimationFrame(updateHeadingAnimation);
         }
 
-        window.setTargetHeading = function(headingDeg) {
-          if (headingDeg === null || headingDeg === undefined || isNaN(headingDeg)) return;
-          var corrected = (Number(headingDeg) - 90 + 360) % 360;
-          targetHeading = corrected;
+        window.setTargetHeading = function(trueHeadingDeg) {
+          if (trueHeadingDeg === null || trueHeadingDeg === undefined || isNaN(trueHeadingDeg)) return;
+          
+          var OFFSET = -110; 
+          var rawHeading = Number(trueHeadingDeg);
+          targetHeading = (rawHeading + OFFSET + 360) % 360;
 
           if (isHeadingFocused && !animFrameId) {
             animFrameId = requestAnimationFrame(updateHeadingAnimation);
@@ -320,7 +309,7 @@ export default function LocationMap({
           window.ReactNativeWebView.postMessage('USER_DRAGGED');
         });
 
-        window.updateMap = function(userLat, userLng, acc, newRoute, gpsHeading) {
+        window.updateMap = function(userLat, userLng, acc, newRoute) {
           var userLatLng = [userLat, userLng];
           marker.setLatLng(userLatLng);
           circle.setLatLng(userLatLng);
@@ -328,10 +317,6 @@ export default function LocationMap({
 
           if (isHeadingFocused) {
             map.setView(userLatLng, Math.max(map.getZoom(), 18), { animate: true });
-          }
-
-          if (gpsHeading !== null && gpsHeading !== undefined && gpsHeading >= 0) {
-            window.setTargetHeading(gpsHeading);
           }
 
           if (newRoute) {
@@ -367,11 +352,10 @@ export default function LocationMap({
   );
 
   useEffect(() => {
-    const safeHeading = heading !== null && heading !== undefined ? heading : "null";
     webViewRef.current?.injectJavaScript(`
       window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
       route || null
-    )}, ${safeHeading});
+    )});
       true;
     `);
   }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
