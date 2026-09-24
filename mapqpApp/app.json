@@ -8,7 +8,12 @@
     "scheme": "mapqpapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition for finding WPI buildings.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone for voice search.",
+        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your precise location for campus routing."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,13 +22,14 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyBG2LckP22yU0fs2NjFt0NLWAtBmKr0IKE"
-        }
-      },
+      "config": {},
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mapqpApp"
+      "package": "com.anonymous.mapqpApp",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -40,11 +46,30 @@
         }
       ],
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for voice search.",
+          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition for finding WPI buildings."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your precise location for campus routing."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2c0f1be9-f804-498c-abb1-44dc68982e2f"
+      }
     }
   }
 }
