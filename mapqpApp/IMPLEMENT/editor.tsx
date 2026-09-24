@@ -31,6 +31,35 @@ type Building = {
   entrances: Entrance[];
 };
 
+// --- Data Parsing Helpers ---
+const rawNodes = routePointsData.nodes as any[];
+const parsedNodes: GraphNode[] = rawNodes.map((n) =>
+  Array.isArray(n) ? { id: n[0], latitude: n[1], longitude: n[2] } : n
+);
+
+const rawConnections = routePointsData.connections as any;
+const parsedConnections: Connections = {};
+
+if (Array.isArray(rawConnections)) {
+  rawConnections.forEach((conn: any[]) => {
+    const from = conn[0];
+    const to = conn[1];
+    const accessibleData = conn[2];
+    
+    if (!parsedConnections[from]) parsedConnections[from] = [];
+    
+    if (accessibleData === false || accessibleData === 0) {
+      parsedConnections[from].push({ to, accessible: false });
+    } else {
+      parsedConnections[from].push(to);
+    }
+  });
+} else {
+  Object.assign(parsedConnections, rawConnections);
+}
+
+// ---------------------------
+
 export type EditorMapProps = {
   nodes: GraphNode[];
   connections: Connections;
@@ -49,11 +78,31 @@ export async function action({ request }: ActionFunctionArgs) {
   const data = await request.json();
 
   if (data.nodes) {
-    data.nodes = data.nodes.map((node: any) => ({
-      ...node,
-      latitude: typeof node.latitude === "number" ? Number(node.latitude.toFixed(6)) : node.latitude,
-      longitude: typeof node.longitude === "number" ? Number(node.longitude.toFixed(6)) : node.longitude,
-    }));
+    // Convert to ultra format: [id, lat, lon]
+    data.nodes = data.nodes.map((node: any) => [
+      node.id,
+      typeof node.latitude === "number" ? Number(node.latitude.toFixed(6)) : node.latitude,
+      typeof node.longitude === "number" ? Number(node.longitude.toFixed(6)) : node.longitude,
+    ]);
+  }
+
+  if (data.connections) {
+    // Convert adjacency list to ultra format: [from, to] or [from, to, false]
+    const flatConnections: any[] = [];
+    Object.entries(data.connections).forEach(([from, targets]) => {
+      (targets as any[]).forEach((target) => {
+        if (typeof target === "string") {
+          flatConnections.push([from, target]);
+        } else {
+          if (target.accessible === false) {
+            flatConnections.push([from, target.to, false]); // encoding stairs
+          } else {
+            flatConnections.push([from, target.to]);
+          }
+        }
+      });
+    });
+    data.connections = flatConnections;
   }
 
   const rootKeys = Object.keys(data).filter((k) => k !== "buildings");
@@ -102,8 +151,8 @@ export default function Editor() {
   const [EditorMap, setEditorMap] = useState<ComponentType<EditorMapProps> | null>(null);
   const [error, setError] = useState("");
 
-  const [nodes, setNodes] = useState<GraphNode[]>(routePointsData.nodes);
-  const [connections, setConnections] = useState<Connections>(routePointsData.connections as Connections);
+  const [nodes, setNodes] = useState<GraphNode[]>(parsedNodes);
+  const [connections, setConnections] = useState<Connections>(parsedConnections);
   const [buildings, setBuildings] = useState<Building[]>(buildingData as Building[]);
 
   const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility" | "add-entrance">("add");
