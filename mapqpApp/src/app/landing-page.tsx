@@ -23,6 +23,10 @@ import buildingData from "../data/wpi-buildings.json";
 
 const SPEECH_SERVER = "http://130.215.172.161:8000";
 
+type Building = {
+  name: string;
+};
+
 export default function LandingPage() {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
@@ -54,7 +58,375 @@ export default function LandingPage() {
     }
   };
 
-  const executeVoiceCommand = (resultText: string) => {
+  /*
+   * Normalize speech so that small differences do not matter.
+   *
+   * Examples:
+   *
+   * "Atwater Kent Laboratories"
+   * "At Water Kent Laboratories"
+   * "ATWATER KENT LABORATORIES"
+   *
+   * all become:
+   *
+   * "atwaterkentlaboratories"
+   */
+  const normalizeSpeech = (value: string) => {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .trim();
+  };
+
+  /*
+   * Standard Levenshtein distance.
+   *
+   * This tells us how many character changes are needed
+   * to turn one string into another.
+   */
+  const levenshteinDistance = (
+    first: string,
+    second: string
+  ) => {
+    const rows = first.length + 1;
+    const columns = second.length + 1;
+
+    const matrix: number[][] = Array.from(
+      { length: rows },
+      () => Array(columns).fill(0)
+    );
+
+    for (let i = 0; i < rows; i++) {
+      matrix[i][0] = i;
+    }
+
+    for (let j = 0; j < columns; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i < rows; i++) {
+      for (let j = 1; j < columns; j++) {
+        const cost =
+          first[i - 1] === second[j - 1] ? 0 : 1;
+
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+
+    return matrix[rows - 1][columns - 1];
+  };
+
+  /*
+   * Compare a building candidate against the spoken command.
+   *
+   * This handles cases where the building name is only part
+   * of a longer command such as:
+   *
+   * "take me to at water kent laboratories"
+   *
+   * instead of requiring the entire sentence to match.
+   */
+  const getFuzzyMatchScore = (
+    spokenText: string,
+    candidate: string
+  ) => {
+    const normalizedSpoken = normalizeSpeech(spokenText);
+    const normalizedCandidate = normalizeSpeech(candidate);
+
+    if (!normalizedSpoken || !normalizedCandidate) {
+      return 0;
+    }
+
+    // Exact normalized match anywhere in the command.
+    if (normalizedSpoken.includes(normalizedCandidate)) {
+      return 1;
+    }
+
+    /*
+     * Check substrings around the length of the building name.
+     *
+     * This lets:
+     *
+     * "caveinhall"
+     *
+     * be compared with:
+     *
+     * "kavenhall"
+     */
+    const candidateLength = normalizedCandidate.length;
+
+    const minimumLength = Math.max(
+      1,
+      candidateLength - 3
+    );
+
+    const maximumLength = Math.min(
+      normalizedSpoken.length,
+      candidateLength + 3
+    );
+
+    let bestDistance = Infinity;
+
+    for (
+      let length = minimumLength;
+      length <= maximumLength;
+      length++
+    ) {
+      for (
+        let start = 0;
+        start + length <= normalizedSpoken.length;
+        start++
+      ) {
+        const section = normalizedSpoken.substring(
+          start,
+          start + length
+        );
+
+        const distance = levenshteinDistance(
+          section,
+          normalizedCandidate
+        );
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+        }
+      }
+    }
+
+    if (bestDistance === Infinity) {
+      return 0;
+    }
+
+    /*
+     * Convert edit distance into a score from 0 to 1.
+     */
+    const score =
+      1 -
+      bestDistance /
+        Math.max(
+          normalizedCandidate.length,
+          1
+        );
+
+    return Math.max(0, score);
+  };
+
+  /*
+   * Known speech variations.
+   *
+   * These are useful for names that Whisper can consistently
+   * interpret as completely different words.
+   */
+  const buildingAliases: {
+    [key: string]: string;
+  } = {
+    // Morgan Hall
+    morgan: "Morgan Hall",
+    "morgan hall": "Morgan Hall",
+
+    // Unity Hall
+    unity: "Unity Hall",
+    "unity hall": "Unity Hall",
+
+    // Alden Memorial
+    alden: "Alden Memorial",
+    "alden memorial": "Alden Memorial",
+
+    // Boynton Hall
+    boynton: "Boynton Hall",
+    "boynton hall": "Boynton Hall",
+
+    // Daniels Hall
+    daniels: "Daniels Hall",
+    "daniels hall": "Daniels Hall",
+
+    // Fuller Laboratories
+    fuller: "Fuller Laboratories",
+    "fuller laboratories": "Fuller Laboratories",
+    "fuller labs": "Fuller Laboratories",
+
+    // Goddard Hall
+    goddard: "Goddard Hall",
+    "goddard hall": "Goddard Hall",
+
+    // Gordon Library
+    gordon: "Gordon Library",
+    "gordon library": "Gordon Library",
+
+    // Higgins Laboratories
+    higgins: "Higgins Laboratories",
+    "higgins laboratories": "Higgins Laboratories",
+    "higgins labs": "Higgins Laboratories",
+
+    // Innovation Studios
+    innovation: "Innovation Studios",
+    "innovation studios": "Innovation Studios",
+
+    // Kaven Hall
+    kaven: "Kaven Hall",
+    "kaven hall": "Kaven Hall",
+    "cave in": "Kaven Hall",
+    "cave in hall": "Kaven Hall",
+    "cave and": "Kaven Hall",
+    "cave and hall": "Kaven Hall",
+    "cavin hall": "Kaven Hall",
+    "caven hall": "Kaven Hall",
+
+    // Olin Hall
+    olin: "Olin Hall",
+    "olin hall": "Olin Hall",
+
+    // Project Center
+    project: "Project Center",
+    "project center": "Project Center",
+
+    // Sandford Riley Hall
+    sandford: "Sandford Riley Hall",
+    sanford: "Sandford Riley Hall",
+    "sandford riley": "Sandford Riley Hall",
+    "sanford riley": "Sandford Riley Hall",
+
+    // Stratton Hall
+    stratton: "Stratton Hall",
+    "stratton hall": "Stratton Hall",
+
+    // Washburn Shops
+    washburn: "Washburn Shops",
+    "washburn shops": "Washburn Shops",
+
+    // Atwater Kent Laboratories
+    atwater: "Atwater Kent Laboratories",
+    "at water": "Atwater Kent Laboratories",
+    "atwater kent": "Atwater Kent Laboratories",
+    "at water kent": "Atwater Kent Laboratories",
+    "atwater kent laboratories":
+      "Atwater Kent Laboratories",
+    "at water kent laboratories":
+      "Atwater Kent Laboratories",
+    "atwater kent labs":
+      "Atwater Kent Laboratories",
+    "at water kent labs":
+      "Atwater Kent Laboratories",
+  };
+
+  /*
+   * Resolve the building from whatever Whisper heard.
+   */
+  const findBuildingFromSpeech = (
+    spokenText: string
+  ): string | null => {
+    const normalizedText = normalizeSpeech(spokenText);
+
+    if (!normalizedText) {
+      return null;
+    }
+
+    const buildings = (buildingData as Building[]).map(
+      (building) => building.name
+    );
+
+    /*
+     * First: exact normalized building-name matching.
+     *
+     * This handles:
+     *
+     * Atwater Kent Laboratories
+     * At Water Kent Laboratories
+     *
+     * because spaces are removed.
+     */
+    for (const buildingName of buildings) {
+      const normalizedBuilding =
+        normalizeSpeech(buildingName);
+
+      if (
+        normalizedText.includes(normalizedBuilding)
+      ) {
+        return buildingName;
+      }
+    }
+
+    /*
+     * Second: exact alias matching after normalization.
+     */
+    const aliases = Object.keys(buildingAliases);
+
+    for (const alias of aliases) {
+      const normalizedAlias =
+        normalizeSpeech(alias);
+
+      if (
+        normalizedText.includes(normalizedAlias)
+      ) {
+        return buildingAliases[alias];
+      }
+    }
+
+    /*
+     * Third: fuzzy matching.
+     *
+     * We compare both official building names and aliases.
+     */
+    let bestBuilding: string | null = null;
+    let bestScore = 0;
+
+    /*
+     * Official building names.
+     */
+    for (const buildingName of buildings) {
+      const score = getFuzzyMatchScore(
+        spokenText,
+        buildingName
+      );
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestBuilding = buildingName;
+      }
+    }
+
+    /*
+     * Aliases.
+     */
+    for (const alias of aliases) {
+      const score = getFuzzyMatchScore(
+        spokenText,
+        alias
+      );
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestBuilding = buildingAliases[alias];
+      }
+    }
+
+    /*
+     * Only accept reasonably strong matches.
+     *
+     * This prevents unrelated speech from accidentally
+     * opening a random building.
+     */
+    if (bestBuilding && bestScore >= 0.60) {
+      console.log(
+        "Voice building match:",
+        bestBuilding,
+        "score:",
+        bestScore
+      );
+
+      return bestBuilding;
+    }
+
+    return null;
+  };
+
+  const executeVoiceCommand = (
+    resultText: string
+  ) => {
     const text = resultText.toLowerCase().trim();
 
     setTranscript(resultText);
@@ -63,7 +435,9 @@ export default function LandingPage() {
       text.includes("accessibility") ||
       text.includes("accessible mode")
     ) {
-      router.replace("/navigation?mode=accessibility");
+      router.replace(
+        "/navigation?mode=accessibility"
+      );
       return;
     }
 
@@ -72,71 +446,31 @@ export default function LandingPage() {
       text.includes("standard mode") ||
       text === "standard"
     ) {
-      router.replace("/navigation?mode=standard");
+      router.replace(
+        "/navigation?mode=standard"
+      );
       return;
     }
 
-    const buildingNames = buildingData
-      .map((building) => building.name)
-      .sort((a, b) => b.length - a.length);
-
-    const normalizedText = text
-      .replace(/[.,!?]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const matchedBuilding = buildingNames.find((buildingName) =>
-      normalizedText.includes(buildingName.toLowerCase())
-    );
+    /*
+     * Find the destination using the robust building
+     * resolver above.
+     */
+    const matchedBuilding =
+      findBuildingFromSpeech(resultText);
 
     if (matchedBuilding) {
+      console.log(
+        "Navigating to building:",
+        matchedBuilding
+      );
+
       router.replace(
         `/navigation?mode=standard&destination=${encodeURIComponent(
           matchedBuilding
         )}`
       );
-      return;
-    }
 
-    const buildingAliases: {
-      [key: string]: string;
-    } = {
-      morgan: "Morgan Hall",
-      unity: "Unity Hall",
-      alden: "Alden Memorial",
-      boynton: "Boynton Hall",
-      daniels: "Daniels Hall",
-      fuller: "Fuller Laboratories",
-      goddard: "Goddard Hall",
-      "gordon library": "Gordon Library",
-      gordon: "Gordon Library",
-      higgins: "Higgins Laboratories",
-      "innovation studios": "Innovation Studios",
-      innovation: "Innovation Studios",
-      kaven: "Kaven Hall",
-      olin: "Olin Hall",
-      "project center": "Project Center",
-      project: "Project Center",
-      "sandford riley": "Sandford Riley Hall",
-      "sanford riley": "Sandford Riley Hall",
-      sandford: "Sandford Riley Hall",
-      sanford: "Sandford Riley Hall",
-      stratton: "Stratton Hall",
-      washburn: "Washburn Shops",
-    };
-
-    const matchedAlias = Object.keys(buildingAliases).find((alias) =>
-      normalizedText.includes(alias)
-    );
-
-    if (matchedAlias) {
-      const buildingName = buildingAliases[matchedAlias];
-
-      router.replace(
-        `/navigation?mode=standard&destination=${encodeURIComponent(
-          buildingName
-        )}`
-      );
       return;
     }
 
@@ -146,7 +480,9 @@ export default function LandingPage() {
     );
   };
 
-  const transcribeRecording = async (uri: string) => {
+  const transcribeRecording = async (
+    uri: string
+  ) => {
     try {
       setIsTranscribing(true);
       setTranscript("");
@@ -174,13 +510,20 @@ export default function LandingPage() {
 
       const result = await response.json();
 
-      console.log("Transcription result:", result);
+      console.log(
+        "Transcription result:",
+        result
+      );
 
-      const resultText = result.text || "No speech detected.";
+      const resultText =
+        result.text || "No speech detected.";
 
       executeVoiceCommand(resultText);
     } catch (error) {
-      console.error("Transcription error:", error);
+      console.error(
+        "Transcription error:",
+        error
+      );
 
       Alert.alert(
         "Transcription Error",
@@ -204,7 +547,10 @@ export default function LandingPage() {
 
       const recordingUri = recorder.uri;
 
-      console.log("Recording finished:", recordingUri);
+      console.log(
+        "Recording finished:",
+        recordingUri
+      );
 
       if (recordingUri) {
         await transcribeRecording(recordingUri);
@@ -223,19 +569,24 @@ export default function LandingPage() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={
+          styles.scrollContent
+        }
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.appName}>MapQP</Text>
+          <Text style={styles.appName}>
+            MapQP
+          </Text>
 
           <Text style={styles.tagline}>
             Welcome to WPI
           </Text>
 
           <Text style={styles.description}>
-            Find your way around campus with navigation designed with
-            accessibility in mind.
+            Find your way around campus with
+            navigation designed with accessibility
+            in mind.
           </Text>
         </View>
 
@@ -247,49 +598,79 @@ export default function LandingPage() {
           <TouchableOpacity
             style={styles.navigationCard}
             onPress={() =>
-              router.replace("/navigation?mode=standard")
+              router.replace(
+                "/navigation?mode=standard"
+              )
             }
             activeOpacity={0.8}
           >
             <View style={styles.navigationIcon}>
-              <Text style={styles.navigationIconText}>➤</Text>
+              <Text
+                style={styles.navigationIconText}
+              >
+                ➤
+              </Text>
             </View>
 
             <View style={styles.navigationText}>
-              <Text style={styles.navigationTitle}>
+              <Text
+                style={styles.navigationTitle}
+              >
                 Standard Navigation
               </Text>
 
-              <Text style={styles.navigationDescription}>
-                Standard map and walking navigation.
+              <Text
+                style={
+                  styles.navigationDescription
+                }
+              >
+                Standard map and walking
+                navigation.
               </Text>
             </View>
 
-            <Text style={styles.arrow}>›</Text>
+            <Text style={styles.arrow}>
+              ›
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.navigationCard}
             onPress={() =>
-              router.replace("/navigation?mode=accessibility")
+              router.replace(
+                "/navigation?mode=accessibility"
+              )
             }
             activeOpacity={0.8}
           >
             <View style={styles.navigationIcon}>
-              <Text style={styles.navigationIconText}>◉</Text>
+              <Text
+                style={styles.navigationIconText}
+              >
+                ◉
+              </Text>
             </View>
 
             <View style={styles.navigationText}>
-              <Text style={styles.navigationTitle}>
+              <Text
+                style={styles.navigationTitle}
+              >
                 Accessibility Navigation
               </Text>
 
-              <Text style={styles.navigationDescription}>
-                Larger controls, text, and navigation elements.
+              <Text
+                style={
+                  styles.navigationDescription
+                }
+              >
+                Larger controls, text, and
+                navigation elements.
               </Text>
             </View>
 
-            <Text style={styles.arrow}>›</Text>
+            <Text style={styles.arrow}>
+              ›
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -309,13 +690,19 @@ export default function LandingPage() {
                   styles.voiceIconListening,
               ]}
             >
-              <Text style={styles.navigationIconText}>
-                {recorderState.isRecording ? "🔴" : "🎙"}
+              <Text
+                style={styles.navigationIconText}
+              >
+                {recorderState.isRecording
+                  ? "🔴"
+                  : "🎙"}
               </Text>
             </View>
 
             <View style={styles.navigationText}>
-              <Text style={styles.navigationTitle}>
+              <Text
+                style={styles.navigationTitle}
+              >
                 {recorderState.isRecording
                   ? "Listening..."
                   : isTranscribing
@@ -323,7 +710,11 @@ export default function LandingPage() {
                   : "Voice Commands"}
               </Text>
 
-              <Text style={styles.navigationDescription}>
+              <Text
+                style={
+                  styles.navigationDescription
+                }
+              >
                 {recorderState.isRecording
                   ? "Tap again when you are finished speaking."
                   : isTranscribing
@@ -334,7 +725,9 @@ export default function LandingPage() {
 
             {!recorderState.isRecording &&
               !isTranscribing && (
-                <Text style={styles.arrow}>🎙</Text>
+                <Text style={styles.arrow}>
+                  🎙
+                </Text>
               )}
           </TouchableOpacity>
 
@@ -343,33 +736,44 @@ export default function LandingPage() {
             recordingComplete ||
             transcript) && (
             <View style={styles.voiceStatusCard}>
-              <Text style={styles.voiceStatusTitle}>
+              <Text
+                style={styles.voiceStatusTitle}
+              >
                 Voice Command
               </Text>
 
               {recorderState.isRecording && (
-                <Text style={styles.voiceStatusText}>
+                <Text
+                  style={styles.voiceStatusText}
+                >
                   Listening for your command...
                 </Text>
               )}
 
               {isTranscribing && (
-                <Text style={styles.voiceStatusText}>
+                <Text
+                  style={styles.voiceStatusText}
+                >
                   Transcribing your recording...
                 </Text>
               )}
 
-              {transcript && !isTranscribing && (
-                <Text style={styles.voiceTranscript}>
-                  Heard: "{transcript}"
-                </Text>
-              )}
+              {transcript &&
+                !isTranscribing && (
+                  <Text
+                    style={styles.voiceTranscript}
+                  >
+                    Heard: "{transcript}"
+                  </Text>
+                )}
 
               {recordingComplete &&
                 !recorderState.isRecording &&
                 !isTranscribing &&
                 !transcript && (
-                  <Text style={styles.voiceStatusText}>
+                  <Text
+                    style={styles.voiceStatusText}
+                  >
                     Recording captured.
                   </Text>
                 )}
