@@ -1,4 +1,3 @@
-import React from "react";
 import { Stack } from "expo-router";
 
 export default function RootLayout() {
@@ -10,7 +9,8 @@ export default function RootLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="landing-page" />
-      <Stack.Screen name="map" />
+      <Stack.Screen name="navigation" />
+      <Stack.Screen name="voice-commands" />
     </Stack>
   );
 }

@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState, useMemo } from "react";
-import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WebView } from "react-native-webview";
 
 // --- Types ---
@@ -82,13 +82,14 @@ export default function LocationMap({
         // Draw the initial route if one is provided
         var routeData = ${JSON.stringify(route || null)};
         if (routeData) {
-          routePolyline = L.polyline(routeData.geometry, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
-          destMarker = L.circleMarker([routeData.destination.latitude, routeData.destination.longitude], {
-            radius: 9,
-            color: '#fffdf8',
-            fillColor: '#1d5962',
-            fillOpacity: 1,
-            weight: 3
+          var leafletGeometry = newRoute.geometry.map(function(point) {
+            return [point[1], point[0]];
+          });
+
+          routePolyline = L.polyline(leafletGeometry, {
+            color: '#1d5962',
+            weight: 6,
+            opacity: 0.9
           }).addTo(map);
           map.fitBounds(routePolyline.getBounds(), { padding: [36, 36] });
         }

@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Keyboard } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import LocationMap from "../components/location-map";
 import buildingData from "../data/wpi-buildings.json";
-import { getWalkwayDebugOverlay, routeBetween } from "../utils/routing";
 import type { WalkingRoute } from "../utils/routing";
-import { router } from "expo-router";
+import { routeBetween } from "../utils/routing";
 
 // --- Types ---
 
@@ -305,6 +305,7 @@ function formatDuration(seconds: number) {
 // --- Main Component ---
 
 export default function Home() {
+  const { destination } = useLocalSearchParams<{ destination?: string }>();
   const samplesRef = useRef<Coordinates[]>([]);
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
@@ -326,6 +327,21 @@ export default function Home() {
   useEffect(() => {
     routeGeometryRef.current = route?.geometry ?? null;
   }, [route]);
+
+  useEffect(() => {
+    if (!destination || typeof destination !== "string") {
+      return;
+    }
+
+    const destinationBuildingMatch = WPI_BUILDINGS.find(
+      (building) =>
+        building.name.toLowerCase() === destination.toLowerCase()
+    );
+
+    if (destinationBuildingMatch) {
+      setDestinationBuilding(destinationBuildingMatch.id);
+    }
+  }, [destination]);
 
   const planRoute = useCallback(async (currentCoords?: Coordinates) => {
     const activeCoords = currentCoords || coordinates;
