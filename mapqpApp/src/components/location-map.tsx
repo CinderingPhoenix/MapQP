@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
-import { DeviceMotion } from "expo-sensors";
+import * as Location from "expo-location";
 import { useAssets } from "expo-asset";
 import { File } from "expo-file-system";
 
@@ -66,43 +66,57 @@ export default function LocationMap({
     `);
   };
 
-  // Device motion heading handler with smoothing filter
+  // Device absolute compass heading handler with smoothing filter
+  // Device absolute compass heading handler with unbounded continuous tracking
   useEffect(() => {
-    let subscription: ReturnType<typeof DeviceMotion.addListener> | null = null;
-    let smoothedHeading: number | null = null;
-    const smoothingFactor = 0.25; // Lower = smoother/slower response, Higher = snappier
+    let subscription: Location.LocationSubscription | null = null;
+    let isMounted = true;
+    let previousRawHeading: number | null = null;
+    let absoluteHeading: number | null = null;
 
-    if (isHeadingFocused) {
-      DeviceMotion.setUpdateInterval(50);
-      subscription = DeviceMotion.addListener((motionData) => {
-        if (!motionData.rotation) return;
-        const rawHeadingDeg = motionData.rotation.alpha * -(180 / Math.PI) - 90;
-        if (isNaN(rawHeadingDeg)) return;
+    async function startHeadingTracking() {
+      if (isHeadingFocused) {
+        const sub = await Location.watchHeadingAsync((headingData) => {
+          let rawHeadingDeg = headingData.trueHeading >= 0 
+            ? headingData.trueHeading 
+            : headingData.magHeading;
 
-        // Initialize smoothing baseline
-        if (smoothedHeading === null) {
-          smoothedHeading = rawHeadingDeg;
+          // Apply the 90-degree offset and normalize to 0-359
+          rawHeadingDeg = (rawHeadingDeg - 90) % 360;
+
+          if (absoluteHeading === null || previousRawHeading === null) {
+            absoluteHeading = rawHeadingDeg;
+            previousRawHeading = rawHeadingDeg; // Set initial baseline
+          } else {
+            let diff = rawHeadingDeg - previousRawHeading;
+            
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
+
+            // Accumulate continuously (can go to 400, 720, -150, etc.)
+            absoluteHeading += diff;
+            previousRawHeading = rawHeadingDeg; // Update baseline only after exceeding dead-zone
+
+            // Pass the unbounded heading. Leaflet handles the visual smoothing natively.
+            webViewRef.current?.injectJavaScript(`
+              if (window.setTargetHeading) window.setTargetHeading(${absoluteHeading.toFixed(2)});
+              true;
+            `);
+          }
+        });
+
+        if (isMounted) {
+          subscription = sub;
         } else {
-          // Handle 360-degree wrapping safely
-          let diff = rawHeadingDeg - smoothedHeading;
-          if (diff > 180) diff -= 360;
-          if (diff < -180) diff += 360;
-
-          // Apply dead-zone filter: ignore micro-movements under 0.4 degrees to prevent jitter
-          if (Math.abs(diff) < 0.4) return;
-
-          smoothedHeading += diff * smoothingFactor;
-          smoothedHeading = (smoothedHeading + 360) % 360;
+          sub.remove();
         }
-
-        webViewRef.current?.injectJavaScript(`
-          if (window.setTargetHeading) window.setTargetHeading(${smoothedHeading.toFixed(2)});
-          true;
-        `);
-      });
+      }
     }
 
+    startHeadingTracking();
+
     return () => {
+      isMounted = false;
       subscription?.remove();
     };
   }, [isHeadingFocused]);

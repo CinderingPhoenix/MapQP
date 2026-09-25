@@ -172,12 +172,10 @@
             var icon = document.getElementById('compass-icon');
             if (!icon) return;
 
-            var targetAngle = rawBearing;
-
             if (currentCompassAngle === null) {
-              currentCompassAngle = targetAngle;
+              currentCompassAngle = rawBearing;
             } else {
-              var diff = (targetAngle - currentCompassAngle + 540) % 360 - 180;
+              var diff = ((rawBearing - currentCompassAngle) % 360 + 540) % 360 - 180;
               currentCompassAngle += diff;
             }
 
@@ -206,6 +204,7 @@
     };
     
     var currentTargetBearing = 0;
+    var currentAnimatedBearing = null;
     var isAnimatingBearing = false;
 
     window.setTargetHeading = function(rawDeg) {
@@ -215,6 +214,9 @@
       currentTargetBearing = -rawDeg;
       
       if (!isAnimatingBearing) {
+        if (currentAnimatedBearing === null) {
+          currentAnimatedBearing = map.getBearing ? map.getBearing() : 0;
+        }
         isAnimatingBearing = true;
         requestAnimationFrame(animateBearingStep);
       }
@@ -226,20 +228,24 @@
         return;
       }
 
-      var currentBearing = map.getBearing ? map.getBearing() : 0;
-      
-      var diff = (currentTargetBearing - currentBearing + 540) % 360 - 180;
+      var diff = ((currentTargetBearing - currentAnimatedBearing) % 360 + 540) % 360 - 180;
       
       if (Math.abs(diff) > 0.05) {
-        map.setBearing(currentBearing + diff * 0.3);
+        currentAnimatedBearing += diff * 0.03;
+        map.setBearing(currentAnimatedBearing);
         requestAnimationFrame(animateBearingStep);
       } else {
+        currentAnimatedBearing = currentTargetBearing;
         map.setBearing(currentTargetBearing);
         isAnimatingBearing = false;
       }
     }
+
     function smoothRotateToZero() {
       var startBearing = map.getBearing ? map.getBearing() : 0;
+      var diffToZero = ((0 - startBearing) % 360 + 540) % 360 - 180;
+      var targetBearing = startBearing + diffToZero;
+
       var startTime = null;
       var duration = 300;
 
@@ -249,12 +255,16 @@
         if (progress > 1) progress = 1;
 
         var easeProgress = 1 - Math.pow(1 - progress, 3);
-        map.setBearing(startBearing * (1 - easeProgress));
+        var stepBearing = startBearing + (targetBearing - startBearing) * easeProgress;
+        
+        map.setBearing(stepBearing);
+        currentAnimatedBearing = stepBearing;
 
         if (progress < 1) {
           requestAnimationFrame(step);
         } else {
-          map.setBearing(0);
+          map.setBearing(targetBearing);
+          currentAnimatedBearing = targetBearing;
         }
       }
 
