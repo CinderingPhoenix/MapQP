@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAssets } from "expo-asset";
+import { File } from "expo-file-system";
+import * as Location from "expo-location";
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
-
-// --- Types ---
 
 type LocationMapProps = {
   latitude: number;
@@ -10,14 +11,12 @@ type LocationMapProps = {
   userLatitude?: number;
   userLongitude?: number;
   accuracy: number;
-  route?: {
-    origin: { latitude: number; longitude: number };
-    destination: { latitude: number; longitude: number };
-    geometry: [number, number][];
-  } | null;
+  heading?: number | null;
+  route?: any;
+  recenterSignal?: number;
+  onUserDragged?: () => void;
+  onHeadingModeChange?: (isFocused: boolean) => void;
 };
-
-// --- Main Component ---
 
 export default function LocationMap({
   latitude,
@@ -25,164 +24,205 @@ export default function LocationMap({
   userLatitude,
   userLongitude,
   accuracy,
+  heading,
   route,
+  recenterSignal,
+  onUserDragged,
+  onHeadingModeChange,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
-  const [showRecenter, setShowRecenter] = useState(false);
+  const [isHeadingFocused, setIsHeadingFocused] = useState(false);
+  const [htmlContent, setHtmlContent] = useState<string>("");
 
-  // Fallback to the default map center if the user's specific location is unavailable
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
 
-  // Memoize the HTML string so the WebView only mounts and loads the Leaflet library once
-  const leafletHtml = useMemo(() => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <style>
-        html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #e0e0e0; }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        // Initialize the Leaflet map with zoom controls disabled
-        var map = L.map('map', { zoomControl: false }).setView([${latitude}, ${longitude}], 16);
-        
-        // Load OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+  // Load the separate Leaflet HTML file.
+  const [assets] = useAssets([require("./leaflet.html")]);
 
-        // Render the user's location marker
-        var marker = L.circleMarker([${currentMarkerLat}, ${currentMarkerLng}], {
-          radius: 8,
-          color: '#fffdf8',
-          fillColor: '#e06b3c',
-          fillOpacity: 1,
-          weight: 3
-        }).addTo(map);
-
-        // Render the accuracy radius circle around the user's marker
-        var circle = L.circle([${currentMarkerLat}, ${currentMarkerLng}], {
-          radius: ${accuracy},
-          color: '#e06b3c',
-          fillColor: '#e06b3c',
-          fillOpacity: 0.3
-        }).addTo(map);
-
-        var routePolyline = null;
-        var destMarker = null;
-        var userMoved = false;
-
-        // Draw the initial route if one is provided
-        var routeData = ${JSON.stringify(route || null)};
-        if (routeData) {
-          var leafletGeometry = newRoute.geometry.map(function(point) {
-            return [point[1], point[0]];
-          });
-
-          routePolyline = L.polyline(leafletGeometry, {
-            color: '#1d5962',
-            weight: 6,
-            opacity: 0.9
-          }).addTo(map);
-          map.fitBounds(routePolyline.getBounds(), { padding: [36, 36] });
-        }
-
-        // Listen for user map panning to trigger the 'Recenter' button in React Native
-        map.on('dragstart', function() {
-          userMoved = true;
-          window.ReactNativeWebView.postMessage('USER_DRAGGED');
-        });
-
-        // Global function called by React Native to dynamically update coordinates without reloading the entire WebView
-        window.updateMap = function(userLat, userLng, acc, newRoute) {
-          var userLatLng = [userLat, userLng];
-          marker.setLatLng(userLatLng);
-          circle.setLatLng(userLatLng);
-          circle.setRadius(acc);
-
-          if (newRoute) {
-            if (routePolyline) map.removeLayer(routePolyline);
-            if (destMarker) map.removeLayer(destMarker);
-            routePolyline = L.polyline(newRoute.geometry, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
-            destMarker = L.circleMarker([newRoute.destination.latitude, newRoute.destination.longitude], {
-              radius: 9,
-              color: '#fffdf8',
-              fillColor: '#1d5962',
-              fillOpacity: 1,
-              weight: 3
-            }).addTo(map);
-          }
-        };
-
-        // Global function called by React Native to pan back to the user without altering current zoom
-        window.resetView = function() {
-          userMoved = false;
-          map.panTo(marker.getLatLng(), { animate: true });
-        };
-      </script>
-    </body>
-    </html>
-  `, []);
-
-  // Inject fresh coordinate and route data into the WebView whenever the state changes in React Native
   useEffect(() => {
+    if (assets && assets[0]?.localUri) {
+      const file = new File(assets[0].localUri);
+
+      file.text().then((content) => {
+        setHtmlContent(content);
+      });
+    }
+  }, [assets]);
+
+  // Initialize the Leaflet map after the WebView loads.
+  const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
-      window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(route || null)});
+      if (window.initMap) {
+        window.initMap(
+          ${latitude},
+          ${longitude},
+          ${currentMarkerLat},
+          ${currentMarkerLng},
+          ${accuracy},
+          ${JSON.stringify(route || null)}
+        );
+      }
       true;
     `);
-  }, [currentMarkerLat, currentMarkerLng, accuracy, route]);
+  };
+
+  // Track the device compass while heading mode is enabled.
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+    let isMounted = true;
+
+    let previousRawHeading: number | null = null;
+    let absoluteHeading: number | null = null;
+
+    async function startHeadingTracking() {
+      if (!isHeadingFocused) {
+        return;
+      }
+
+      const sub = await Location.watchHeadingAsync(
+        (headingData) => {
+          let rawHeadingDeg =
+            headingData.trueHeading >= 0
+              ? headingData.trueHeading
+              : headingData.magHeading;
+
+          // Apply the 90-degree offset used by the map rotation system.
+          rawHeadingDeg =
+            (rawHeadingDeg - 90) % 360;
+
+          if (
+            absoluteHeading === null ||
+            previousRawHeading === null
+          ) {
+            absoluteHeading = rawHeadingDeg;
+            previousRawHeading = rawHeadingDeg;
+          } else {
+            let diff =
+              rawHeadingDeg -
+              previousRawHeading;
+
+            if (diff > 180) {
+              diff -= 360;
+            }
+
+            if (diff < -180) {
+              diff += 360;
+            }
+
+            // Keep a continuous heading value so the map
+            // does not suddenly spin the long way around.
+            absoluteHeading += diff;
+            previousRawHeading = rawHeadingDeg;
+
+            webViewRef.current?.injectJavaScript(`
+              if (window.setTargetHeading) {
+                window.setTargetHeading(
+                  ${absoluteHeading.toFixed(2)}
+                );
+              }
+              true;
+            `);
+          }
+        }
+      );
+
+      if (isMounted) {
+        subscription = sub;
+      } else {
+        sub.remove();
+      }
+    }
+
+    startHeadingTracking();
+
+    return () => {
+      isMounted = false;
+      subscription?.remove();
+    };
+  }, [isHeadingFocused]);
+
+  // Update the user's location and route without
+  // reloading the entire WebView.
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
+      if (window.updateMap) {
+        window.updateMap(
+          ${currentMarkerLat},
+          ${currentMarkerLng},
+          ${accuracy},
+          ${JSON.stringify(route || null)}
+        );
+      }
+      true;
+    `);
+  }, [
+    currentMarkerLat,
+    currentMarkerLng,
+    accuracy,
+    route,
+    heading,
+  ]);
+
+  // Allow the parent screen to request a recenter.
+  useEffect(() => {
+    if (
+      recenterSignal !== undefined &&
+      recenterSignal > 0
+    ) {
+      webViewRef.current?.injectJavaScript(
+        "if (window.resetView) window.resetView(); true;"
+      );
+    }
+  }, [recenterSignal]);
+
+  if (!htmlContent) {
+    return (
+      <View style={styles.container} />
+    );
+  }
 
   return (
     <View style={styles.container}>
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
-        source={{ html: leafletHtml }}
+        source={{
+          html: htmlContent,
+          baseUrl: "https://localhost",
+        }}
         style={styles.map}
+        onLoadEnd={handleLoadEnd}
         onMessage={(event) => {
-          if (event.nativeEvent.data === "USER_DRAGGED") {
-            setShowRecenter(true);
+          const data =
+            event.nativeEvent.data;
+
+          if (data === "USER_DRAGGED") {
+            onUserDragged?.();
+          } else if (
+            data === "HEADING_LOCKED"
+          ) {
+            setIsHeadingFocused(true);
+            onHeadingModeChange?.(true);
+          } else if (
+            data === "HEADING_UNLOCKED"
+          ) {
+            setIsHeadingFocused(false);
+            onHeadingModeChange?.(false);
           }
         }}
       />
-      {showRecenter && (
-        <TouchableOpacity
-          style={styles.recenterButton}
-          onPress={() => {
-            setShowRecenter(false);
-            webViewRef.current?.injectJavaScript("window.resetView(); true;");
-          }}
-        >
-          <Text style={styles.recenterText}>Recenter</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
 
-// --- Styling ---
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { width: "100%", height: "100%" },
-  recenterButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "white",
-    padding: 12,
-    borderRadius: 8,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+  container: {
+    flex: 1,
   },
-  recenterText: { fontWeight: "bold", color: "#333" },
+
+  map: {
+    width: "100%",
+    height: "100%",
+  },
 });

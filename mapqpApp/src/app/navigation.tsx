@@ -59,6 +59,11 @@ type KalmanState = {
   timestamp: number;
 };
 
+type DirectionStep = {
+  instruction: string;
+  pointIndex: number;
+};
+
 // --- Constants ---
 
 const SAMPLE_COUNT = 20; 
@@ -302,6 +307,179 @@ function formatDuration(seconds: number) {
     : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
+function getBearing(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const dLon = deg2rad(lon2 - lon1);
+
+  const y =
+    Math.sin(dLon) * Math.cos(deg2rad(lat2));
+
+  const x =
+    Math.cos(deg2rad(lat1)) *
+      Math.sin(deg2rad(lat2)) -
+    Math.sin(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.cos(dLon);
+
+  return (
+    (Math.atan2(y, x) * 180) / Math.PI + 360
+  ) % 360;
+}
+
+function generateDirections(
+  geometry: [number, number][]
+): DirectionStep[] {
+  const steps: DirectionStep[] = [];
+
+  if (!geometry || geometry.length < 2) {
+    return steps;
+  }
+
+  let lastBearing = getBearing(
+    geometry[0][0],
+    geometry[0][1],
+    geometry[1][0],
+    geometry[1][1]
+  );
+
+  for (let i = 1; i < geometry.length - 1; i++) {
+    const p1 = geometry[i];
+    const p2 = geometry[i + 1];
+
+    const segmentDistance =
+      getDistanceFromLatLonInMeters(
+        p1[0],
+        p1[1],
+        p2[0],
+        p2[1]
+      );
+
+    if (segmentDistance < 3) {
+      continue;
+    }
+
+    const currentBearing = getBearing(
+      p1[0],
+      p1[1],
+      p2[0],
+      p2[1]
+    );
+
+    let diff = currentBearing - lastBearing;
+
+    if (diff > 180) {
+      diff -= 360;
+    }
+
+    if (diff < -180) {
+      diff += 360;
+    }
+
+    let instruction = "";
+
+    if (diff > 45 && diff <= 135) {
+      instruction = "Turn right";
+    } else if (diff > 10 && diff <= 45) {
+      instruction = "Slight right";
+    } else if (diff < -45 && diff >= -135) {
+      instruction = "Turn left";
+    } else if (diff < -10 && diff >= -45) {
+      instruction = "Slight left";
+    }
+
+    if (instruction) {
+      const previousStep =
+        steps[steps.length - 1];
+
+      if (
+        !previousStep ||
+        previousStep.instruction !== instruction ||
+        i - previousStep.pointIndex > 3
+      ) {
+        steps.push({
+          instruction,
+          pointIndex: i,
+        });
+      }
+
+      lastBearing = currentBearing;
+    }
+  }
+
+  steps.push({
+    instruction: "Arrive at destination",
+    pointIndex: geometry.length - 1,
+  });
+
+  return steps;
+}
+
+function getDistanceToStep(
+  geometry: [number, number][],
+  currentIndex: number,
+  targetIndex: number,
+  userLat?: number,
+  userLng?: number
+): number {
+  if (
+    !geometry ||
+    currentIndex >= targetIndex
+  ) {
+    return 0;
+  }
+
+  let total = 0;
+  let start = currentIndex;
+
+  if (
+    userLat !== undefined &&
+    userLng !== undefined &&
+    currentIndex + 1 < geometry.length
+  ) {
+    total +=
+      getDistanceFromLatLonInMeters(
+        userLat,
+        userLng,
+        geometry[currentIndex + 1][0],
+        geometry[currentIndex + 1][1]
+      );
+
+    start = currentIndex + 1;
+  }
+
+  for (
+    let i = start;
+    i < targetIndex &&
+    i < geometry.length - 1;
+    i++
+  ) {
+    total +=
+      getDistanceFromLatLonInMeters(
+        geometry[i][0],
+        geometry[i][1],
+        geometry[i + 1][0],
+        geometry[i + 1][1]
+      );
+  }
+
+  return Math.round(total);
+}
+
+function formatInstruction(
+  instruction: string,
+  distance: number
+): string {
+  if (distance <= 5) {
+    return `${instruction} now`;
+  }
+
+  return `${instruction} in ${formatDistance(distance)}`;
+}
+
 // --- Main Component ---
 
 export default function Home() {
@@ -319,6 +497,11 @@ export default function Home() {
   const [route, setRoute] = useState<RoutePlan | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
+  const [routeSteps, setRouteSteps] =
+    useState<DirectionStep[]>([]);
+
+  const [currentRouteIndex, setCurrentRouteIndex] =
+    useState(0);
   
   const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
@@ -396,6 +579,10 @@ export default function Home() {
 
       const outdoorRoute = fastestRoute(availableOutdoorRoutes);
       setRoute(outdoorRoute);
+      setRouteSteps(
+        generateDirections(outdoorRoute.geometry)
+      );
+      setCurrentRouteIndex(0);
     } catch (routeRequestError) {
       autoRouteKeyRef.current = "";
       setRouteError(
@@ -457,6 +644,37 @@ export default function Home() {
               const snapped = snapToRouteGeometry(displayLat, displayLng, routeGeometryRef.current);
               displayLat = snapped.lat;
               displayLng = snapped.lng;
+            }
+
+            if (routeGeometryRef.current && destinationBuilding !== "") {
+              let closestIndex = currentRouteIndex;
+              let closestDistance = Infinity;
+
+              for (
+                let i = currentRouteIndex;
+                i < routeGeometryRef.current.length;
+                i++
+              ) {
+                const point =
+                  routeGeometryRef.current[i];
+
+                const distance =
+                  getDistanceFromLatLonInMeters(
+                    processed.latitude,
+                    processed.longitude,
+                    point[0],
+                    point[1]
+                  );
+
+                if (distance < closestDistance) {
+                  closestDistance = distance;
+                  closestIndex = i;
+                }
+              }
+
+              if (closestIndex !== currentRouteIndex) {
+                setCurrentRouteIndex(closestIndex);
+              }
             }
 
             setCoordinates({
@@ -522,7 +740,32 @@ export default function Home() {
     setRoute(null);
     setDestinationBuilding("");
     autoRouteKeyRef.current = "";
+    setRouteSteps([]);
+    setCurrentRouteIndex(0);
   }, []);
+
+  const upcomingSteps = routeSteps.filter(
+    (step) =>
+      step.pointIndex >= currentRouteIndex
+  );
+
+  const nextStep =
+    upcomingSteps.length > 0
+      ? upcomingSteps[0]
+      : null;
+
+  const distanceToNextStep =
+    route &&
+    nextStep &&
+    coordinates
+      ? getDistanceToStep(
+          route.geometry,
+          currentRouteIndex,
+          nextStep.pointIndex,
+          coordinates.latitude,
+          coordinates.longitude
+        )
+      : 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -532,6 +775,22 @@ export default function Home() {
       >
         <Text style={styles.backButtonText}>←</Text>
       </TouchableOpacity>
+
+      {route && nextStep && (
+      <View style={styles.nextDirection}>
+        <Text style={styles.nextDirectionText}>
+          {formatInstruction(
+            nextStep.instruction,
+            distanceToNextStep
+          )}
+        </Text>
+
+        <Text style={styles.nextDirectionSubtext}>
+          {formatDistance(route.distance)} total •{" "}
+          {formatDuration(route.duration)}
+        </Text>
+      </View>
+    )}
 
 
       <View 
@@ -744,4 +1003,34 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     lineHeight: 32,
   },
+
+  nextDirection: {
+  position: "absolute",
+  top: 220,
+  left: 20,
+  right: 20,
+  zIndex: 50,
+  backgroundColor: "white",
+  borderRadius: 14,
+  padding: 14,
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 3,
+  },
+  shadowOpacity: 0.2,
+  shadowRadius: 6,
+  elevation: 6,
+},
+
+nextDirectionText: {
+  fontSize: 18,
+  fontWeight: "bold",
+},
+
+nextDirectionSubtext: {
+  marginTop: 4,
+  fontSize: 13,
+  color: "#666",
+},
 });

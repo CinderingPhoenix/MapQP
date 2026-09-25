@@ -1,0 +1,324 @@
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@latest/dist/leaflet-rotate.min.js"></script>
+  <style>
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #e0e0e0;
+    }
+    .leaflet-control-rotate,
+    .leaflet-control-compass,
+    .leaflet-bar.compass {
+      display: none !important;
+    }
+    .leaflet-top.leaflet-right {
+      top: 150px !important;
+      right: 16px !important;
+    }
+    .compass-control {
+      background: white;
+      border-radius: 50% !important;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      width: 54px !important;
+      height: 54px !important;
+      line-height: 54px !important;
+      text-align: center;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .compass-icon {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      transition: transform 0.1s ease-out;
+      will-change: transform;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = null;
+    var marker = null;
+    var circle = null;
+    var remainingPolyline = null;
+    var traversedPolyline = null;
+    var destMarker = null;
+    var isHeadingFocused = false;
+    var routeData = null;
+    var currentCompassAngle = null;
+
+    function getClosestPointOnSegment(p, a, b) {
+      var cosLat = Math.cos(a[0] * Math.PI / 180);
+      var px = (p[1] - a[1]) * cosLat;
+      var py = p[0] - a[0];
+      var bx = (b[1] - a[1]) * cosLat;
+      var by = b[0] - a[0];
+      var lenSq = bx * bx + by * by;
+      if (lenSq === 0) return { point: a, distanceSq: py * py + px * px, t: 0 };
+      var t = Math.max(0, Math.min(1, (px * bx + py * by) / lenSq));
+      var closestLat = a[0] + t * by;
+      var closestLng = a[1] + t * (b[1] - a[1]);
+      var dx = (p[1] - closestLng) * cosLat;
+      var dy = p[0] - closestLat;
+      return { point: [closestLat, closestLng], distanceSq: dx * dx + dy * dy, t: t };
+    }
+
+    function splitRouteAtUser(userLat, userLng, geometry) {
+      if (!geometry || geometry.length < 2) return { traversed: [], remaining: geometry || [] };
+      var bestSegmentIndex = 0;
+      var minDistanceSq = Infinity;
+      var snappedPoint = [userLat, userLng];
+
+      for (var i = 0; i < geometry.length - 1; i++) {
+        var closest = getClosestPointOnSegment([userLat, userLng], geometry[i], geometry[i + 1]);
+        if (closest.distanceSq < minDistanceSq) {
+          minDistanceSq = closest.distanceSq;
+          bestSegmentIndex = i;
+          snappedPoint = closest.point;
+        }
+      }
+
+      var traversed = geometry.slice(0, bestSegmentIndex + 1);
+      traversed.push(snappedPoint);
+      var remaining = [snappedPoint].concat(geometry.slice(bestSegmentIndex + 1));
+      return { traversed: traversed, remaining: remaining };
+    }
+
+    function initRoute(rData, uLat, uLng) {
+      if (!rData) return;
+      var split = splitRouteAtUser(uLat, uLng, rData.geometry);
+      traversedPolyline = L.polyline(split.traversed, { color: '#888888', weight: 6, opacity: 0.6 }).addTo(map);
+      remainingPolyline = L.polyline(split.remaining, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
+      destMarker = L.circleMarker([rData.destination.latitude, rData.destination.longitude], {
+        radius: 9, color: '#fffdf8', fillColor: '#1d5962', fillOpacity: 1, weight: 3
+      }).addTo(map);
+      map.fitBounds(remainingPolyline.getBounds(), { padding: [36, 36] });
+    }
+
+    // Called once when the React Native WebView loads
+    window.initMap = function(centerLat, centerLng, userLat, userLng, accuracy, route) {
+      if (map) return;
+
+      map = L.map('map', { 
+        zoomControl: false, rotate: true, touchRotate: true, shiftKeyRotate: true
+      }).setView([centerLat, centerLng], 16);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Recalculate dimensions to fetch missing map tiles
+      setTimeout(function() {
+        if (map) {
+          map.invalidateSize();
+        }
+      }, 250);
+
+      marker = L.circleMarker([userLat, userLng], {
+        radius: 8, color: '#fffdf8', fillColor: '#e06b3c', fillOpacity: 1, weight: 3
+      }).addTo(map);
+
+      circle = L.circle([userLat, userLng], {
+        radius: accuracy, color: '#e06b3c', fillColor: '#e06b3c', fillOpacity: 0.3
+      }).addTo(map);
+
+      routeData = route;
+      if (routeData) {
+        initRoute(routeData, userLat, userLng);
+      }
+
+      var CompassControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function (map) {
+          var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control compass-control');
+          // Custom SVG Compass vector icon matching app theme colors (#1d5962 and #e06b3c)
+          container.innerHTML = '<div id="compass-icon" class="compass-icon">' +
+            '<svg viewBox="0 0 24 24" width="32" height="32">' +
+              '<polygon points="12,2 15,12 12,10" fill="#e06b3c" />' +
+              '<polygon points="12,2 9,12 12,10" fill="#f09068" />' +
+              '<polygon points="12,22 15,12 12,14" fill="#1d5962" />' +
+              '<polygon points="12,22 9,12 12,14" fill="#2d7982" />' +
+            '</svg>' +
+          '</div>';
+          
+          L.DomEvent.on(container, 'click', function (e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            
+            isHeadingFocused = !isHeadingFocused;
+            
+            if (isHeadingFocused) {
+              container.style.backgroundColor = '#d3e3fd'; 
+              window.ReactNativeWebView.postMessage('HEADING_LOCKED');
+              map.setView(marker.getLatLng(), 32, { animate: true });
+            } else {
+              container.style.backgroundColor = 'white';
+              window.ReactNativeWebView.postMessage('HEADING_UNLOCKED');
+              smoothRotateToZero();
+            }
+          });
+
+          function updateCompassRotation() {
+            var rawBearing = map.getBearing ? map.getBearing() : 0;
+            var icon = document.getElementById('compass-icon');
+            if (!icon) return;
+
+            if (currentCompassAngle === null) {
+              currentCompassAngle = rawBearing;
+            } else {
+              var diff = ((rawBearing - currentCompassAngle) % 360 + 540) % 360 - 180;
+              currentCompassAngle += diff;
+            }
+
+            icon.style.transform = 'rotate(' + currentCompassAngle + 'deg)';
+          }
+
+          updateCompassRotation();
+          map.on('rotate', updateCompassRotation);
+
+          return container;
+        }
+      });
+      map.addControl(new CompassControl());
+
+      map.on('dragstart rotatestart', function() {
+        if (isHeadingFocused) {
+          isHeadingFocused = false;
+          var compass = document.querySelector('.compass-control');
+          if (compass) compass.style.backgroundColor = 'white';
+          window.ReactNativeWebView.postMessage('HEADING_UNLOCKED');
+        }
+        window.ReactNativeWebView.postMessage('USER_DRAGGED');
+      });
+
+      updateCompassPosition(!!routeData);
+    };
+    
+    var currentTargetBearing = 0;
+    var currentAnimatedBearing = null;
+    var isAnimatingBearing = false;
+
+    window.setTargetHeading = function(rawDeg) {
+      if (rawDeg === null || rawDeg === undefined || isNaN(rawDeg)) return;
+      if (!isHeadingFocused || !map) return;
+
+      currentTargetBearing = -rawDeg;
+      
+      if (!isAnimatingBearing) {
+        if (currentAnimatedBearing === null) {
+          currentAnimatedBearing = map.getBearing ? map.getBearing() : 0;
+        }
+        isAnimatingBearing = true;
+        requestAnimationFrame(animateBearingStep);
+      }
+    };
+
+    function animateBearingStep() {
+      if (!isHeadingFocused || !map) {
+        isAnimatingBearing = false;
+        return;
+      }
+
+      var diff = ((currentTargetBearing - currentAnimatedBearing) % 360 + 540) % 360 - 180;
+      
+      if (Math.abs(diff) > 0.05) {
+        currentAnimatedBearing += diff * 0.03;
+        map.setBearing(currentAnimatedBearing);
+        requestAnimationFrame(animateBearingStep);
+      } else {
+        currentAnimatedBearing = currentTargetBearing;
+        map.setBearing(currentTargetBearing);
+        isAnimatingBearing = false;
+      }
+    }
+
+    function smoothRotateToZero() {
+      var startBearing = map.getBearing ? map.getBearing() : 0;
+      var diffToZero = ((0 - startBearing) % 360 + 540) % 360 - 180;
+      var targetBearing = startBearing + diffToZero;
+
+      var startTime = null;
+      var duration = 300;
+
+      function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        var progress = (timestamp - startTime) / duration;
+        if (progress > 1) progress = 1;
+
+        var easeProgress = 1 - Math.pow(1 - progress, 3);
+        var stepBearing = startBearing + (targetBearing - startBearing) * easeProgress;
+        
+        map.setBearing(stepBearing);
+        currentAnimatedBearing = stepBearing;
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          map.setBearing(targetBearing);
+          currentAnimatedBearing = targetBearing;
+        }
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    window.updateMap = function(userLat, userLng, acc, newRoute) {
+      if (!map) return;
+      var userLatLng = [userLat, userLng];
+      marker.setLatLng(userLatLng);
+      circle.setLatLng(userLatLng);
+      circle.setRadius(acc);
+
+      if (isHeadingFocused) {
+        map.setView(userLatLng, Math.max(map.getZoom(), 32), { animate: true });
+      }
+
+      if (newRoute) {
+        routeData = newRoute;
+        var split = splitRouteAtUser(userLat, userLng, newRoute.geometry);
+
+        if (traversedPolyline) map.removeLayer(traversedPolyline);
+        if (remainingPolyline) map.removeLayer(remainingPolyline);
+        if (destMarker) map.removeLayer(destMarker);
+
+        traversedPolyline = L.polyline(split.traversed, { color: '#888888', weight: 6, opacity: 0.6 }).addTo(map);
+        remainingPolyline = L.polyline(split.remaining, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
+
+        destMarker = L.circleMarker([newRoute.destination.latitude, newRoute.destination.longitude], {
+          radius: 9, color: '#fffdf8', fillColor: '#1d5962', fillOpacity: 1, weight: 3
+        }).addTo(map);
+      } else {
+        routeData = null;
+        if (traversedPolyline) { map.removeLayer(traversedPolyline); traversedPolyline = null; }
+        if (remainingPolyline) { map.removeLayer(remainingPolyline); remainingPolyline = null; }
+        if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+      }
+
+      updateCompassPosition(!!newRoute);
+    };
+
+    window.resetView = function() {
+      if (map && marker) {
+        map.panTo(marker.getLatLng(), { animate: true });
+      }
+    };
+
+    function updateCompassPosition(hasRoute) {
+      var controlContainer = document.querySelector('.leaflet-top.leaflet-right');
+      if (controlContainer) {
+        controlContainer.style.setProperty("top", "150px", "important");
+        controlContainer.style.right = "16px";
+      }
+    }
+
+  </script>
+</body>
