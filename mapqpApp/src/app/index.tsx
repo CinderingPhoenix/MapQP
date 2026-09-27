@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Speech from "expo-speech";
 import LocationMap from "../components/location-map";
 import buildingData from "../data/wpi-buildings.json";
 import { routeBetween, WalkingRoute } from "../utils/routing";
@@ -27,7 +28,6 @@ try {
   ExpoSpeechRecognitionModule = speechModule.ExpoSpeechRecognitionModule;
   useSpeechRecognitionEvent = speechModule.useSpeechRecognitionEvent;
 } catch (err) {
-  // Fallback safely when running in Expo Go where native module is missing
   console.warn("expo-speech-recognition is not available in this environment.");
 }
 
@@ -87,6 +87,12 @@ type DirectionStep = {
   pointIndex: number;
 };
 
+type StepSpeechStage = {
+  m25?: boolean;
+  m5?: boolean;
+  turn?: boolean;
+};
+
 // --- Constants ---
 
 const SAMPLE_COUNT = 20;
@@ -94,6 +100,7 @@ const BASE_MAX_SAMPLE_AGE_MS = 20_000;
 const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const RECENT_SEARCHES_STORAGE_KEY = "@wpi_map_recent_searches";
+const LAST_LOCATION_STORAGE_KEY = "@wpi_map_last_location";
 
 const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"),
@@ -433,11 +440,13 @@ export default function Home() {
   const samplesRef = useRef<Coordinates[]>([]);
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
+  const spokenStagesRef = useRef<Record<number, StepSpeechStage>>({});
 
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
   const [error, setError] = useState("");
   const [pollingInterval, setPollingInterval] = useState(1000);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
 
   const [originLabel] = useState("Your current location");
   const [destinationBuilding, setDestinationBuilding] = useState("");
@@ -452,11 +461,41 @@ export default function Home() {
   const [showRecenter, setShowRecenter] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
 
+  // Loading bar countdown states
+  const [routeLoadingProgress, setRouteLoadingProgress] = useState(0);
+  const progressAnimationRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
   const isReroutingRef = useRef(false);
+  const destinationBuildingRef = useRef(destinationBuilding);
+  
+  // Ref to instantly stop any speech triggers when the user cancels
+  const isRouteCancelledRef = useRef(false);
 
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    destinationBuildingRef.current = destinationBuilding;
+  }, [destinationBuilding]);
+
+  // Load last known location on mount
+  useEffect(() => {
+    const loadLastLocation = async () => {
+      try {
+        const savedLocation = await AsyncStorage.getItem(LAST_LOCATION_STORAGE_KEY);
+        if (savedLocation && !initialLocationSet.current) {
+          const parsed = JSON.parse(savedLocation);
+          if (parsed.latitude && parsed.longitude) {
+            setMapCenter({ latitude: parsed.latitude, longitude: parsed.longitude });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load last known location:", error);
+      }
+    };
+    loadLastLocation();
+  }, []);
 
   // Sync keyboard offset animation
   useEffect(() => {
@@ -489,18 +528,48 @@ export default function Home() {
     routeGeometryRef.current = route?.geometry ?? null;
   }, [route]);
 
+  const toggleMute = useCallback(() => {
+    setIsAudioMuted((prev) => {
+      const next = !prev;
+      if (next) Speech.stop();
+      return next;
+    });
+  }, []);
+
+  // Start countdown progress bar for route preview
+  const startRoutePreviewCountdown = useCallback(() => {
+    setRouteLoadingProgress(0);
+    if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
+
+    const startTime = Date.now();
+    const duration = 4000; // 4 seconds matching the map zoom timeout
+
+    progressAnimationRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setRouteLoadingProgress(progress);
+
+      if (progress >= 1) {
+        if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
+      }
+    }, 50);
+  }, []);
+
   // Route Planning Execution Logic
   const planRoute = useCallback(
     async (currentCoords?: Coordinates) => {
-      const activeCoords = currentCoords || coordinates;
+      const targetBuilding = destinationBuildingRef.current;
       setRouteError("");
 
-      const destinationSelection = WPI_BUILDINGS.find((b) => b.id === destinationBuilding);
+      if (!targetBuilding) return;
+
+      const destinationSelection = WPI_BUILDINGS.find((b) => b.id === targetBuilding);
       if (!destinationSelection) {
         setRouteError("Choose a WPI destination building.");
         return;
       }
 
+      const activeCoords = currentCoords || coordinates;
       if (!activeCoords) {
         setRouteError("Waiting for your current location before planning.");
         return;
@@ -532,6 +601,10 @@ export default function Home() {
           })
         );
 
+        if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) {
+          return;
+        }
+
         const availableOutdoorRoutes = outdoorCandidates.filter(
           (candidate): candidate is RouteCandidate => candidate !== null
         );
@@ -541,22 +614,37 @@ export default function Home() {
         }
 
         const outdoorRoute = fastestRoute(availableOutdoorRoutes);
+
+        if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) {
+          return;
+        }
+
         setRoute(outdoorRoute);
         setRouteSteps(generateDirections(outdoorRoute.geometry));
         setCurrentRouteIndex(0);
+
+        // Trigger loading bar countdown animation for preview zoom
+        startRoutePreviewCountdown();
+
+        spokenStagesRef.current = {};
+        if (!isAudioMuted && !isRouteCancelledRef.current) {
+          Speech.speak(`Navigating to ${destinationSelection.name}`);
+        }
       } catch (routeRequestError) {
-        autoRouteKeyRef.current = "";
-        setRouteError(
-          routeRequestError instanceof Error
-            ? routeRequestError.message
-            : "The route could not be planned. Try again."
-        );
+        if (destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current) {
+          autoRouteKeyRef.current = "";
+          setRouteError(
+            routeRequestError instanceof Error
+              ? routeRequestError.message
+              : "The route could not be planned. Try again."
+          );
+        }
       } finally {
         setRouteLoading(false);
         isReroutingRef.current = false;
       }
     },
-    [destinationBuilding, coordinates, originLabel]
+    [coordinates, originLabel, isAudioMuted, startRoutePreviewCountdown]
   );
 
   // Live Location Subscription
@@ -603,7 +691,11 @@ export default function Home() {
             let displayLng = processed.longitude;
             let newRouteIndex = currentRouteIndex;
 
-            if (routeGeometryRef.current && !isReroutingRef.current && destinationBuilding !== "") {
+            if (
+              routeGeometryRef.current &&
+              !isReroutingRef.current &&
+              destinationBuildingRef.current !== ""
+            ) {
               const snapped = snapToRouteGeometry(displayLat, displayLng, routeGeometryRef.current);
               displayLat = snapped.lat;
               displayLng = snapped.lng;
@@ -615,6 +707,11 @@ export default function Home() {
               latitude: displayLat,
               longitude: displayLng,
             });
+
+            AsyncStorage.setItem(
+              LAST_LOCATION_STORAGE_KEY,
+              JSON.stringify({ latitude: displayLat, longitude: displayLng })
+            ).catch((err) => console.error("Failed to save location", err));
 
             if (newRouteIndex !== currentRouteIndex) {
               setCurrentRouteIndex(newRouteIndex);
@@ -628,7 +725,7 @@ export default function Home() {
             if (
               routeGeometryRef.current &&
               !isReroutingRef.current &&
-              destinationBuilding !== "" &&
+              destinationBuildingRef.current !== "" &&
               isUserOffRoute(processed.latitude, processed.longitude, routeGeometryRef.current)
             ) {
               isReroutingRef.current = true;
@@ -656,7 +753,7 @@ export default function Home() {
     return () => {
       subscription?.remove();
     };
-  }, [destinationBuilding, planRoute, pollingInterval, currentRouteIndex]);
+  }, [planRoute, pollingInterval, currentRouteIndex]);
 
   // Trigger route planning when destination updates
   useEffect(() => {
@@ -665,18 +762,43 @@ export default function Home() {
     const routeKey = `current::${destinationBuilding}`;
     if (autoRouteKeyRef.current === routeKey) return;
 
+    isRouteCancelledRef.current = false;
     autoRouteKeyRef.current = routeKey;
     void planRoute();
   }, [coordinates, destinationBuilding, planRoute]);
 
-  const handleDestinationChange = useCallback((buildingId: string) => {
+const handleDestinationChange = useCallback((buildingId: string) => {
+    isRouteCancelledRef.current = false;
+    autoRouteKeyRef.current = ""; // Clear cache immediately on selection
     setDestinationBuilding(buildingId);
-  }, []);
+
+    if (buildingId) {
+      // Force immediate route execution on selection
+      void planRoute();
+    }
+  }, [planRoute]);
 
   const handleCancelRoute = useCallback(() => {
+    // Immediately flag route as cancelled so turn-by-turn voice and async fetches stop speaking
+    isRouteCancelledRef.current = true;
+    destinationBuildingRef.current = "";
+    
+    // FIX: Reset the auto-route cache key so selecting the same destination works immediately
+    autoRouteKeyRef.current = ""; 
+    
+    routeGeometryRef.current = null;
+    isReroutingRef.current = false;
+
+    // Stop speaking immediately
+    Speech.stop();
+    spokenStagesRef.current = {};
+
+    if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
+    setRouteLoadingProgress(0);
+
     setRoute(null);
     setDestinationBuilding("");
-    autoRouteKeyRef.current = "";
+    setRouteError("");
     setRouteSteps([]);
     setCurrentRouteIndex(0);
     setDirectionsExpanded(false);
@@ -700,6 +822,34 @@ export default function Home() {
           coordinates.longitude
         )
       : 0;
+
+  // Handle turn-by-turn voice announcements (25m, 5m, and at turn)
+  useEffect(() => {
+    if (!route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
+
+    const stepIdx = nextStep.pointIndex;
+    if (!spokenStagesRef.current[stepIdx]) {
+      spokenStagesRef.current[stepIdx] = {};
+    }
+    const stages = spokenStagesRef.current[stepIdx];
+
+    const speakPrompt = (text: string) => {
+      if (isAudioMuted || isRouteCancelledRef.current) return;
+      Speech.stop();
+      Speech.speak(text, { language: "en-US", rate: 1.0 });
+    };
+
+    if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) {
+      stages.m25 = true;
+      speakPrompt(`In 25 meters, ${nextStep.instruction}`);
+    } else if (distToNextStepMeters <= 5 && distToNextStepMeters > 2 && !stages.m5) {
+      stages.m5 = true;
+      speakPrompt(`In 5 meters, ${nextStep.instruction}`);
+    } else if (distToNextStepMeters <= 2 && !stages.turn) {
+      stages.turn = true;
+      speakPrompt(`${nextStep.instruction} now`);
+    }
+  }, [route, nextStep, coordinates, distToNextStepMeters, isAudioMuted]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -776,6 +926,18 @@ export default function Home() {
               </Text>
             </TouchableOpacity>
           )}
+
+          {/* Loading bar at the bottom of the top text box (disappears once completed) */}
+          {routeLoadingProgress < 1 && (
+            <View style={styles.progressBarBackground}>
+              <View 
+                style={[
+                  styles.progressBarFill, 
+                  { width: `${routeLoadingProgress * 100}%` }
+                ]} 
+              />
+            </View>
+          )}
         </View>
       )}
 
@@ -802,6 +964,11 @@ export default function Home() {
             route={route}
             recenterSignal={recenterSignal}
             onUserDragged={() => setShowRecenter(true)}
+            onPanBack={() => setShowRecenter(false)}
+            onHeadingModeChange={() => {
+              setShowRecenter(false);
+            }}
+            onToggleMute={toggleMute}
           />
         )}
       </View>
@@ -853,7 +1020,6 @@ const BuildingPicker = React.memo(
 
     const isQueryEmpty = query.trim() === "";
 
-    // Safely register speech events only if the native module exists
     useSpeechRecognitionEvent("result", (event: any) => {
       const spokenText = event.results[0]?.transcript;
       if (spokenText) {
@@ -884,7 +1050,7 @@ const BuildingPicker = React.memo(
     });
 
     const handleVoiceSearch = async () => {
-      if (value) return; // Prevent voice search if destination is already set
+      if (value) return;
 
       try {
         if (!ExpoSpeechRecognitionModule || typeof ExpoSpeechRecognitionModule.isRecognitionAvailable !== "function") {
@@ -982,7 +1148,7 @@ const BuildingPicker = React.memo(
     }, []);
 
     const handleFocus = useCallback(() => {
-      if (value) return; // Do not open dropdown on focus if route/destination is active
+      if (value) return;
       if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
       if (query.trim() === "" && recentBuildings.length === 0) {
         setIsOpen(false);
@@ -1082,7 +1248,7 @@ const BuildingPicker = React.memo(
               value !== "" && { backgroundColor: "#f9f9f9", color: "#333" },
             ]}
             value={query}
-            editable={!value} // Disables typing/focus when a destination is set
+            editable={!value}
             onChangeText={(text) => {
               setQuery(text);
               onChange("");
@@ -1144,9 +1310,22 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 1,
     borderColor: "#e0e0e0",
+    overflow: "hidden",
   },
   topRouteSummaryExpanded: {
     height: 480,
+  },
+  progressBarBackground: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "transparent",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#1d5962",
   },
   expandedContainer: { flex: 1, flexDirection: "column" },
   expandedHeader: {

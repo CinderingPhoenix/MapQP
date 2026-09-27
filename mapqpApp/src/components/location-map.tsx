@@ -16,6 +16,8 @@ type LocationMapProps = {
   recenterSignal?: number;
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
+  onToggleMute?: () => void;
+  onPanBack?: () => void;
 };
 
 export default function LocationMap({
@@ -29,15 +31,19 @@ export default function LocationMap({
   recenterSignal,
   onUserDragged,
   onHeadingModeChange,
+  onToggleMute,
+  onPanBack,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [htmlContent, setHtmlContent] = useState<string>("");
 
+  // Track whether the user has manually dragged away from auto-centering
+  const hasUserPannedAwayRef = useRef(false);
+
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
 
-  // Load the separate leaflet.html file as a raw text string
   const [assets] = useAssets([require("./leaflet.html")]);
 
   useEffect(() => {
@@ -49,7 +55,6 @@ export default function LocationMap({
     }
   }, [assets]);
 
-  // Pass initial coordinates to Leaflet once the HTML loads into WebView
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
       if (window.initMap) {
@@ -66,8 +71,43 @@ export default function LocationMap({
     `);
   };
 
-  // Device absolute compass heading handler with smoothing filter
-  // Device absolute compass heading handler with unbounded continuous tracking
+  // 1. Initial route overview fitBounds -> 4 second silent delay -> focuses on user & sets heading focused
+  useEffect(() => {
+    if (route && route.geometry && route.geometry.length > 0) {
+      hasUserPannedAwayRef.current = false; // Reset pan state for new route
+      const routeCoords = route.geometry.map((pt: [number, number]) => [pt[0], pt[1]]);
+
+      webViewRef.current?.injectJavaScript(`
+        if (window.map) {
+          var bounds = L.latLngBounds(${JSON.stringify(routeCoords)});
+          window.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+        }
+        true;
+      `);
+
+      const timeoutId = setTimeout(() => {
+        hasUserPannedAwayRef.current = false;
+        setIsHeadingFocused(true);
+        onHeadingModeChange?.(true);
+        onPanBack?.();
+
+        webViewRef.current?.injectJavaScript(`
+          if (window.setHeadingFocus) {
+            window.setHeadingFocus(true);
+          }
+          if (window.updateMap) {
+            window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(route)});
+          }
+          true;
+        `);
+      }, 4000);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [route]);
+
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
@@ -81,23 +121,22 @@ export default function LocationMap({
             ? headingData.trueHeading 
             : headingData.magHeading;
 
-          // Apply the 90-degree offset and normalize to 0-359
-          rawHeadingDeg = (rawHeadingDeg - 90) % 360;
+          rawHeadingDeg = rawHeadingDeg % 360;
 
           if (absoluteHeading === null || previousRawHeading === null) {
             absoluteHeading = rawHeadingDeg;
-            previousRawHeading = rawHeadingDeg; // Set initial baseline
+            previousRawHeading = rawHeadingDeg; 
           } else {
             let diff = rawHeadingDeg - previousRawHeading;
             
             if (diff > 180) diff -= 360;
             if (diff < -180) diff += 360;
 
-            // Accumulate continuously (can go to 400, 720, -150, etc.)
-            absoluteHeading += diff;
-            previousRawHeading = rawHeadingDeg; // Update baseline only after exceeding dead-zone
+            if (Math.abs(diff) < 0.5) return;
 
-            // Pass the unbounded heading. Leaflet handles the visual smoothing natively.
+            absoluteHeading += diff;
+            previousRawHeading = rawHeadingDeg;
+
             webViewRef.current?.injectJavaScript(`
               if (window.setTargetHeading) window.setTargetHeading(${absoluteHeading.toFixed(2)});
               true;
@@ -121,21 +160,24 @@ export default function LocationMap({
     };
   }, [isHeadingFocused]);
 
-  // Sync state updates
+  // Only update map position on GPS tick if the user hasn't manually panned away
   useEffect(() => {
-    webViewRef.current?.injectJavaScript(`
-      if (window.updateMap) {
-        window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
-      route || null
-    )});
-      }
-      true;
-    `);
+    if (!hasUserPannedAwayRef.current) {
+      webViewRef.current?.injectJavaScript(`
+        if (window.updateMap) {
+          window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
+        route || null
+      )});
+        }
+        true;
+      `);
+    }
   }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
 
-  // Recenter handler
+  // Recenter signal explicitly resets the view and re-enables tracking
   useEffect(() => {
     if (recenterSignal !== undefined && recenterSignal > 0) {
+      hasUserPannedAwayRef.current = false;
       webViewRef.current?.injectJavaScript(
         "if (window.resetView) window.resetView(); true;"
       );
@@ -157,13 +199,21 @@ export default function LocationMap({
         onMessage={(event) => {
           const data = event.nativeEvent.data;
           if (data === "USER_DRAGGED") {
+            hasUserPannedAwayRef.current = true; // Stop forcing center on GPS updates
+            setIsHeadingFocused(false);         // Unlock heading mode if dragged
             onUserDragged?.();
           } else if (data === "HEADING_LOCKED") {
+            hasUserPannedAwayRef.current = false;
             setIsHeadingFocused(true);
             onHeadingModeChange?.(true);
+            onPanBack?.();
           } else if (data === "HEADING_UNLOCKED") {
+            hasUserPannedAwayRef.current = false;
             setIsHeadingFocused(false);
             onHeadingModeChange?.(false);
+            onPanBack?.();
+          } else if (data === "TOGGLE_MUTE") {
+            onToggleMute?.();
           }
         }}
       />
