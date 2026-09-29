@@ -15,7 +15,9 @@ type LocationMapProps = {
   route?: any;
   recenterSignal?: number;
   onUserDragged?: () => void;
+  onPanBack?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
+  onToggleMute?: () => void;
 };
 
 export default function LocationMap({
@@ -28,7 +30,9 @@ export default function LocationMap({
   route,
   recenterSignal,
   onUserDragged,
+  onPanBack,
   onHeadingModeChange,
+  onToggleMute,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
@@ -199,6 +203,10 @@ export default function LocationMap({
 
           if (data === "USER_DRAGGED") {
             onUserDragged?.();
+          } else if (data === "PAN_BACK") {
+            onPanBack?.();
+          } else if (data === "TOGGLE_MUTE") {
+            onToggleMute?.();
           } else if (
             data === "HEADING_LOCKED"
           ) {
