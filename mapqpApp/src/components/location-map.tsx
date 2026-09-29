@@ -20,6 +20,10 @@ type LocationMapProps = {
   onPanBack?: () => void;
 };
 
+/**
+ * LocationMap component embeds and bridges a Leaflet map HTML file within a React Native WebView.
+ * Manages map initialization assets, user position updates, heading tracking subscriptions, and interaction callbacks.
+ */
 export default function LocationMap({
   latitude,
   longitude,
@@ -55,6 +59,9 @@ export default function LocationMap({
     }
   }, [assets]);
 
+  /**
+   * Injects initialization script into the WebView once the HTML content has loaded.
+   */
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
       if (window.initMap) {
@@ -74,7 +81,7 @@ export default function LocationMap({
   // 1. Initial route overview fitBounds -> 4 second silent delay -> focuses on user & sets heading focused
   useEffect(() => {
     if (route && route.geometry && route.geometry.length > 0) {
-      hasUserPannedAwayRef.current = false; // Reset pan state for new route
+      hasUserPannedAwayRef.current = false;
       const routeCoords = route.geometry.map((pt: [number, number]) => [pt[0], pt[1]]);
 
       webViewRef.current?.injectJavaScript(`
@@ -108,6 +115,9 @@ export default function LocationMap({
     }
   }, [route]);
 
+  /**
+   * Subscribes to device heading updates when heading focus is locked.
+   */
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
@@ -199,8 +209,8 @@ export default function LocationMap({
         onMessage={(event) => {
           const data = event.nativeEvent.data;
           if (data === "USER_DRAGGED") {
-            hasUserPannedAwayRef.current = true; // Stop forcing center on GPS updates
-            setIsHeadingFocused(false);         // Unlock heading mode if dragged
+            hasUserPannedAwayRef.current = true;
+            setIsHeadingFocused(false);
             onUserDragged?.();
           } else if (data === "HEADING_LOCKED") {
             hasUserPannedAwayRef.current = false;

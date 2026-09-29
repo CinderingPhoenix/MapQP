@@ -110,10 +110,55 @@ const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
 
 // --- Geographic & Math Helpers ---
 
+/**
+ * Calculates a similarity score between 0 and 1 for two strings
+ * based on the Levenshtein distance.
+ */
+function getSimilarityScore(str1: string, str2: string): number {
+  const a = str1.toLowerCase().trim();
+  const b = str2.toLowerCase().trim();
+  
+  if (a.length === 0) return b.length === 0 ? 1.0 : 0.0;
+  if (b.length === 0) return 0.0;
+
+  const matrix = Array.from({ length: b.length + 1 }, () => 
+    new Array(a.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+  for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+
+  for (let j = 1; j <= b.length; j++) {
+    for (let i = 1; i <= a.length; i++) {
+      if (b.charAt(j - 1) === a.charAt(i - 1)) {
+        matrix[j][i] = matrix[j - 1][i - 1];
+      } else {
+        matrix[j][i] = Math.min(
+          matrix[j - 1][i - 1] + 1, // substitution
+          matrix[j][i - 1] + 1,     // insertion
+          matrix[j - 1][i] + 1      // deletion
+        );
+      }
+    }
+  }
+
+  const distance = matrix[b.length][a.length];
+  const maxLen = Math.max(a.length, b.length);
+  return (maxLen - distance) / maxLen;
+}
+
+/**
+ * Converts an angle from degrees to radians.
+ * Multiplies the degree value by the ratio of PI divided by 180.
+ */
 function deg2rad(deg: number): number {
   return deg * (Math.PI / 180);
 }
 
+/**
+ * Calculates the great-circle distance between two points on the Earth's surface.
+ * Uses the Haversine formula, computing latitude and longitude differences converted to radians, trigonometric sine/cosine components, and multiplying by the Earth's mean radius in meters.
+ */
 function getDistanceFromLatLonInMeters(
   lat1: number,
   lon1: number,
@@ -133,6 +178,10 @@ function getDistanceFromLatLonInMeters(
   return R * c;
 }
 
+/**
+ * Calculates the compass bearing angle between two geographic coordinates.
+ * Computes the difference in longitude and applies trigonometric atan2 calculations involving sine and cosine functions of the latitudes and longitudes, normalizing the resulting angle to a 0–360 degree range.
+ */
 function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLon = deg2rad(lon2 - lon1);
   const y = Math.sin(dLon) * Math.cos(deg2rad(lat2));
@@ -142,12 +191,20 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): num
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
+/**
+ * Formats a distance in meters into a human-readable string.
+ * Checks if the distance is under 1000 meters to display rounded meters; otherwise, formats it into kilometers with one decimal place.
+ */
 function formatDistance(meters: number): string {
   return meters < 1000
     ? `${Math.round(meters)} m`
     : `${(meters / 1000).toFixed(1)} km`;
 }
 
+/**
+ * Formats a duration in seconds into a human-readable string.
+ * Converts seconds into minutes, then formats as minutes if under an hour or splits into hours and minutes if 60 minutes or more.
+ */
 function formatDuration(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
   return minutes < 60
@@ -155,12 +212,20 @@ function formatDuration(seconds: number): string {
     : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
+/**
+ * Formats a navigation instruction string with its corresponding distance.
+ * Appends "now" if the distance is 5 meters or less, or appends "in [formatted distance]" if greater than 5 meters.
+ */
 function formatInstructionWithDistance(instruction: string, distMeters: number): string {
   return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters)}`;
 }
 
 // --- Navigation & Routing Helpers ---
 
+/**
+ * Generates an array of turn-by-turn direction steps from route geometry coordinates.
+ * Iterates through coordinate pairs, calculates bearing changes between consecutive segments, classifies turns based on angular difference thresholds, and appends an arrival step at the end.
+ */
 function generateDirections(geometry: [number, number][]): DirectionStep[] {
   const steps: DirectionStep[] = [];
   if (!geometry || geometry.length < 2) return steps;
@@ -199,6 +264,10 @@ function generateDirections(geometry: [number, number][]): DirectionStep[] {
   return steps;
 }
 
+/**
+ * Calculates the total distance from the user's current location to a target direction step point along the route geometry.
+ * Sums the distance from the user's current coordinates to the next route vertex, then accumulates distances across subsequent geometry segments up to the target index.
+ */
 function getDistanceToStepPoint(
   geometry: [number, number][],
   currentIndex: number,
@@ -233,6 +302,10 @@ function getDistanceToStepPoint(
   return Math.round(totalMeters);
 }
 
+/**
+ * Computes the cumulative segment distance between two indices in a route geometry array.
+ * Iterates through geometry points from startIndex to endIndex, summing distances between consecutive coordinate pairs.
+ */
 function getSegmentDistance(
   geometry: [number, number][],
   startIndex: number,
@@ -253,6 +326,10 @@ function getSegmentDistance(
   return Math.round(totalMeters);
 }
 
+/**
+ * Finds the closest point on a line segment to a given external point.
+ * Uses vector projection in a local Cartesian coordinate space to find the projection scalar t clamped between 0 and 1, calculating the resulting latitude, longitude, and distance.
+ */
 function getClosestPointOnSegment(
   p: { lat: number; lng: number },
   a: { lat: number; lng: number },
@@ -280,6 +357,10 @@ function getClosestPointOnSegment(
   };
 }
 
+/**
+ * Snaps user coordinates to the nearest point along the route geometry if within a threshold.
+ * Iterates over all line segments in the route geometry, finds the closest projected point on each segment, and returns the best snapped coordinates if within the snap distance threshold.
+ */
 function snapToRouteGeometry(
   userLat: number,
   userLng: number,
@@ -311,6 +392,10 @@ function snapToRouteGeometry(
   return { lat: userLat, lng: userLng, index: bestIndex };
 }
 
+/**
+ * Checks if the user has strayed off the planned route.
+ * Calculates the minimum distance from the user's coordinates to all points in the route geometry and compares it against an off-route threshold.
+ */
 function isUserOffRoute(userLat: number, userLng: number, geometry: [number, number][]): boolean {
   if (!geometry || geometry.length === 0) return false;
 
@@ -322,6 +407,10 @@ function isUserOffRoute(userLat: number, userLng: number, geometry: [number, num
   return minDistance > OFF_ROUTE_THRESHOLD_METERS;
 }
 
+/**
+ * Creates a geographic Point object for a specific building entrance.
+ * Extracts latitude, longitude, and constructs a descriptive label combining the building name and entrance name.
+ */
 function buildingPoint(building: Building, entranceIndex: number): Point {
   const entrance = building.entrances[entranceIndex];
   return {
@@ -331,6 +420,10 @@ function buildingPoint(building: Building, entranceIndex: number): Point {
   };
 }
 
+/**
+ * Selects and returns the fastest route candidate among multiple route options.
+ * Uses array reduction to compare route durations and returns the candidate with the minimum duration value.
+ */
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
   return routes.reduce((fastest, candidate) =>
     candidate.duration < fastest.duration ? candidate : fastest
@@ -339,6 +432,10 @@ function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
 
 // --- Kalman Filtering & Polling Helpers ---
 
+/**
+ * Processes incoming raw location samples using a Kalman filter to reduce GPS noise and smooth movement.
+ * Computes time deltas, applies accuracy penalties for sudden high-speed jumps, predicts next states using speed and heading, updates Kalman gain, and smooths accuracy based on stationary sample buffers.
+ */
 function processAdvancedCoordinates(
   incomingSample: Coordinates,
   previousStateRef: React.MutableRefObject<KalmanState | null>,
@@ -425,6 +522,10 @@ function processAdvancedCoordinates(
   };
 }
 
+/**
+ * Calculates a smart, adaptive GPS polling interval based on speed and accuracy.
+ * Uses an exponential decay function based on the user's movement speed and clamps the interval between 500ms and 4000ms rounded to the nearest 250ms.
+ */
 function calculateSmartPollingInterval(accuracy: number, speed: number, sampleCount: number): number {
   if (sampleCount < SAMPLE_COUNT) return 500;
 
@@ -436,6 +537,10 @@ function calculateSmartPollingInterval(accuracy: number, speed: number, sampleCo
 
 // --- Main Screen Component ---
 
+/**
+ * Main application screen component for campus navigation.
+ * Manages location subscriptions, Kalman filtering, route planning state, audio instructions, keyboard animations, and renders the map and destination picker interface.
+ */
 export default function Home() {
   const samplesRef = useRef<Coordinates[]>([]);
   const kalmanStateRef = useRef<KalmanState | null>(null);
@@ -647,13 +752,25 @@ export default function Home() {
     [coordinates, originLabel, isAudioMuted, startRoutePreviewCountdown]
   );
 
-  // Live Location Subscription
+  // Live Location & App Initialization
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
 
-    async function startLocationTracking() {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
+    async function initializeApp() {
+      if (
+        ExpoSpeechRecognitionModule &&
+        typeof ExpoSpeechRecognitionModule.requestPermissionsAsync === "function"
+      ) {
+        try {
+          await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        } catch (err) {
+          console.warn("Failed to request speech permissions on mount:", err);
+        }
+      }
+
+      const permissions = await Location.requestForegroundPermissionsAsync();
+      
+      if (permissions.status !== "granted") {
         setError("Location permission is required to plan a route.");
         return;
       }
@@ -749,7 +866,8 @@ export default function Home() {
       );
     }
 
-    startLocationTracking();
+    initializeApp();
+    
     return () => {
       subscription?.remove();
     };
@@ -767,13 +885,12 @@ export default function Home() {
     void planRoute();
   }, [coordinates, destinationBuilding, planRoute]);
 
-const handleDestinationChange = useCallback((buildingId: string) => {
+  const handleDestinationChange = useCallback((buildingId: string) => {
     isRouteCancelledRef.current = false;
-    autoRouteKeyRef.current = ""; // Clear cache immediately on selection
+    autoRouteKeyRef.current = "";
     setDestinationBuilding(buildingId);
 
     if (buildingId) {
-      // Force immediate route execution on selection
       void planRoute();
     }
   }, [planRoute]);
@@ -1005,6 +1122,10 @@ type BuildingPickerProps = {
   placeholder: string;
 };
 
+/**
+ * BuildingPicker component handles searching, voice recognition, and selecting WPI building destinations.
+ * Manages search queries, filters building lists, reads recent searches from storage, integrates speech recognition event handlers, and renders an autocomplete dropdown UI.
+ */
 const BuildingPicker = React.memo(
   ({ buildings, value, onChange, onCancel, placeholder }: BuildingPickerProps) => {
     const selectedBuilding = buildings.find((b) => b.id === value);
@@ -1026,9 +1147,29 @@ const BuildingPicker = React.memo(
         setQuery(spokenText);
         setIsOpen(true);
 
-        const matched = buildings.find((b) =>
-          b.name.toLowerCase().includes(spokenText.toLowerCase().trim())
+        const cleanSpoken = spokenText.toLowerCase().trim();
+
+        let matched = buildings.find((b) =>
+          b.name.toLowerCase().includes(cleanSpoken)
         );
+
+        if (!matched) {
+          let bestMatch: Building | null = null;
+          let highestSimilarity = 0;
+
+          for (const building of buildings) {
+            const similarity = getSimilarityScore(cleanSpoken, building.name);
+            if (similarity > highestSimilarity) {
+              highestSimilarity = similarity;
+              bestMatch = building;
+            }
+          }
+
+          if (highestSimilarity >= 0.45 && bestMatch) {
+            matched = bestMatch;
+          }
+        }
+
         if (matched) {
           if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
           onChange(matched.id);
@@ -1224,62 +1365,78 @@ const BuildingPicker = React.memo(
           </ScrollView>
         )}
         <View style={styles.inputWrapper}>
-          <TouchableOpacity
-            style={[styles.micButton, value !== "" && { opacity: 0.4 }]}
-            disabled={!!value}
-            onPress={() => {
-              if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-              void handleVoiceSearch();
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons
-              name={isListening ? "mic" : "mic-outline"}
-              size={20}
-              color={isListening ? "#1d5962" : "#666"}
-            />
-          </TouchableOpacity>
-
-          <TextInput
-            style={[
-              styles.input,
-              styles.inputWithMic,
-              (value !== "" || query !== "") && styles.inputWithClear,
-              value !== "" && { backgroundColor: "#f9f9f9", color: "#333" },
-            ]}
-            value={query}
-            editable={!value}
-            onChangeText={(text) => {
-              setQuery(text);
-              onChange("");
-              if (text.trim() === "") {
-                setIsOpen(recentBuildings.length > 0);
-              } else {
-                setIsOpen(true);
-              }
-            }}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onSubmitEditing={() => setIsOpen(false)}
-            placeholder={isListening ? "Listening..." : placeholder}
-          />
-          {(value !== "" || query !== "") && (
+          {isListening ? (
             <TouchableOpacity
-              style={styles.clearButton}
+              style={styles.listeningActiveContainer}
               onPress={() => {
                 if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-                if (isListening && ExpoSpeechRecognitionModule?.stop) {
+                if (ExpoSpeechRecognitionModule?.stop) {
                   ExpoSpeechRecognitionModule.stop();
                 }
-                setQuery("");
-                setIsOpen(false);
-                onCancel();
-                Keyboard.dismiss();
+                setIsListening(false);
               }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>✕</Text>
+              <Ionicons name="mic" size={24} color="#1d5962" />
+              <Text style={styles.listeningActiveText}>Listening...</Text>
             </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.micButton, value !== "" && { opacity: 0.4 }]}
+                disabled={!!value}
+                onPress={() => {
+                  if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+                  void handleVoiceSearch();
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="mic-outline"
+                  size={20}
+                  color="#666"
+                />
+              </TouchableOpacity>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.inputWithMic,
+                  (value !== "" || query !== "") && styles.inputWithClear,
+                  value !== "" && { backgroundColor: "#f9f9f9", color: "#333" },
+                ]}
+                value={query}
+                editable={!value}
+                onChangeText={(text) => {
+                  setQuery(text);
+                  onChange("");
+                  if (text.trim() === "") {
+                    setIsOpen(recentBuildings.length > 0);
+                  } else {
+                    setIsOpen(true);
+                  }
+                }}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onSubmitEditing={() => setIsOpen(false)}
+                placeholder={placeholder}
+              />
+              {(value !== "" || query !== "") && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => {
+                    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+                    setQuery("");
+                    setIsOpen(false);
+                    onCancel();
+                    Keyboard.dismiss();
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.cancelButtonText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
@@ -1424,6 +1581,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#666",
     textTransform: "uppercase",
+  },
+  listeningActiveContainer: {
+    height: 48,
+    flexDirection: "row",
+    borderColor: "#1d5962",
+    borderWidth: 2,
+    borderRadius: 8,
+    backgroundColor: "#e8f4f5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listeningActiveText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1d5962",
+    marginLeft: 8,
   },
   clearRecentText: { fontSize: 12, color: "#d9534f", fontWeight: "600" },
   dropdownItem: { paddingVertical: 14, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },

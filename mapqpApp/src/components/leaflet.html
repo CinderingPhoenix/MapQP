@@ -70,6 +70,10 @@
     var routeData = null;
     var currentCompassAngle = null;
 
+    /**
+     * Calculates the closest projected point on a line segment to an external coordinate point.
+     * Uses dot products and vector projection scaled by parameter t clamped between 0 and 1.
+     */
     function getClosestPointOnSegment(p, a, b) {
       var cosLat = Math.cos(a[0] * Math.PI / 180);
       var px = (p[1] - a[1]) * cosLat;
@@ -86,6 +90,9 @@
       return { point: [closestLat, closestLng], distanceSq: dx * dx + dy * dy, t: t };
     }
 
+    /**
+     * Splits a route geometry polyline into traversed (gray) and remaining (teal) segments relative to the user's location.
+     */
     function splitRouteAtUser(userLat, userLng, geometry) {
       if (!geometry || geometry.length < 2) return { traversed: [], remaining: geometry || [] };
       var bestSegmentIndex = 0;
@@ -107,6 +114,9 @@
       return { traversed: traversed, remaining: remaining };
     }
 
+    /**
+     * Initializes route polylines and destination marker on the Leaflet map instance.
+     */
     function initRoute(rData, uLat, uLng) {
       if (!rData) return;
       var split = splitRouteAtUser(uLat, uLng, rData.geometry);
@@ -118,6 +128,9 @@
       map.fitBounds(remainingPolyline.getBounds(), { padding: [36, 36] });
     }
 
+    /**
+     * Bootstraps the Leaflet map container, tile layer, custom user location markers, custom controls (Compass & Mute), and event listeners.
+     */
     window.initMap = function(centerLat, centerLng, userLat, userLng, accuracy, route) {
       if (map) return;
 
@@ -242,6 +255,9 @@
     var currentAnimatedBearing = null;
     var isAnimatingBearing = false;
 
+    /**
+     * Updates the target heading angle for rotation animation when navigation heading lock is active.
+     */
     window.setTargetHeading = function(rawDeg) {
       if (rawDeg === null || rawDeg === undefined || isNaN(rawDeg)) return;
       if (!isHeadingFocused || !map) return;
@@ -257,6 +273,9 @@
       }
     };
 
+    /**
+     * Sets the heading lock focus state and updates compass control button styles.
+     */
     window.setHeadingFocus = function(focused) {
       isHeadingFocused = focused;
       var compass = document.querySelector('.compass-control');
@@ -268,6 +287,9 @@
       }
     };
 
+    /**
+     * Animates map bearing transitions smoothly step-by-step toward the target heading.
+     */
     function animateBearingStep() {
       if (!isHeadingFocused || !map) {
         isAnimatingBearing = false;
@@ -287,6 +309,9 @@
       }
     }
 
+    /**
+     * Smoothly rotates the map back to zero orientation when heading focus is released.
+     */
     function smoothRotateToZero() {
       var startBearing = map.getBearing ? map.getBearing() : 0;
       var diffToZero = ((0 - startBearing) % 360 + 540) % 360 - 180;
@@ -317,6 +342,9 @@
       requestAnimationFrame(step);
     }
 
+    /**
+     * Updates user marker position, accuracy circle, and active route geometry on the Leaflet map.
+     */
     window.updateMap = function(userLat, userLng, acc, newRoute) {
       if (!map) return;
       var userLatLng = [userLat, userLng];
@@ -352,12 +380,18 @@
       updateCompassPosition(!!newRoute);
     };
 
+    /**
+     * Pans the map view back to the current user location marker.
+     */
     window.resetView = function() {
       if (map && marker) {
         map.panTo(marker.getLatLng(), { animate: true });
       }
     };
 
+    /**
+     * Dynamically adjusts the vertical position of map control buttons depending on route banner visibility.
+     */
     function updateCompassPosition(hasRoute) {
       var controlContainer = document.querySelector('.leaflet-top.leaflet-right');
       if (controlContainer) {
