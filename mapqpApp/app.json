@@ -39,8 +39,13 @@
           "imageWidth": 76
         }
       ],
+<<<<<<< HEAD
       "expo-image",
       "expo-web-browser"
+=======
+      "expo-audio",
+      "expo-asset"
+>>>>>>> landing-page
     ],
     "experiments": {
       "typedRoutes": true,
