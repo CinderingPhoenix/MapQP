@@ -1,9 +1,9 @@
-import { useAssets } from "expo-asset";
-import { File } from "expo-file-system";
-import * as Location from "expo-location";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
+import * as Location from "expo-location";
+import { useAssets } from "expo-asset";
+import { File } from "expo-file-system";
 
 type LocationMapProps = {
   latitude: number;
@@ -15,11 +15,15 @@ type LocationMapProps = {
   route?: any;
   recenterSignal?: number;
   onUserDragged?: () => void;
-  onPanBack?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
   onToggleMute?: () => void;
+  onPanBack?: () => void;
 };
 
+/**
+ * LocationMap component embeds and bridges a Leaflet map HTML file within a React Native WebView.
+ * Manages map initialization assets, user position updates, heading tracking subscriptions, and interaction callbacks.
+ */
 export default function LocationMap({
   latitude,
   longitude,
@@ -30,40 +34,43 @@ export default function LocationMap({
   route,
   recenterSignal,
   onUserDragged,
-  onPanBack,
   onHeadingModeChange,
   onToggleMute,
+  onPanBack,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [htmlContent, setHtmlContent] = useState<string>("");
 
+  // Track whether the user has manually dragged away from auto-centering
+  const hasUserPannedAwayRef = useRef(false);
+
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
 
-  // Load the separate Leaflet HTML file.
   const [assets] = useAssets([require("./leaflet.html")]);
 
   useEffect(() => {
     if (assets && assets[0]?.localUri) {
       const file = new File(assets[0].localUri);
-
       file.text().then((content) => {
         setHtmlContent(content);
       });
     }
   }, [assets]);
 
-  // Initialize the Leaflet map after the WebView loads.
+  /**
+   * Injects initialization script into the WebView once the HTML content has loaded.
+   */
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
       if (window.initMap) {
         window.initMap(
-          ${latitude},
-          ${longitude},
-          ${currentMarkerLat},
-          ${currentMarkerLng},
-          ${accuracy},
+          ${latitude}, 
+          ${longitude}, 
+          ${currentMarkerLat}, 
+          ${currentMarkerLng}, 
+          ${accuracy}, 
           ${JSON.stringify(route || null)}
         );
       }
@@ -71,70 +78,87 @@ export default function LocationMap({
     `);
   };
 
-  // Track the device compass while heading mode is enabled.
+  // 1. Initial route overview fitBounds -> 4 second silent delay -> focuses on user & sets heading focused
+  useEffect(() => {
+    if (route && route.geometry && route.geometry.length > 0) {
+      hasUserPannedAwayRef.current = false;
+      const routeCoords = route.geometry.map((pt: [number, number]) => [pt[0], pt[1]]);
+
+      webViewRef.current?.injectJavaScript(`
+        if (window.map) {
+          var bounds = L.latLngBounds(${JSON.stringify(routeCoords)});
+          window.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+        }
+        true;
+      `);
+
+      const timeoutId = setTimeout(() => {
+        hasUserPannedAwayRef.current = false;
+        setIsHeadingFocused(true);
+        onHeadingModeChange?.(true);
+        onPanBack?.();
+
+        webViewRef.current?.injectJavaScript(`
+          if (window.setHeadingFocus) {
+            window.setHeadingFocus(true);
+          }
+          if (window.updateMap) {
+            window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(route)});
+          }
+          true;
+        `);
+      }, 4000);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [route]);
+
+  /**
+   * Subscribes to device heading updates when heading focus is locked.
+   */
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
-
     let previousRawHeading: number | null = null;
     let absoluteHeading: number | null = null;
 
     async function startHeadingTracking() {
-      if (!isHeadingFocused) {
-        return;
-      }
+      if (isHeadingFocused) {
+        const sub = await Location.watchHeadingAsync((headingData) => {
+          let rawHeadingDeg = headingData.trueHeading >= 0 
+            ? headingData.trueHeading 
+            : headingData.magHeading;
 
-      const sub = await Location.watchHeadingAsync(
-        (headingData) => {
-          let rawHeadingDeg =
-            headingData.trueHeading >= 0
-              ? headingData.trueHeading
-              : headingData.magHeading;
+          rawHeadingDeg = rawHeadingDeg % 360;
 
-          // Apply the 90-degree offset used by the map rotation system.
-          rawHeadingDeg =
-            (rawHeadingDeg - 90) % 360;
-
-          if (
-            absoluteHeading === null ||
-            previousRawHeading === null
-          ) {
+          if (absoluteHeading === null || previousRawHeading === null) {
             absoluteHeading = rawHeadingDeg;
-            previousRawHeading = rawHeadingDeg;
+            previousRawHeading = rawHeadingDeg; 
           } else {
-            let diff =
-              rawHeadingDeg -
-              previousRawHeading;
+            let diff = rawHeadingDeg - previousRawHeading;
+            
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
 
-            if (diff > 180) {
-              diff -= 360;
-            }
+            if (Math.abs(diff) < 0.5) return;
 
-            if (diff < -180) {
-              diff += 360;
-            }
-
-            // Keep a continuous heading value so the map
-            // does not suddenly spin the long way around.
             absoluteHeading += diff;
             previousRawHeading = rawHeadingDeg;
 
             webViewRef.current?.injectJavaScript(`
-              if (window.setTargetHeading) {
-                window.setTargetHeading(
-                  ${absoluteHeading.toFixed(2)}
-                );
-              }
+              if (window.setTargetHeading) window.setTargetHeading(${absoluteHeading.toFixed(2)});
               true;
             `);
           }
-        }
-      );
+        });
 
-      if (isMounted) {
-        subscription = sub;
-      } else {
-        sub.remove();
+        if (isMounted) {
+          subscription = sub;
+        } else {
+          sub.remove();
+        }
       }
     }
 
@@ -146,34 +170,24 @@ export default function LocationMap({
     };
   }, [isHeadingFocused]);
 
-  // Update the user's location and route without
-  // reloading the entire WebView.
+  // Only update map position on GPS tick if the user hasn't manually panned away
   useEffect(() => {
-    webViewRef.current?.injectJavaScript(`
-      if (window.updateMap) {
-        window.updateMap(
-          ${currentMarkerLat},
-          ${currentMarkerLng},
-          ${accuracy},
-          ${JSON.stringify(route || null)}
-        );
-      }
-      true;
-    `);
-  }, [
-    currentMarkerLat,
-    currentMarkerLng,
-    accuracy,
-    route,
-    heading,
-  ]);
+    if (!hasUserPannedAwayRef.current) {
+      webViewRef.current?.injectJavaScript(`
+        if (window.updateMap) {
+          window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
+        route || null
+      )});
+        }
+        true;
+      `);
+    }
+  }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
 
-  // Allow the parent screen to request a recenter.
+  // Recenter signal explicitly resets the view and re-enables tracking
   useEffect(() => {
-    if (
-      recenterSignal !== undefined &&
-      recenterSignal > 0
-    ) {
+    if (recenterSignal !== undefined && recenterSignal > 0) {
+      hasUserPannedAwayRef.current = false;
       webViewRef.current?.injectJavaScript(
         "if (window.resetView) window.resetView(); true;"
       );
@@ -181,9 +195,7 @@ export default function LocationMap({
   }, [recenterSignal]);
 
   if (!htmlContent) {
-    return (
-      <View style={styles.container} />
-    );
+    return <View style={styles.container} />;
   }
 
   return (
@@ -191,32 +203,27 @@ export default function LocationMap({
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
-        source={{
-          html: htmlContent,
-          baseUrl: "https://localhost",
-        }}
+        source={{ html: htmlContent, baseUrl: "https://localhost" }}
         style={styles.map}
         onLoadEnd={handleLoadEnd}
         onMessage={(event) => {
-          const data =
-            event.nativeEvent.data;
-
+          const data = event.nativeEvent.data;
           if (data === "USER_DRAGGED") {
+            hasUserPannedAwayRef.current = true;
+            setIsHeadingFocused(false);
             onUserDragged?.();
-          } else if (data === "PAN_BACK") {
+          } else if (data === "HEADING_LOCKED") {
+            hasUserPannedAwayRef.current = false;
+            setIsHeadingFocused(true);
+            onHeadingModeChange?.(true);
+            onPanBack?.();
+          } else if (data === "HEADING_UNLOCKED") {
+            hasUserPannedAwayRef.current = false;
+            setIsHeadingFocused(false);
+            onHeadingModeChange?.(false);
             onPanBack?.();
           } else if (data === "TOGGLE_MUTE") {
             onToggleMute?.();
-          } else if (
-            data === "HEADING_LOCKED"
-          ) {
-            setIsHeadingFocused(true);
-            onHeadingModeChange?.(true);
-          } else if (
-            data === "HEADING_UNLOCKED"
-          ) {
-            setIsHeadingFocused(false);
-            onHeadingModeChange?.(false);
           }
         }}
       />
@@ -225,12 +232,6 @@ export default function LocationMap({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  map: {
-    width: "100%",
-    height: "100%",
-  },
+  container: { flex: 1 },
+  map: { width: "100%", height: "100%" },
 });

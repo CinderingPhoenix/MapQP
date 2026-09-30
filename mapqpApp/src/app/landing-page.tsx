@@ -10,11 +10,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LandingPage() {
   const openStandardNavigation = () => {
-    router.replace("/navigation?mode=standard");
+    router.push("/navigation?mode=standard");
   };
 
   const openAccessibilityNavigation = () => {
-    router.replace("/navigation?mode=accessibility");
+    router.push("/navigation?mode=accessibility");
   };
 
   return (
