@@ -11,9 +11,15 @@ export type RoutePoint = {
 
 export type WalkingRoute = {
   geometry: [number, number][];
+  navigationPath: NavigationPoint[];
   distance: number;
   duration: number;
   via?: string;
+};
+
+export type NavigationPoint = {
+  coordinate: [number, number];
+  connectionCount: number;
 };
 
 export type WalkwayDebugOverlay = {
@@ -220,10 +226,18 @@ function findLocalWalkingRoute(
   });
 
   const geometry = smoothPolyline(rawGeometry);
+  const navigationPath = path.map((nodeId) => ({
+    coordinate: nodes.find((candidate) => candidate.id === nodeId)!,
+    connectionCount: graphEdges.get(nodeId)?.length ?? 0,
+  })).map(({ coordinate, connectionCount }) => ({
+    coordinate: [coordinate.latitude, coordinate.longitude] as [number, number],
+    connectionCount,
+  }));
   const distance = distances.get(destinationId)!;
 
   return {
     geometry,
+    navigationPath,
     distance,
     duration: distance / WALKING_SPEED_METERS_PER_SECOND,
   };
