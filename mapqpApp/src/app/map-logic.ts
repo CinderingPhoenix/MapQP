@@ -5,7 +5,7 @@ import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
 import buildingData from "../data/wpi-buildings.json";
-import { routeBetween, WalkingRoute } from "../utils/routing";
+import { NavigationPoint, routeBetween, WalkingRoute } from "../utils/routing";
 
 let ExpoSpeechRecognitionModule: any = null;
 try {
@@ -66,6 +66,11 @@ type StepSpeechStage = {
   turn?: boolean;
 };
 
+type OrientationPrompt = {
+  direction: "left" | "right" | "around";
+  timestamp: number;
+};
+
 type RouteCandidate = WalkingRoute & {
   origin: Point;
   destination: Point;
@@ -113,7 +118,7 @@ export function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: 
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLon = deg2rad(lon2 - lon1);
   const y = Math.sin(dLon) * Math.cos(deg2rad(lat2));
   const x = Math.cos(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) - Math.sin(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.cos(dLon);
@@ -133,22 +138,43 @@ export function formatInstructionWithDistance(instruction: string, distMeters: n
   return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters)}`;
 }
 
-export function generateDirections(geometry: [number, number][]): DirectionStep[] {
+function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
+  let closestIndex = 0;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < geometry.length; index++) {
+    const distance = getDistanceFromLatLonInMeters(geometry[index][0], geometry[index][1], point[0], point[1]);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+  }
+  return closestIndex;
+}
+
+export function generateDirections(
+  geometry: [number, number][],
+  navigationPath: NavigationPoint[] = [],
+): DirectionStep[] {
   const steps: DirectionStep[] = [];
-  if (!geometry || geometry.length < 2) return steps;
-  let lastBearing = getBearing(...geometry[0], ...geometry[1]);
-  for (let i = 1; i < geometry.length - 1; i++) {
-    const dist = getDistanceFromLatLonInMeters(...geometry[i], ...geometry[i + 1]);
-    if (dist < 3) continue;
-    const currentBearing = getBearing(...geometry[i], ...geometry[i + 1]);
-    let diff = currentBearing - lastBearing;
+  if (!geometry || geometry.length < 2 || navigationPath.length < 3) return steps;
+
+  for (let index = 1; index < navigationPath.length - 1; index++) {
+    const decisionPoint = navigationPath[index];
+    if (decisionPoint.connectionCount <= 2) continue;
+
+    const previousPoint = navigationPath[index - 1].coordinate;
+    const currentPoint = decisionPoint.coordinate;
+    const nextPoint = navigationPath[index + 1].coordinate;
+    const incomingBearing = getBearing(...previousPoint, ...currentPoint);
+    const outgoingBearing = getBearing(...currentPoint, ...nextPoint);
+    let diff = outgoingBearing - incomingBearing;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-    const instruction = diff > 45 && diff <= 135 ? "Turn right" : diff > 10 ? "Slight right" : diff < -45 && diff >= -135 ? "Turn left" : diff < -10 ? "Slight left" : "";
+    const instruction = diff > 45 ? "Turn right" : diff > 15 ? "Slight right" : diff < -45 ? "Turn left" : diff < -15 ? "Slight left" : "Continue straight";
+    const pointIndex = closestGeometryIndex(geometry, currentPoint);
     const lastStep = steps[steps.length - 1];
-    if (instruction && (!lastStep || lastStep.instruction !== instruction || i - lastStep.pointIndex > 3)) {
-      steps.push({ instruction, pointIndex: i });
-      lastBearing = currentBearing;
+    if (!lastStep || lastStep.instruction !== instruction || pointIndex - lastStep.pointIndex > 3) {
+      steps.push({ instruction, pointIndex });
     }
   }
   steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
@@ -250,6 +276,7 @@ export function useMapNavigation() {
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
   const spokenStagesRef = useRef<Record<number, StepSpeechStage>>({});
+  const orientationPromptRef = useRef<OrientationPrompt | null>(null);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
   const [error, setError] = useState("");
@@ -263,6 +290,7 @@ export function useMapNavigation() {
   const [showRecenter, setShowRecenter] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
   const [routeLoadingProgress, setRouteLoadingProgress] = useState(0);
+  const [currentHeading, setCurrentHeading] = useState<number | null>(null);
   const progressAnimationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
@@ -321,7 +349,7 @@ export function useMapNavigation() {
       if (!availableRoutes.length) throw new Error("The walking route service could not find a route. Try again.");
       const selectedRoute = fastestRoute(availableRoutes);
       setRoute(selectedRoute);
-      setRouteSteps(generateDirections(selectedRoute.geometry));
+      setRouteSteps(generateDirections(selectedRoute.geometry, selectedRoute.navigationPath));
       setCurrentRouteIndex(0);
       startRoutePreviewCountdown();
       spokenStagesRef.current = {};
@@ -381,6 +409,33 @@ export function useMapNavigation() {
     return () => { isMounted = false; subscription?.remove(); };
   }, []);
 
+  // Keep an independent compass heading available for correcting a user's orientation.
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+    let isMounted = true;
+
+    if (!route) {
+      setCurrentHeading(null);
+      return;
+    }
+
+    Location.watchHeadingAsync((headingData) => {
+      if (!isMounted) return;
+      const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
+      setCurrentHeading(heading % 360);
+    }).then((nextSubscription) => {
+      if (isMounted) subscription = nextSubscription;
+      else nextSubscription.remove();
+    }).catch((headingError) => {
+      console.warn("Unable to track heading for route guidance:", headingError);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.remove();
+    };
+  }, [route]);
+
   useEffect(() => {
     if (!destinationBuilding || !coordinates) return;
     const routeKey = `current::${destinationBuilding}`;
@@ -405,6 +460,7 @@ export function useMapNavigation() {
     isReroutingRef.current = false;
     Speech.stop();
     spokenStagesRef.current = {};
+    orientationPromptRef.current = null;
     if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
     setRouteLoadingProgress(0);
     setRoute(null);
@@ -418,6 +474,37 @@ export function useMapNavigation() {
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);
   const nextStep = upcomingSteps[0] ?? null;
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
+
+  useEffect(() => {
+    if (!route || !coordinates || currentHeading === null || isAudioMuted || isRouteCancelledRef.current) return;
+
+    const lookAheadIndex = Math.min(currentRouteIndex + 4, route.geometry.length - 1);
+    if (lookAheadIndex <= currentRouteIndex) return;
+
+    const routeBearing = getBearing(
+      coordinates.latitude,
+      coordinates.longitude,
+      route.geometry[lookAheadIndex][0],
+      route.geometry[lookAheadIndex][1],
+    );
+    const headingDifference = ((routeBearing - currentHeading + 540) % 360) - 180;
+    const absoluteDifference = Math.abs(headingDifference);
+    if (absoluteDifference < 65) return;
+
+    const direction: OrientationPrompt["direction"] = absoluteDifference >= 135
+      ? "around"
+      : headingDifference > 0 ? "right" : "left";
+    const now = Date.now();
+    const previousPrompt = orientationPromptRef.current;
+    if (previousPrompt?.direction === direction && now - previousPrompt.timestamp < 8_000) return;
+
+    orientationPromptRef.current = { direction, timestamp: now };
+    Speech.stop();
+    Speech.speak(
+      direction === "around" ? "Turn around to face the route" : `Turn ${direction} to face the route`,
+      { language: "en-US", rate: 1 },
+    );
+  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted]);
 
   useEffect(() => {
     if (!route || !nextStep || !coordinates || isRouteCancelledRef.current) return;

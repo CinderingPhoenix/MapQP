@@ -170,18 +170,16 @@ export default function LocationMap({
     };
   }, [isHeadingFocused]);
 
-  // Only update map position on GPS tick if the user hasn't manually panned away
+  // Keep the marker and route progress synchronized even when the viewport is manually panned.
   useEffect(() => {
-    if (!hasUserPannedAwayRef.current) {
-      webViewRef.current?.injectJavaScript(`
-        if (window.updateMap) {
-          window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
-        route || null
-      )});
-        }
-        true;
-      `);
-    }
+    webViewRef.current?.injectJavaScript(`
+      if (window.updateMap) {
+        window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
+      route || null
+    )});
+      }
+      true;
+    `);
   }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
 
   // Recenter signal explicitly resets the view and re-enables tracking
