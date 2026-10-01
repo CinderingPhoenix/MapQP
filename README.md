@@ -23,7 +23,7 @@ Starts the app using a connected android emulator
 cd android
 ./gradlew clean
 ```
-Cleans out the android folder for compiling new versions
+Optional step to clean out the android folder for compiling new versions
 
 ```
 cd android

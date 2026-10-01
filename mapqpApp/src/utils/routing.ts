@@ -32,21 +32,16 @@ type GraphEdge = {
   distance: number;
 };
 
+type WalkwayConnectionItem = string | { to: string; accessible?: boolean };
+
 // --- Constants & Graph Initialization ---
 
 const WALKING_SPEED_METERS_PER_SECOND = 1.4;
 const routeCache = new Map<string, WalkingRoute>();
 
-// 1. Cast the raw JSON data to array types
-const rawNodes = routePointsData.nodes as [string, number, number][];
-const rawConnections = routePointsData.connections as [string, string, number?][];
-
-// 2. Rehydrate nodes into GraphNode objects
-const walkwayNodes: GraphNode[] = rawNodes.map((node) => ({
-  id: node[0],
-  latitude: node[1],
-  longitude: node[2],
-}));
+// Load static walkway nodes from JSON
+const walkwayNodes: GraphNode[] = routePointsData.nodes;
+const walkwayConnections: Record<string, WalkwayConnectionItem[]> = routePointsData.connections;
 
 // Combine walkway intersection nodes and building entrance points into a unified graph
 const campusNodes: GraphNode[] = [
@@ -67,24 +62,21 @@ for (const node of campusNodes) {
   graphEdges.set(node.id, []);
 }
 
-// 1. Build bidirectional edges for pre-defined walkway paths using the flat array
-for (const conn of rawConnections) {
-  const fromId = conn[0];
-  const toId = conn[1];
-  
+// 1. Build bidirectional edges for pre-defined walkway paths
+for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
   const fromNode = campusNodesById.get(fromId);
-  const toNode = campusNodesById.get(toId);
-
   if (!fromNode) {
-    console.warn(`Unknown node in walkwayConnections: ${fromId}`);
-    continue;
+    throw new Error(`Unknown node in walkwayConnections: ${fromId}`);
   }
-  if (!toNode) {
-    console.warn(`Unknown node in walkwayConnections: ${toId}`);
-    continue;
+
+  for (const item of toIds) {
+    const toId = typeof item === "string" ? item : item.to;
+    const toNode = campusNodesById.get(toId);
+    if (!toNode) {
+      throw new Error(`Unknown node in walkwayConnections: ${toId}`);
+    }
+    connectWalkwayNodes(fromNode, toNode);
   }
-  
-  connectWalkwayNodes(fromNode, toNode);
 }
 
 // 2. Connect building entrances to the nearest existing walkway segments
@@ -110,19 +102,21 @@ for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(cand
 export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
   return {
     nodes: campusNodes.map((node) => [node.latitude, node.longitude]),
-    connections: rawConnections
-      .map((conn) => {
-        const fromNode = campusNodesById.get(conn[0]);
-        const toNode = campusNodesById.get(conn[1]);
-        
-        if (!fromNode || !toNode) return null;
-        
-        return [
-          [fromNode.latitude, fromNode.longitude] as [number, number],
-          [toNode.latitude, toNode.longitude] as [number, number],
-        ] as [[number, number], [number, number]];
-      })
-      .filter((conn): conn is [[number, number], [number, number]] => conn !== null),
+    connections: Object.entries(walkwayConnections).flatMap(([fromId, toIds]) => {
+      const fromNode = campusNodesById.get(fromId);
+      if (!fromNode) return [];
+      return toIds
+        .map((item) => {
+          const toId = typeof item === "string" ? item : item.to;
+          const toNode = campusNodesById.get(toId);
+          if (!toNode) return null;
+          return [
+            [fromNode.latitude, fromNode.longitude] as [number, number],
+            [toNode.latitude, toNode.longitude] as [number, number],
+          ] as [[number, number], [number, number]];
+        })
+        .filter((conn): conn is [[number, number], [number, number]] => conn !== null);
+    }),
   };
 }
 
