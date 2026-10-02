@@ -1,9 +1,9 @@
-import { useRef, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { WebView } from "react-native-webview";
-import * as Location from "expo-location";
 import { useAssets } from "expo-asset";
 import { File } from "expo-file-system";
+import * as Location from "expo-location";
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
 
 type LocationMapProps = {
   latitude: number;
@@ -17,6 +17,7 @@ type LocationMapProps = {
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
   onToggleMute?: () => void;
+  onOpenSettings?: () => void;
   onPanBack?: () => void;
 };
 
@@ -36,6 +37,7 @@ export default function LocationMap({
   onUserDragged,
   onHeadingModeChange,
   onToggleMute,
+  onOpenSettings,
   onPanBack,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
@@ -170,18 +172,16 @@ export default function LocationMap({
     };
   }, [isHeadingFocused]);
 
-  // Only update map position on GPS tick if the user hasn't manually panned away
+  // Keep the marker and route progress synchronized even when the viewport is manually panned.
   useEffect(() => {
-    if (!hasUserPannedAwayRef.current) {
-      webViewRef.current?.injectJavaScript(`
-        if (window.updateMap) {
-          window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
-        route || null
-      )});
-        }
-        true;
-      `);
-    }
+    webViewRef.current?.injectJavaScript(`
+      if (window.updateMap) {
+        window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
+      route || null
+    )});
+      }
+      true;
+    `);
   }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
 
   // Recenter signal explicitly resets the view and re-enables tracking
@@ -224,6 +224,8 @@ export default function LocationMap({
             onPanBack?.();
           } else if (data === "TOGGLE_MUTE") {
             onToggleMute?.();
+          } else if (data === "OPEN_SETTINGS") {
+            onOpenSettings?.();
           }
         }}
       />
