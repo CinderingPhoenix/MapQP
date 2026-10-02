@@ -9,6 +9,7 @@ export default function RootLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="landing-page" />
+      <Stack.Screen name="loading-screen" />
       <Stack.Screen name="standard-navigation" />
       <Stack.Screen name="accessibility-navigation" />
     </Stack>

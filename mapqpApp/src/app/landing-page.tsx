@@ -7,8 +7,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocationWarmup } from "../hooks/use-location-warmup";
 
 export default function LandingPage() {
+  useLocationWarmup();
   const openStandardNavigation = () => {
     router.push("/standard-navigation");
   };
