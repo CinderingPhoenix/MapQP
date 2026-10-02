@@ -35,13 +35,14 @@ export default function Home() {
     setShowRecenter,
   } = useMapNavigation();
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const showSub = Keyboard.addListener(showEvent, (event) => Animated.timing(keyboardTranslateY, { toValue: -(event.endCoordinates.height + 10), duration: event.duration || 175, useNativeDriver: true }).start());
-    const hideSub = Keyboard.addListener(hideEvent, (event) => Animated.timing(keyboardTranslateY, { toValue: 0, duration: event.duration || 200, useNativeDriver: true }).start());
+    const showSub = Keyboard.addListener(showEvent, (event) => { setKeyboardHeight(event.endCoordinates.height); Animated.timing(keyboardTranslateY, { toValue: -(event.endCoordinates.height + 24), duration: event.duration || 175, useNativeDriver: true }).start(); });
+    const hideSub = Keyboard.addListener(hideEvent, (event) => { setKeyboardHeight(0); Animated.timing(keyboardTranslateY, { toValue: 0, duration: event.duration || 200, useNativeDriver: true }).start(); });
     return () => { showSub.remove(); hideSub.remove(); };
   }, [keyboardTranslateY]);
 
@@ -92,7 +93,7 @@ export default function Home() {
         />}
       </View>
 
-      <Animated.View style={[styles.plannerPanel, { transform: [{ translateY: keyboardTranslateY }] }]}>
+      <Animated.View style={[styles.plannerPanel, { paddingBottom: keyboardHeight > 0 ? 48 : 40, transform: [{ translateY: keyboardTranslateY }] }]}> 
         {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text style={styles.recenterText}>Recenter</Text></TouchableOpacity>}
         <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
         {routeError !== "" && <Text style={styles.errorText}>{routeError}</Text>}
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
   directionsList: { flex: 1, marginTop: 4 },
   directionItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
   directionInstruction: { fontSize: 19, fontWeight: "500", color: "#333" },
-  plannerPanel: { position: "absolute", bottom: 16, left: 16, right: 16, zIndex: 10, backgroundColor: "#fff", borderRadius: 12, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderColor: "#e0e0e0" },
+  plannerPanel: { position: "absolute", bottom: -16, left: 16, right: 16, zIndex: 10, backgroundColor: "#fff", borderTopLeftRadius: 12, borderTopRightRadius: 12, padding: 16, paddingBottom: 40, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderBottomWidth: 0, borderColor: "#e0e0e0" },
   recenterButton: { position: "absolute", top: -56, right: 0, backgroundColor: "white", padding: 12, borderRadius: 8, elevation: 4, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 4, zIndex: 20 },
   recenterText: { fontWeight: "bold", color: "#333" },
   subText: { fontSize: 16, color: "#555", marginTop: 4 },
