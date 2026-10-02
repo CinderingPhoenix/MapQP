@@ -1,6 +1,8 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-  ScrollView,
+  Image,
+  ImageBackground,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,204 +20,267 @@ export default function LandingPage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.appName}>MapQP</Text>
+          <View style={styles.logoPlaceholder}>
+            <Text style={styles.logoPlaceholderText}>Logo</Text>
+          </View>
 
-          <Text style={styles.tagline}>
-            Welcome to WPI
-          </Text>
-
-          <Text style={styles.description}>
-            Find your way around campus with navigation designed with
-            accessibility in mind.
-          </Text>
+          <Image
+            source={require("../../assets/images/wpi-logo.png")}
+            style={styles.wpiLogo}
+            resizeMode="contain"
+          />
         </View>
 
-        {/* Navigation Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Choose Navigation
-          </Text>
-
-          {/* Standard Navigation */}
-          <TouchableOpacity
-            style={styles.navigationCard}
-            onPress={openStandardNavigation}
-            activeOpacity={0.8}
-          >
-            <View style={styles.navigationIcon}>
-              <Text style={styles.navigationIconText}>
-                ➤
-              </Text>
+        {/* Campus Map */}
+        <ImageBackground
+          source={require("../../assets/images/campus-map.png")}
+          style={styles.mapBackground}
+          resizeMode="cover"
+        >
+          <View style={styles.presetArea}>
+            <View style={styles.presetLabel}>
+              <Text style={styles.presetText}>Select your preset</Text>
             </View>
 
-            <View style={styles.navigationText}>
-              <Text style={styles.navigationTitle}>
-                Standard Navigation
-              </Text>
+            <View style={styles.buttonRow}>
+              {/* Standard Mode */}
+              <TouchableOpacity
+                style={styles.buttonWrapper}
+                onPress={openStandardNavigation}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={[
+                    "rgba(255,255,255,0.72)",
+                    "rgba(255,255,255,0.97)",
+                    "rgba(255,255,255,0.97)",
+                    "rgba(220,240,255,0.72)",
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modeButton}
+                >
+                  <View style={[styles.modeIcon, styles.standardIcon]}>
+                    <Text style={styles.standardIconText}>➤</Text>
+                  </View>
 
-              <Text style={styles.navigationDescription}>
-                Standard map and walking navigation.
-              </Text>
+                  <Text style={styles.modeTitle}>
+                    Standard{"\n"}Mode
+                  </Text>
+
+                  <Text style={styles.modeDescription}>
+                    General campus navigation
+                  </Text>
+
+                  <View style={styles.standardAccent} />
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Accessibility Mode */}
+              <TouchableOpacity
+                style={styles.buttonWrapper}
+                onPress={openAccessibilityNavigation}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={[
+                    "rgba(255,255,255,0.72)",
+                    "rgba(255,255,255,0.97)",
+                    "rgba(255,255,255,0.97)",
+                    "rgba(255,225,228,0.72)",
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modeButton}
+                >
+                  <View style={[styles.modeIcon, styles.accessibilityIcon]}>
+                    <Text style={styles.accessibilityIconText}>♿</Text>
+                  </View>
+
+                  <Text style={styles.modeTitle}>
+                    Accessibility{"\n"}Mode
+                  </Text>
+
+                  <Text style={styles.modeDescription}>
+                    Navigation built around your needs
+                  </Text>
+
+                  <View style={styles.accessibilityAccent} />
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
-
-          {/* Accessibility Navigation */}
-          <TouchableOpacity
-            style={styles.navigationCard}
-            onPress={openAccessibilityNavigation}
-            activeOpacity={0.8}
-          >
-            <View style={styles.navigationIcon}>
-              <Text style={styles.navigationIconText}>
-                ◉
-              </Text>
-            </View>
-
-            <View style={styles.navigationText}>
-              <Text style={styles.navigationTitle}>
-                Accessibility Navigation
-              </Text>
-
-              <Text style={styles.navigationDescription}>
-                Navigation designed with accessibility preferences
-                and larger controls.
-              </Text>
-            </View>
-
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            MapQP • Accessible Campus Navigation
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ImageBackground>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FFFFFF",
   },
 
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-    flexGrow: 1,
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
 
   header: {
-    paddingTop: 20,
-    paddingBottom: 32,
+    height: 130,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingHorizontal: 28,
   },
 
-  appName: {
-    fontSize: 42,
+  logoPlaceholder: {
+    width: 105,
+    height: 105,
+    borderRadius: 18,
+    backgroundColor: "#D1D1D1",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  logoPlaceholderText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000000",
+  },
+
+  wpiLogo: {
+    width: 105,
+    height: 105,
+  },
+
+  mapBackground: {
+    flex: 1,
+    width: "100%",
+  },
+
+  presetArea: {
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingHorizontal: 18,
+    paddingBottom: 26,
+  },
+
+  presetLabel: {
+    alignSelf: "center",
+    backgroundColor: "rgba(255,255,255,0.88)",
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    marginBottom: 38,
+  },
+
+  presetText: {
+    fontSize: 22,
     fontWeight: "800",
-    color: "#111827",
+    color: "#000000",
+    textAlign: "center",
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    gap: 14,
+  },
+
+  buttonWrapper: {
+    flex: 1,
+    aspectRatio: 0.9,
+    borderRadius: 28,
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 9,
+    elevation: 6,
+  },
+
+  modeButton: {
+    flex: 1,
+    borderRadius: 28,
+    paddingHorizontal: 14,
+    paddingVertical: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.8)",
+    overflow: "hidden",
+  },
+
+  modeIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
+  standardIcon: {
+    backgroundColor: "#246B96",
+  },
+
+  accessibilityIcon: {
+    backgroundColor: "#AC2B37",
+  },
+
+  standardIconText: {
+    color: "#FFFFFF",
+    fontSize: 28,
+    fontWeight: "900",
+  },
+
+  accessibilityIconText: {
+    color: "#FFFFFF",
+    fontSize: 29,
+  },
+
+  modeTitle: {
+    fontSize: 19,
+    lineHeight: 23,
+    fontWeight: "900",
+    color: "#172033",
+    textAlign: "center",
     marginBottom: 8,
   },
 
-  tagline: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 12,
-  },
-
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
+  modeDescription: {
+    fontSize: 12,
+    lineHeight: 17,
     color: "#4B5563",
-    maxWidth: 500,
-  },
-
-  section: {
-    marginBottom: 30,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 14,
-  },
-
-  navigationCard: {
-    minHeight: 100,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-  },
-
-  navigationIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 14,
-    backgroundColor: "#E5E7EB",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-
-  navigationIconText: {
-    fontSize: 27,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  navigationText: {
-    flex: 1,
-  },
-
-  navigationTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 5,
-  },
-
-  navigationDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#4B5563",
-  },
-
-  arrow: {
-    fontSize: 32,
-    color: "#9CA3AF",
-    marginLeft: 10,
-  },
-
-  footer: {
-    marginTop: "auto",
-    paddingTop: 30,
-    alignItems: "center",
-  },
-
-  footerText: {
-    fontSize: 13,
-    color: "#9CA3AF",
     textAlign: "center",
+  },
+
+  standardAccent: {
+    position: "absolute",
+    bottom: 0,
+    left: 24,
+    right: 24,
+    height: 5,
+    backgroundColor: "#246B96",
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+  },
+
+  accessibilityAccent: {
+    position: "absolute",
+    bottom: 0,
+    left: 24,
+    right: 24,
+    height: 5,
+    backgroundColor: "#AC2B37",
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
   },
 });
