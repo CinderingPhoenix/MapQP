@@ -1,9 +1,9 @@
-import { useRef, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { WebView } from "react-native-webview";
-import * as Location from "expo-location";
 import { useAssets } from "expo-asset";
 import { File } from "expo-file-system";
+import * as Location from "expo-location";
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
 
 type LocationMapProps = {
   latitude: number;
@@ -17,6 +17,7 @@ type LocationMapProps = {
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
   onToggleMute?: () => void;
+  onOpenSettings?: () => void;
   onPanBack?: () => void;
 };
 
@@ -36,6 +37,7 @@ export default function LocationMap({
   onUserDragged,
   onHeadingModeChange,
   onToggleMute,
+  onOpenSettings,
   onPanBack,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
@@ -222,6 +224,8 @@ export default function LocationMap({
             onPanBack?.();
           } else if (data === "TOGGLE_MUTE") {
             onToggleMute?.();
+          } else if (data === "OPEN_SETTINGS") {
+            onOpenSettings?.();
           }
         }}
       />

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Vibration } from "react-native";
+import { useSettings } from "@/context/settings-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Platform, Vibration } from "react-native";
 import buildingData from "../data/wpi-buildings.json";
 import { NavigationPoint, routeBetween, WalkingRoute } from "../utils/routing";
 
@@ -58,6 +59,7 @@ type KalmanState = {
 export type DirectionStep = {
   instruction: string;
   pointIndex: number;
+  turnDegrees?: number;
 };
 
 type StepSpeechStage = {
@@ -125,8 +127,26 @@ export function getBearing(lat1: number, lon1: number, lat2: number, lon2: numbe
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
-export function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
+export function formatDistance(
+  meters: number,
+  units: "imperial" | "metric" = "metric"
+): string {
+  if (units === "imperial") {
+    const feet = meters * 3.28084;
+
+    if (feet < 5280) {
+      return `${Math.round(feet)} ft`;
+    }
+
+    const miles = feet / 5280;
+    return `${miles.toFixed(1)} mi`;
+  }
+
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 export function formatDuration(seconds: number): string {
@@ -134,8 +154,14 @@ export function formatDuration(seconds: number): string {
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
-export function formatInstructionWithDistance(instruction: string, distMeters: number): string {
-  return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters)}`;
+export function formatInstructionWithDistance(
+  instruction: string,
+  distMeters: number,
+  units: "imperial" | "metric" = "metric"
+): string {
+  return distMeters <= 5
+    ? `${instruction} now`
+    : `${instruction} in ${formatDistance(distMeters, units)}`;
 }
 
 function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
@@ -149,6 +175,31 @@ function closestGeometryIndex(geometry: [number, number][], point: [number, numb
     }
   }
   return closestIndex;
+}
+
+export function formatDirectionInstruction(
+  step: DirectionStep,
+  style: "natural" | "degrees"
+): string {
+  if (
+    style === "natural" ||
+    step.turnDegrees === undefined ||
+    step.instruction === "Arrive at destination"
+  ) {
+    return step.instruction;
+  }
+
+  const degrees = Math.round(Math.abs(step.turnDegrees));
+
+  if (degrees <= 15) {
+    return "Continue straight";
+  }
+
+  if (step.turnDegrees > 0) {
+    return `Turn right ${degrees}°`;
+  }
+
+  return `Turn left ${degrees}°`;
 }
 
 export function generateDirections(
@@ -174,7 +225,7 @@ export function generateDirections(
     const pointIndex = closestGeometryIndex(geometry, currentPoint);
     const lastStep = steps[steps.length - 1];
     if (!lastStep || lastStep.instruction !== instruction || pointIndex - lastStep.pointIndex > 3) {
-      steps.push({ instruction, pointIndex });
+      steps.push({ instruction, pointIndex, turnDegrees: diff });
     }
   }
   steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
@@ -299,6 +350,7 @@ export function useMapNavigation() {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
+  const { distanceUnits, directionStyle } = useSettings();
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
@@ -473,6 +525,9 @@ export function useMapNavigation() {
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);
   const nextStep = upcomingSteps[0] ?? null;
+  const nextStepInstruction = nextStep
+    ? formatDirectionInstruction(nextStep, directionStyle)
+    : null;
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   useEffect(() => {
@@ -516,10 +571,19 @@ export function useMapNavigation() {
       Speech.stop();
       Speech.speak(text, { language: "en-US", rate: 1 });
     };
-    if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) { stages.m25 = true; speakPrompt(`In 25 meters, ${nextStep.instruction}`); }
-    else if (distToNextStepMeters <= 5 && distToNextStepMeters > 2 && !stages.m5) { stages.m5 = true; speakPrompt(`In 5 meters, ${nextStep.instruction}`); }
-    else if (distToNextStepMeters <= 2 && !stages.turn) { stages.turn = true; speakPrompt(`${nextStep.instruction} now`); }
-  }, [route, nextStep, coordinates, distToNextStepMeters, isAudioMuted]);
+    if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) {
+      stages.m25 = true;
+      const distance = distanceUnits === "imperial" ? "80 feet" : "25 meters";
+      speakPrompt(`In ${distance}, ${nextStepInstruction}`);
+    } else if (distToNextStepMeters <= 5 && distToNextStepMeters > 2 && !stages.m5) {
+      stages.m5 = true;
+      const distance = distanceUnits === "imperial" ? "15 feet" : "5 meters";
+      speakPrompt(`In ${distance}, ${nextStepInstruction}`); 
+    } else if (distToNextStepMeters <= 2 && !stages.turn) {
+      stages.turn = true;
+      speakPrompt(`${nextStepInstruction} now`);
+    }
+  }, [route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits]);
 
   return { coordinates, mapCenter, error, isAudioMuted, destinationBuilding, route, routeError, routeSteps, currentRouteIndex, showRecenter, recenterSignal, routeLoadingProgress, upcomingSteps, nextStep, distToNextStepMeters, toggleMute, handleDestinationChange, handleCancelRoute, handleRecenter, setShowRecenter };
 }
