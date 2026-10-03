@@ -1,6 +1,5 @@
 import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
-import { useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -14,6 +13,8 @@ import { useSettings } from "../context/settings-context";
 
 export default function SettingsPage() {
   const {
+    navigationMode,
+    setNavigationMode,
     distanceUnits,
     setDistanceUnits,
     directionStyle,
@@ -21,9 +22,10 @@ export default function SettingsPage() {
     fontSize,
     setFontSize,
   } = useSettings();
-  const [navigationMode, setNavigationMode] = useState<"standard" | "accessibility">("standard");
 
-  const changeNavigationMode = (mode: "standard" | "accessibility") => {
+  const changeNavigationMode = (
+    mode: "standard" | "accessibility"
+  ) => {
     setNavigationMode(mode);
 
     if (mode === "standard") {

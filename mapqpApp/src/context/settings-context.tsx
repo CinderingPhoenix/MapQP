@@ -9,14 +9,17 @@ import {
 
 export type DistanceUnits = "imperial" | "metric";
 export type DirectionStyle = "natural" | "degrees";
+export type NavigationMode = "standard" | "accessibility";
 
 type AppSettings = {
+  navigationMode: NavigationMode;
   distanceUnits: DistanceUnits;
   directionStyle: DirectionStyle;
   fontSize: number;
 };
 
 type SettingsContextType = AppSettings & {
+  setNavigationMode: (mode: NavigationMode) => void;
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
@@ -26,6 +29,7 @@ type SettingsContextType = AppSettings & {
 const SETTINGS_STORAGE_KEY = "@mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
+  navigationMode: "standard",
   distanceUnits: "imperial",
   directionStyle: "natural",
   fontSize: 1,
@@ -36,6 +40,10 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 );
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const [navigationMode, setNavigationMode] = useState<NavigationMode>(
+    DEFAULT_SETTINGS.navigationMode
+  );
+
   const [distanceUnits, setDistanceUnits] = useState<DistanceUnits>(
     DEFAULT_SETTINGS.distanceUnits
   );
@@ -58,6 +66,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (savedSettings) {
           const parsedSettings: Partial<AppSettings> =
             JSON.parse(savedSettings);
+
+          if (
+            parsedSettings.navigationMode === "standard" ||
+            parsedSettings.navigationMode === "accessibility"
+          ) {
+            setNavigationMode(parsedSettings.navigationMode);
+          }
 
           if (
             parsedSettings.distanceUnits === "imperial" ||
@@ -99,6 +114,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const saveSettings = async () => {
       try {
         const settings: AppSettings = {
+          navigationMode,
           distanceUnits,
           directionStyle,
           fontSize,
@@ -115,6 +131,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     void saveSettings();
   }, [
+    navigationMode,
     distanceUnits,
     directionStyle,
     fontSize,
@@ -124,9 +141,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsContext.Provider
       value={{
+        navigationMode,
         distanceUnits,
         directionStyle,
         fontSize,
+        setNavigationMode,
         setDistanceUnits,
         setDirectionStyle,
         setFontSize,
