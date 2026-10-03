@@ -38,12 +38,20 @@ type GraphEdge = {
   distance: number;
 };
 
-type WalkwayConnectionItem = string | { to: string; accessible?: boolean };
+type WalkwayConnectionItem = string | { to: string; accessible?: boolean; internal?: boolean };
 
 // --- Constants & Graph Initialization ---
 
 const WALKING_SPEED_METERS_PER_SECOND = 1.4;
 const routeCache = new Map<string, WalkingRoute>();
+
+function buildingSlug(buildingName: string) {
+  return buildingName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+function entranceNodeId(buildingName: string, index: number) {
+  return `${buildingSlug(buildingName)}-entrance-${index}`;
+}
 
 // Load static walkway nodes from JSON
 const walkwayNodes: GraphNode[] = routePointsData.nodes;
@@ -54,7 +62,7 @@ const campusNodes: GraphNode[] = [
   ...walkwayNodes,
   ...buildingData.flatMap((building) =>
     building.entrances.map((entrance, index) => ({
-      id: `${building.name}-entrance-${index}`,
+      id: entranceNodeId(building.name, index),
       latitude: entrance.latitude,
       longitude: entrance.longitude,
     }))

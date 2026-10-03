@@ -1,9 +1,8 @@
 import type { ComponentType } from "react";
 import { useEffect, useState } from "react";
-import type { ActionFunctionArgs } from "react-router";
-import { useFetcher } from "react-router";
-import routePointsData from "../data/route-points.json";
-import buildingData from "../data/wpi-buildings.json";
+import routePointsData from "../src/data/route-points.json";
+import buildingData from "../src/data/wpi-buildings.json";
+import ImageMap, { type ImageMapNetwork } from "./image-map";
 
 type GraphNode = {
   id: string;
@@ -14,6 +13,7 @@ type GraphNode = {
 type ConnectionDetail = {
   to: string;
   accessible?: boolean;
+  internal?: boolean;
 };
 
 type Connections = Record<string, (string | ConnectionDetail)[]>;
@@ -31,11 +31,15 @@ type Building = {
   entrances: Entrance[];
 };
 
+type ImageMapInfo = { path: string; name: string; networkPath: string };
+type MapEndpoint = { map: string; nodeId: string };
+type MapLink = { from: MapEndpoint; to: MapEndpoint };
+
 export type EditorMapProps = {
   nodes: GraphNode[];
   connections: Connections;
   buildings: Building[];
-  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility" | "add-entrance";
+  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility" | "internal" | "add-entrance" | "link";
   selectedNodeId: string | null;
   onMapClick: (lat: number, lng: number) => void;
   onNodeClick: (id: string) => void;
@@ -43,76 +47,54 @@ export type EditorMapProps = {
   onNodeDragEnd: (id: string, lat: number, lng: number) => void;
 };
 
-export async function action({ request }: ActionFunctionArgs) {
-  const fs = await import("node:fs/promises");
-  const path = await import("node:path");
-  const data = await request.json();
-
-  if (data.nodes) {
-    data.nodes = data.nodes.map((node: any) => ({
-      ...node,
-      latitude: typeof node.latitude === "number" ? Number(node.latitude.toFixed(6)) : node.latitude,
-      longitude: typeof node.longitude === "number" ? Number(node.longitude.toFixed(6)) : node.longitude,
-    }));
-  }
-
-  const rootKeys = Object.keys(data).filter((k) => k !== "buildings");
-  let jsonString = "{\n";
-  rootKeys.forEach((key, i) => {
-    const val = data[key];
-    jsonString += `  "${key}": `;
-    if (Array.isArray(val)) {
-      jsonString += "[\n";
-      const items = val.map((item) => `    ${JSON.stringify(item)}`);
-      jsonString += items.join(",\n");
-      jsonString += "\n  ]";
-    } else if (val !== null && typeof val === "object") {
-      jsonString += "{\n";
-      const subEntries = Object.entries(val).map(([subK, subV]) => {
-        const formattedVal = JSON.stringify(subV, null, 2).replace(/\n/g, "\n    ");
-        return `    ${JSON.stringify(subK)}: ${formattedVal}`;
-      });
-      jsonString += subEntries.join(",\n");
-      jsonString += "\n  }";
-    } else {
-      jsonString += JSON.stringify(val);
-    }
-    if (i < rootKeys.length - 1) {
-      jsonString += ",";
-    }
-    jsonString += "\n";
-  });
-  jsonString += "}";
-
-  if (data.nodes || data.connections) {
-    const filePath = path.join(process.cwd(), "app", "data", "route-points.json");
-    await fs.writeFile(filePath, jsonString, "utf-8");
-  }
-
-  if (data.buildings) {
-    const buildingsPath = path.join(process.cwd(), "app", "data", "wpi-buildings.json");
-    await fs.writeFile(buildingsPath, JSON.stringify(data.buildings, null, 2), "utf-8");
-  }
-
-  return { success: true };
-}
-
 export default function Editor() {
-  const fetcher = useFetcher();
   const [EditorMap, setEditorMap] = useState<ComponentType<EditorMapProps> | null>(null);
   const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const [nodes, setNodes] = useState<GraphNode[]>(routePointsData.nodes);
   const [connections, setConnections] = useState<Connections>(routePointsData.connections as Connections);
   const [buildings, setBuildings] = useState<Building[]>(buildingData as Building[]);
 
-  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility" | "add-entrance">("add");
+  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility" | "internal" | "add-entrance" | "link">("add");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const [selectedBuilding, setSelectedBuilding] = useState<string>(buildingData[0]?.name || "");
   const [entranceName, setEntranceName] = useState("");
   const [entranceFloor, setEntranceFloor] = useState<number>(1);
   const [entranceAccessible, setEntranceAccessible] = useState<boolean>(true);
+  const [imageMaps, setImageMaps] = useState<ImageMapInfo[]>([]);
+  const [selectedImageMap, setSelectedImageMap] = useState<ImageMapInfo | null>(null);
+  const [imageNetwork, setImageNetwork] = useState<ImageMapNetwork>({ nodes: [], connections: {} });
+  const [imageMode, setImageMode] = useState<"add" | "connect" | "accessibility" | "disconnect" | "delete" | "link">("add");
+  const [imageSelectedNodeId, setImageSelectedNodeId] = useState<string | null>(null);
+  const [mapLinks, setMapLinks] = useState<MapLink[]>([]);
+  const [linkTargetMap, setLinkTargetMap] = useState("campus");
+  const [pendingLinkSource, setPendingLinkSource] = useState<MapEndpoint | null>(null);
+
+  const currentMapKey = selectedImageMap?.networkPath ?? "campus";
+  const saveMapLinks = (links: MapLink[]) => {
+    setMapLinks(links);
+    fetch("/api/map-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ links }),
+    }).catch((err) => {
+      console.error("Failed to save map links:", err);
+      setError("Map links could not be saved.");
+    });
+  };
+
+  const addMapLink = (source: MapEndpoint, target: MapEndpoint) => {
+    if (source.map === target.map && source.nodeId === target.nodeId) return;
+    const exists = mapLinks.some((link) =>
+      (link.from.map === source.map && link.from.nodeId === source.nodeId && link.to.map === target.map && link.to.nodeId === target.nodeId)
+      || (link.to.map === source.map && link.to.nodeId === source.nodeId && link.from.map === target.map && link.from.nodeId === target.nodeId));
+    if (!exists) saveMapLinks([...mapLinks, { from: source, to: target }]);
+    setPendingLinkSource(null);
+    setSelectedNodeId(null);
+    setImageSelectedNodeId(null);
+  };
 
   const handleUpdateEntranceField = (field: string, value: any) => {
     if (!selectedNodeId || !selectedNodeId.includes("-entrance-")) return;
@@ -138,10 +120,159 @@ export default function Editor() {
   };
 
   const saveToDisk = (updatedNodes: GraphNode[], updatedConns: Connections, updatedBuildings?: Building[]) => {
-    fetcher.submit(
-      { nodes: updatedNodes, connections: updatedConns, buildings: updatedBuildings || buildings },
-      { method: "POST", encType: "application/json" }
-    );
+    setIsSaving(true);
+    fetch("/api/editor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nodes: updatedNodes, connections: updatedConns, buildings: updatedBuildings || buildings }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Save failed with status ${response.status}`);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("The latest changes could not be saved.");
+      })
+      .finally(() => setIsSaving(false));
+  };
+
+  useEffect(() => {
+    fetch("/api/maps")
+      .then((response) => response.json() as Promise<ImageMapInfo[]>)
+      .then(setImageMaps)
+      .catch((err) => {
+        console.error("Failed to load floor maps:", err);
+        setError("Floor maps could not be loaded.");
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/map-links")
+      .then((response) => response.json() as Promise<MapLink[]>)
+      .then(setMapLinks)
+      .catch((err) => {
+        console.error("Failed to load map links:", err);
+        setError("Map links could not be loaded.");
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedImageMap) return;
+    fetch(`/api/map-network?path=${encodeURIComponent(selectedImageMap.networkPath)}`)
+      .then((response) => response.ok ? response.json() : { nodes: [], connections: {} })
+      .then((network) => setImageNetwork(network as ImageMapNetwork))
+      .catch((err) => {
+        console.error("Failed to load floor map network:", err);
+        setImageNetwork({ nodes: [], connections: {} });
+      });
+    setImageSelectedNodeId(null);
+  }, [selectedImageMap]);
+
+  const saveImageNetwork = (network: ImageMapNetwork) => {
+    setImageNetwork(network);
+    setIsSaving(true);
+    fetch(`/api/map-network?path=${encodeURIComponent(selectedImageMap?.networkPath ?? "")}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ network }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Map save failed with status ${response.status}`);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("The floor map network could not be saved.");
+      })
+      .finally(() => setIsSaving(false));
+  };
+
+  const imageTarget = (item: string | { to: string }) => typeof item === "string" ? item : item.to;
+  const updateImageConnection = (fromId: string, toId: string) => {
+    const connections = { ...imageNetwork.connections };
+    const add = (from: string, to: string) => {
+      const list = [...(connections[from] ?? [])];
+      const index = list.findIndex((item) => imageTarget(item) === to);
+      if (index === -1) list.push(to);
+      connections[from] = list;
+    };
+    add(fromId, toId);
+    add(toId, fromId);
+    saveImageNetwork({ ...imageNetwork, connections });
+  };
+
+  const toggleImageAccessibility = (fromId: string, toId: string) => {
+    const connections = { ...imageNetwork.connections };
+    [fromId, toId].forEach((from, index) => {
+      const target = index === 0 ? toId : fromId;
+      const list = [...(connections[from] ?? [])];
+      const itemIndex = list.findIndex((item) => imageTarget(item) === target);
+      if (itemIndex === -1) return;
+      const item = list[itemIndex];
+      const details = typeof item === "string" ? { to: item } : { to: item.to, ...(item.accessible === false ? { accessible: false } : {}) };
+      list[itemIndex] = details.accessible === false ? target : { ...details, accessible: false };
+      connections[from] = list;
+    });
+    saveImageNetwork({ ...imageNetwork, connections });
+  };
+
+  const removeImageConnection = (fromId: string, toId: string) => {
+    const connections = { ...imageNetwork.connections };
+    [fromId, toId].forEach((from, index) => {
+      const target = index === 0 ? toId : fromId;
+      connections[from] = (connections[from] ?? []).filter((item) => imageTarget(item) !== target);
+    });
+    saveImageNetwork({ ...imageNetwork, connections });
+    setImageSelectedNodeId(null);
+  };
+
+  const handleImageNodeClick = (id: string) => {
+    if (imageMode === "link") {
+      if (pendingLinkSource && pendingLinkSource.map !== currentMapKey) {
+        addMapLink(pendingLinkSource, { map: currentMapKey, nodeId: id });
+        return;
+      }
+      setPendingLinkSource({ map: currentMapKey, nodeId: id });
+      setImageSelectedNodeId(id);
+      return;
+    }
+    if (imageMode === "delete") {
+      const connections = Object.fromEntries(Object.entries(imageNetwork.connections)
+        .filter(([key]) => key !== id)
+        .map(([key, items]) => [key, items.filter((item) => imageTarget(item) !== id)]));
+      saveImageNetwork({ nodes: imageNetwork.nodes.filter((node) => node.id !== id), connections });
+      setImageSelectedNodeId(null);
+      return;
+    }
+    if (imageMode === "add") {
+      setImageSelectedNodeId(imageSelectedNodeId === id ? null : id);
+      return;
+    }
+    if (!imageSelectedNodeId) {
+      setImageSelectedNodeId(id);
+    } else if (imageSelectedNodeId === id) {
+      setImageSelectedNodeId(null);
+    } else if (imageMode === "connect") {
+      updateImageConnection(imageSelectedNodeId, id);
+      setImageSelectedNodeId(null);
+    } else if (imageMode === "accessibility") {
+      const list = imageNetwork.connections[imageSelectedNodeId] ?? [];
+      if (list.some((item) => imageTarget(item) === id)) toggleImageAccessibility(imageSelectedNodeId, id);
+      setImageSelectedNodeId(null);
+    } else if (imageMode === "disconnect") {
+      const connections = { ...imageNetwork.connections };
+      [imageSelectedNodeId, id].forEach((from, index) => {
+        const to = index === 0 ? id : imageSelectedNodeId;
+        connections[from] = (connections[from] ?? []).filter((item) => imageTarget(item) !== to);
+      });
+      saveImageNetwork({ ...imageNetwork, connections });
+      setImageSelectedNodeId(null);
+    }
+  };
+
+  const handleImageMapClick = (x: number, y: number) => {
+    if (imageMode !== "add") return;
+    const id = `image_node_${Math.random().toString(36).slice(2, 9)}`;
+    saveImageNetwork({ ...imageNetwork, nodes: [...imageNetwork.nodes, { id, x, y }] });
   };
 
   const handleNodeDragEnd = (id: string, latitude: number, longitude: number) => {
@@ -275,11 +406,10 @@ export default function Editor() {
       if (index !== -1) {
         const current = list[index];
         const isCurrentlyAccessible = typeof current === "string" || current.accessible !== false;
-        if (isCurrentlyAccessible) {
-          list[index] = { to: tId, accessible: false };
-        } else {
-          list[index] = tId;
-        }
+        const details = typeof current === "string" ? { to: current } : { ...current };
+        list[index] = isCurrentlyAccessible
+          ? { ...details, accessible: false }
+          : { to: tId, ...(details.internal ? { internal: true } : {}) };
       } else {
         list.push({ to: tId, accessible: false });
       }
@@ -293,7 +423,38 @@ export default function Editor() {
     saveToDisk(nodes, nextConnections);
   };
 
+  const toggleInternal = (fromId: string, toId: string) => {
+    const nextConnections = { ...connections };
+    const updateListForPair = (fId: string, tId: string) => {
+      const list = [...(nextConnections[fId] || [])];
+      const index = list.findIndex((item) => (typeof item === "string" ? item : item.to) === tId);
+      if (index === -1) return;
+      const current = list[index];
+      const details = typeof current === "string" ? { to: current } : { ...current };
+      if (details.internal) {
+        delete details.internal;
+        list[index] = details.accessible === undefined ? tId : details;
+      } else {
+        list[index] = { ...details, internal: true };
+      }
+      nextConnections[fId] = list;
+    };
+    updateListForPair(fromId, toId);
+    updateListForPair(toId, fromId);
+    setConnections(nextConnections);
+    saveToDisk(nodes, nextConnections);
+  };
+
   const handleNodeClick = (nodeId: string) => {
+    if (mode === "link") {
+      if (pendingLinkSource && pendingLinkSource.map !== currentMapKey) {
+        addMapLink(pendingLinkSource, { map: currentMapKey, nodeId });
+        return;
+      }
+      setPendingLinkSource({ map: currentMapKey, nodeId });
+      setSelectedNodeId(nodeId);
+      return;
+    }
     if (selectedNodeId === nodeId && (mode === "add" || mode === "add-entrance")) {
       setSelectedNodeId(null);
       return;
@@ -351,11 +512,6 @@ export default function Editor() {
       return;
     }
 
-    if (nodeId.includes("-entrance-")) {
-      setSelectedNodeId(nodeId);
-      return;
-    }
-
     if (mode === "connect") {
       if (!selectedNodeId) {
         setSelectedNodeId(nodeId);
@@ -385,7 +541,7 @@ export default function Editor() {
       return;
     }
 
-    if (mode === "disconnect" || mode === "accessibility") {
+    if (mode === "disconnect" || mode === "accessibility" || mode === "internal") {
       if (!selectedNodeId) {
         setSelectedNodeId(nodeId);
         return;
@@ -407,6 +563,8 @@ export default function Editor() {
           removeConnection(selectedNodeId, nodeId);
         } else if (mode === "accessibility") {
           toggleAccessibility(selectedNodeId, nodeId);
+        } else {
+          toggleInternal(selectedNodeId, nodeId);
         }
       }
 
@@ -420,10 +578,12 @@ export default function Editor() {
       removeConnection(fromId, toId);
     } else if (mode === "accessibility") {
       toggleAccessibility(fromId, toId);
+    } else if (mode === "internal") {
+      toggleInternal(fromId, toId);
     }
   };
 
-  const activeConnectionList: { from: string; to: string; accessible: boolean }[] = [];
+  const activeConnectionList: { from: string; to: string; accessible: boolean; internal: boolean }[] = [];
   const seen = new Set<string>();
 
   Object.entries(connections).forEach(([from, toArray]) => {
@@ -432,20 +592,34 @@ export default function Editor() {
       const to = typeof item === "string" ? item : item?.to;
       if (!to) return;
       const accessible = typeof item === "string" ? true : item.accessible !== false;
+      const internal = typeof item !== "string" && item.internal === true;
       const key = [from, to].sort().join("::");
       if (!seen.has(key)) {
         seen.add(key);
-        activeConnectionList.push({ from, to, accessible });
+        activeConnectionList.push({ from, to, accessible, internal });
       }
     });
   });
 
-  const isSaving = fetcher.state !== "idle";
-
   return (
     <main className="map-app">
       <div className="map-canvas" aria-label="Map view">
-        {EditorMap ? (
+        {selectedImageMap ? (
+          <ImageMap
+            imageUrl={`/maps/${selectedImageMap.path}`}
+            network={imageNetwork}
+            mode={imageMode}
+            selectedNodeId={imageSelectedNodeId}
+            onMapClick={handleImageMapClick}
+            onNodeClick={handleImageNodeClick}
+            onConnectionClick={(from, to) => {
+              if (imageMode === "disconnect") removeImageConnection(from, to);
+              else if (imageMode === "accessibility") toggleImageAccessibility(from, to);
+            }}
+            onNodeDragEnd={(id, x, y) => saveImageNetwork({ ...imageNetwork, nodes: imageNetwork.nodes.map((node) => node.id === id ? { ...node, x, y } : node) })}
+          />
+        ) : (
+        EditorMap ? (
           <EditorMap
             nodes={nodes}
             connections={connections}
@@ -461,9 +635,61 @@ export default function Editor() {
           <div className="map-loading">
             <span>{error || "Loading map..."}</span>
           </div>
+        )
         )}
       </div>
       <section className="planner-panel map-controls" aria-label="Editor controls">
+        <div style={{ marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid #ddd" }}>
+          <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.4rem" }}>Map layer</label>
+          <select
+            value={selectedImageMap?.path ?? ""}
+            onChange={(event) => {
+              const next = imageMaps.find((map) => map.path === event.target.value) ?? null;
+              setSelectedImageMap(next);
+              setLinkTargetMap("campus");
+              if (pendingLinkSource) {
+                if (next) setImageMode("link");
+                else setMode("link");
+              }
+            }}
+            style={{ width: "100%", padding: "0.4rem" }}
+          >
+            <option value="">Campus route map</option>
+            {imageMaps.map((map) => <option key={map.path} value={map.path}>{map.name}</option>)}
+          </select>
+        </div>
+        {selectedImageMap && (
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+            {(["add", "connect", "accessibility", "disconnect", "delete", "link"] as const).map((nextMode) => (
+              <button key={nextMode} onClick={() => { setImageMode(nextMode); setImageSelectedNodeId(null); if (nextMode === "link") setPendingLinkSource(null); }} style={{ fontWeight: imageMode === nextMode ? "bold" : "normal" }}>
+                {nextMode[0].toUpperCase() + nextMode.slice(1)}
+              </button>
+            ))}
+            <p style={{ width: "100%", fontSize: "0.85rem", color: "#555", margin: 0 }}>
+              {imageMode === "add" ? "Click the image to add a node." : imageMode === "link" ? (pendingLinkSource ? "Choose a node on this map to finish the link." : "Select a node to link to another map.") : imageSelectedNodeId ? `Selected "${imageSelectedNodeId}". Choose another node.` : "Select two nodes to edit their connection."}
+            </p>
+          </div>
+        )}
+        {pendingLinkSource && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", padding: "0.75rem", background: "#eef6ff", border: "1px solid #8ab4f8", borderRadius: "4px", marginBottom: "1rem" }}>
+            <strong>Link selected node</strong>
+            <span style={{ fontSize: "0.8rem" }}>Source selected. Choose the destination map, then click its node.</span>
+            <select value={linkTargetMap} onChange={(event) => {
+              const targetMap = event.target.value;
+              setLinkTargetMap(targetMap);
+              const next = imageMaps.find((map) => map.networkPath === targetMap) ?? null;
+              setSelectedImageMap(next);
+              if (next) setImageMode("link");
+              else setMode("link");
+            }}>
+              <option value="campus">Campus route map</option>
+              {imageMaps.filter((map) => map.networkPath !== selectedImageMap?.networkPath).map((map) => (
+                <option key={map.networkPath} value={map.networkPath}>{map.name}</option>
+              ))}
+            </select>
+            <button onClick={() => { setPendingLinkSource(null); setSelectedNodeId(null); setImageSelectedNodeId(null); }}>Cancel link</button>
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ margin: 0 }}>Route Editor</h2>
@@ -493,6 +719,18 @@ export default function Editor() {
               onClick={() => { setMode("accessibility"); setSelectedNodeId(null); }}
             >
               Accessibility
+            </button>
+            <button
+              style={{ fontWeight: mode === "internal" ? "bold" : "normal", color: "#2980b9" }}
+              onClick={() => { setMode("internal"); setSelectedNodeId(null); }}
+            >
+              Internal
+            </button>
+            <button
+              style={{ fontWeight: mode === "link" ? "bold" : "normal", color: "#16a085" }}
+              onClick={() => { setMode("link"); setSelectedNodeId(null); setPendingLinkSource(null); }}
+            >
+              Link map node
             </button>
             <button
               style={{ fontWeight: mode === "disconnect" ? "bold" : "normal", color: "#d35400" }}
@@ -686,13 +924,20 @@ export default function Editor() {
           <div>
             <h4 style={{ margin: "0 0 0.5rem 0" }}>Active Connections ({activeConnectionList.length})</h4>
             <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              {activeConnectionList.map(({ from, to, accessible }) => (
+              {activeConnectionList.map(({ from, to, accessible, internal }) => (
                 <div key={`${from}::${to}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", background: "#f5f5f5", padding: "0.25rem 0.5rem", borderRadius: "3px" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                     {from} ↔ {to}
+                    {internal && <span style={{ color: "#2980b9", fontSize: "0.7rem", fontWeight: "bold", background: "#dbeafe", padding: "1px 4px", borderRadius: "3px" }}>Inside</span>}
                     {!accessible && <span style={{ color: "#c0392b", fontSize: "0.7rem", fontWeight: "bold", background: "#fadbd8", padding: "1px 4px", borderRadius: "3px" }}>Stairs</span>}
                   </span>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      onClick={() => toggleInternal(from, to)}
+                      style={{ color: internal ? "#6b7280" : "#2980b9", border: "none", background: "none", cursor: "pointer", fontSize: "0.75rem" }}
+                    >
+                      {internal ? "Remove internal" : "Mark internal"}
+                    </button>
                     <button
                       onClick={() => toggleAccessibility(from, to)}
                       style={{ color: accessible ? "#8e44ad" : "#27ae60", border: "none", background: "none", cursor: "pointer", fontSize: "0.75rem" }}

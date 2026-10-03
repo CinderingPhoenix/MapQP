@@ -23,7 +23,7 @@ export default function EditorMap({
   onConnectionClick,
   onNodeDragEnd,
 }: EditorMapProps) {
-  const lines: { key: string; fromId: string; toId: string; accessible: boolean; positions: [[number, number], [number, number]] }[] = [];
+  const lines: { key: string; fromId: string; toId: string; accessible: boolean; internal: boolean; positions: [[number, number], [number, number]] }[] = [];
   const seenEdges = new Set<string>();
 
   const allNodes: { id: string; latitude: number; longitude: number }[] = [...nodes];
@@ -31,7 +31,7 @@ export default function EditorMap({
   if (buildings) {
     buildings.forEach((building) => {
       building.entrances.forEach((entrance, index) => {
-        const entranceId = `${building.name}-entrance-${index}`;
+        const entranceId = `${building.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-entrance-${index}`;
         allNodes.push({
           id: entranceId,
           latitude: entrance.latitude,
@@ -43,7 +43,7 @@ export default function EditorMap({
 
   const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
 
-  const isLineClickable = mode === "disconnect" || mode === "delete" || mode === "accessibility";
+  const isLineClickable = mode === "disconnect" || mode === "accessibility" || mode === "internal";
 
   Object.entries(connections).forEach(([fromId, toIds]) => {
     const fromNode = nodeMap.get(fromId);
@@ -52,6 +52,7 @@ export default function EditorMap({
     toIds.forEach((item) => {
       const toId = typeof item === "string" ? item : item.to;
       const accessible = typeof item === "string" ? true : item.accessible !== false;
+      const internal = typeof item !== "string" && item.internal === true;
       const toNode = nodeMap.get(toId);
       if (!toNode) return;
 
@@ -63,6 +64,7 @@ export default function EditorMap({
           fromId,
           toId,
           accessible,
+          internal,
           positions: [
             [fromNode.latitude, fromNode.longitude],
             [toNode.latitude, toNode.longitude],
@@ -90,7 +92,7 @@ export default function EditorMap({
       <MapEventCatcher onMapClick={onMapClick} />
 
       {lines.map((line) => {
-        const lineColor = line.accessible ? "#d46b3f" : "#8e44ad";
+        const lineColor = line.internal ? "#2980b9" : line.accessible ? "#d46b3f" : "#8e44ad";
 
         return (
           <React.Fragment key={line.key}>
@@ -115,7 +117,7 @@ export default function EditorMap({
                 color: lineColor,
                 weight: 4,
                 opacity: 0.8,
-                dashArray: line.accessible ? undefined : "6, 6"
+                dashArray: line.internal ? "3, 3" : line.accessible ? undefined : "6, 6"
               }}
               eventHandlers={{
                 click: (e: { originalEvent: { stopPropagation: () => void; }; }) => {
@@ -126,7 +128,11 @@ export default function EditorMap({
                 },
               }}
             >
-              {!line.accessible && (
+              {line.internal ? (
+                <Tooltip permanent={false} direction="center">
+                  Inside building
+                </Tooltip>
+              ) : !line.accessible && (
                 <Tooltip permanent={false} direction="center">
                   Not Accessibility Friendly (Stairs/Steep)
                 </Tooltip>
@@ -180,7 +186,7 @@ export default function EditorMap({
 
       {buildings && buildings.flatMap((building) =>
         building.entrances.map((entrance, index) => {
-          const entranceId = `${building.name}-entrance-${index}`;
+          const entranceId = `${building.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-entrance-${index}`;
           const isSelected = entranceId === selectedNodeId;
 
           const entranceIcon = divIcon({

@@ -1,0 +1,32 @@
+[
+  {
+    "from": {
+      "map": "campus",
+      "nodeId": "test-entrance"
+    },
+    "to": {
+      "map": "unity/1st-floor.json",
+      "nodeId": "test-stairs"
+    }
+  },
+  {
+    "from": {
+      "map": "unity/1st-floor.json",
+      "nodeId": "image_node_714pab6"
+    },
+    "to": {
+      "map": "campus",
+      "nodeId": "unity-hall-entrance-0"
+    }
+  },
+  {
+    "from": {
+      "map": "unity/1st-floor.json",
+      "nodeId": "image_node_k5i1vik"
+    },
+    "to": {
+      "map": "campus",
+      "nodeId": "unity-hall-entrance-1"
+    }
+  }
+]
