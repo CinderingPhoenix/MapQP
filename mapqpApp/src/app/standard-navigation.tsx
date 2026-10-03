@@ -4,6 +4,7 @@ import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOp
 import { SafeAreaView } from "react-native-safe-area-context";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
+import { useSettings } from "../context/settings-context";
 import {
   WPI_BUILDINGS,
   formatDistance,
@@ -37,6 +38,7 @@ export default function Home() {
   } = useMapNavigation();
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
+  const { distanceUnits } = useSettings();
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -61,16 +63,16 @@ export default function Home() {
                   const distance = index === 0
                     ? getDistanceToStepPoint(route.geometry, currentRouteIndex, step.pointIndex, coordinates?.latitude, coordinates?.longitude)
                     : getSegmentDistance(route.geometry, upcomingSteps[index - 1].pointIndex, step.pointIndex);
-                  return <View key={`${step.pointIndex}-${index}`} style={styles.directionItem}><Text style={styles.directionInstruction}>{formatInstructionWithDistance(step.instruction, distance)}</Text></View>;
+                  return <View key={`${step.pointIndex}-${index}`} style={styles.directionItem}><Text style={styles.directionInstruction}>{formatInstructionWithDistance(step.instruction, distance, distanceUnits)}</Text></View>;
                 })}
                 {upcomingSteps.length === 0 && <View style={styles.directionItem}><Text style={styles.directionInstruction}>You have arrived!</Text></View>}
               </ScrollView>
-              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7}><Text style={[styles.subText, { marginTop: 10 }]}>{formatDistance(route.distance)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7}><Text style={[styles.subText, { marginTop: 10 }]}>{formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={{ flex: 1 }} onPress={() => setDirectionsExpanded(true)} activeOpacity={0.7}>
-              <Text style={styles.boldText}>{nextStep ? formatInstructionWithDistance(nextStep.instruction, distToNextStepMeters) : "Follow route"}</Text>
-              <Text style={styles.subText}>{formatDistance(route.distance)} total • {formatDuration(route.duration)}</Text>
+              <Text style={styles.boldText}>{nextStep ? formatInstructionWithDistance(nextStep.instruction, distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
+              <Text style={styles.subText}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
             </TouchableOpacity>
           )}
           {routeLoadingProgress < 1 && <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>}

@@ -2,30 +2,26 @@ import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSettings } from "../context/settings-context";
 
 export default function SettingsPage() {
+  const {
+    distanceUnits,
+    setDistanceUnits,
+    directionStyle,
+    setDirectionStyle,
+    fontSize,
+    setFontSize,
+  } = useSettings();
   const [navigationMode, setNavigationMode] = useState<"standard" | "accessibility">("standard");
-  const [distanceUnits, setDistanceUnits] = useState<"imperial" | "metric">("imperial");
-  const [directionStyle, setDirectionStyle] = useState<"natural" | "degrees">("natural");
-  const [fontSize, setFontSize] = useState(1);
-
-  const [avoidStairs, setAvoidStairs] = useState(false);
-  const [preferElevators, setPreferElevators] = useState(false);
-  const [avoidSteepSlopes, setAvoidSteepSlopes] = useState(false);
-
-  const [largeControls, setLargeControls] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-
-  const [voiceGuidance, setVoiceGuidance] = useState(true);
-  const [hapticFeedback, setHapticFeedback] = useState(true);
 
   const changeNavigationMode = (mode: "standard" | "accessibility") => {
     setNavigationMode(mode);
