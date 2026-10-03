@@ -39,7 +39,7 @@ export default function Home() {
   } = useMapNavigation();
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
-  const { distanceUnits, directionStyle } = useSettings();
+  const { distanceUnits, directionStyle, fontSize } = useSettings();
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -56,7 +56,7 @@ export default function Home() {
           {directionsExpanded ? (
             <View style={styles.expandedContainer}>
               <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={styles.expandedHeader}>
-                <Text style={styles.boldText}>Upcoming Directions</Text>
+                <Text style={[styles.boldText, { fontSize: 22 * fontSize }]}>Upcoming Directions</Text>
                 <Text style={styles.collapseHint}>Tap to collapse</Text>
               </TouchableOpacity>
               <ScrollView style={styles.directionsList} nestedScrollEnabled keyboardShouldPersistTaps="always" showsVerticalScrollIndicator>
@@ -64,16 +64,16 @@ export default function Home() {
                   const distance = index === 0
                     ? getDistanceToStepPoint(route.geometry, currentRouteIndex, step.pointIndex, coordinates?.latitude, coordinates?.longitude)
                     : getSegmentDistance(route.geometry, upcomingSteps[index - 1].pointIndex, step.pointIndex);
-                  return <View key={`${step.pointIndex}-${index}`} style={styles.directionItem}><Text style={styles.directionInstruction}>{formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits)}</Text></View>;
+                  return <View key={`${step.pointIndex}-${index}`} style={styles.directionItem}><Text style={[styles.directionInstruction, { fontSize: 19 * fontSize }, ]}>{formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits)}</Text></View>;
                 })}
-                {upcomingSteps.length === 0 && <View style={styles.directionItem}><Text style={styles.directionInstruction}>You have arrived!</Text></View>}
+                {upcomingSteps.length === 0 && <View style={styles.directionItem}><Text style={[styles.directionInstruction, { fontSize: 19 * fontSize }, ]}>You have arrived!</Text></View>}
               </ScrollView>
-              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7}><Text style={[styles.subText, { marginTop: 10 }]}>{formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7}><Text style={[styles.subText, { marginTop: 10 }, { fontSize: 16 * fontSize }]}>{formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={{ flex: 1 }} onPress={() => setDirectionsExpanded(true)} activeOpacity={0.7}>
-              <Text style={styles.boldText}>{nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
-              <Text style={styles.subText}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
+              <Text style={[styles.boldText, { fontSize: 22 * fontSize }, ]}>{nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
+              <Text style={[styles.subText, { fontSize: 16 * fontSize }]}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
             </TouchableOpacity>
           )}
           {routeLoadingProgress < 1 && <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>}
