@@ -59,6 +59,7 @@ type KalmanState = {
 export type DirectionStep = {
   instruction: string;
   pointIndex: number;
+  turnDegrees?: number;
 };
 
 type StepSpeechStage = {
@@ -176,6 +177,31 @@ function closestGeometryIndex(geometry: [number, number][], point: [number, numb
   return closestIndex;
 }
 
+export function formatDirectionInstruction(
+  step: DirectionStep,
+  style: "natural" | "degrees"
+): string {
+  if (
+    style === "natural" ||
+    step.turnDegrees === undefined ||
+    step.instruction === "Arrive at destination"
+  ) {
+    return step.instruction;
+  }
+
+  const degrees = Math.round(Math.abs(step.turnDegrees));
+
+  if (degrees <= 15) {
+    return "Continue straight";
+  }
+
+  if (step.turnDegrees > 0) {
+    return `Turn right ${degrees}°`;
+  }
+
+  return `Turn left ${degrees}°`;
+}
+
 export function generateDirections(
   geometry: [number, number][],
   navigationPath: NavigationPoint[] = [],
@@ -199,7 +225,7 @@ export function generateDirections(
     const pointIndex = closestGeometryIndex(geometry, currentPoint);
     const lastStep = steps[steps.length - 1];
     if (!lastStep || lastStep.instruction !== instruction || pointIndex - lastStep.pointIndex > 3) {
-      steps.push({ instruction, pointIndex });
+      steps.push({ instruction, pointIndex, turnDegrees: diff });
     }
   }
   steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
@@ -324,7 +350,7 @@ export function useMapNavigation() {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits } = useSettings();
+  const { distanceUnits, directionStyle } = useSettings();
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
@@ -499,6 +525,9 @@ export function useMapNavigation() {
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);
   const nextStep = upcomingSteps[0] ?? null;
+  const nextStepInstruction = nextStep
+    ? formatDirectionInstruction(nextStep, directionStyle)
+    : null;
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   useEffect(() => {
@@ -545,16 +574,16 @@ export function useMapNavigation() {
     if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) {
       stages.m25 = true;
       const distance = distanceUnits === "imperial" ? "80 feet" : "25 meters";
-      speakPrompt(`In ${distance}, ${nextStep.instruction}`);
+      speakPrompt(`In ${distance}, ${nextStepInstruction}`);
     } else if (distToNextStepMeters <= 5 && distToNextStepMeters > 2 && !stages.m5) {
       stages.m5 = true;
       const distance = distanceUnits === "imperial" ? "15 feet" : "5 meters";
-      speakPrompt(`In ${distance}, ${nextStep.instruction}`); 
+      speakPrompt(`In ${distance}, ${nextStepInstruction}`); 
     } else if (distToNextStepMeters <= 2 && !stages.turn) {
       stages.turn = true;
-      speakPrompt(`${nextStep.instruction} now`);
+      speakPrompt(`${nextStepInstruction} now`);
     }
-  }, [route, nextStep, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits]);
+  }, [route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits]);
 
   return { coordinates, mapCenter, error, isAudioMuted, destinationBuilding, route, routeError, routeSteps, currentRouteIndex, showRecenter, recenterSignal, routeLoadingProgress, upcomingSteps, nextStep, distToNextStepMeters, toggleMute, handleDestinationChange, handleCancelRoute, handleRecenter, setShowRecenter };
 }
