@@ -36,6 +36,7 @@ type GraphNode = {
 type GraphEdge = {
   nodeId: string;
   distance: number;
+  accessible: boolean;
 };
 
 type WalkwayConnectionItem = string | { to: string; accessible?: boolean };
@@ -63,6 +64,15 @@ const campusNodes: GraphNode[] = [
 
 const campusNodesById = new Map(campusNodes.map((node) => [node.id, node]));
 const graphEdges = new Map<string, GraphEdge[]>();
+const accessibleEntranceIds = new Set(
+  buildingData.flatMap((building) =>
+    building.entrances.flatMap((entrance, index) =>
+      entrance.accessibility
+        ? [`${building.name}-entrance-${index}`]
+        : []
+    )
+  )
+);
 
 for (const node of campusNodes) {
   graphEdges.set(node.id, []);
@@ -81,7 +91,11 @@ for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
     if (!toNode) {
       throw new Error(`Unknown node in walkwayConnections: ${toId}`);
     }
-    connectWalkwayNodes(fromNode, toNode);
+    connectWalkwayNodes(
+      fromNode,
+      toNode,
+      typeof item === "string" || item.accessible !== false
+    );
   }
 }
 
@@ -89,13 +103,36 @@ for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
 for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
   const existingEdges = graphEdges.get(node.id) ?? [];
   if (existingEdges.length === 0) {
-    const nearest = nearestEdges(node);
+    const entranceIsAccessible = accessibleEntranceIds.has(node.id);
+    const nearest = nearestEdges(node).map((edge) => ({
+      ...edge,
+      accessible: edge.accessible && entranceIsAccessible,
+    }));
     graphEdges.set(node.id, nearest);
     for (const edge of nearest) {
       graphEdges.set(edge.nodeId, [
         ...(graphEdges.get(edge.nodeId) ?? []),
-        { nodeId: node.id, distance: edge.distance },
+        {
+          nodeId: node.id,
+          distance: edge.distance,
+          accessible: edge.accessible,
+        },
       ]);
+    }
+  }
+}
+
+// Entrance accessibility applies to every graph edge connected to that entrance,
+// including entrances that have explicit connections in route-points.json.
+for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
+  const entranceIsAccessible = accessibleEntranceIds.has(node.id);
+  for (const edge of graphEdges.get(node.id) ?? []) {
+    edge.accessible = edge.accessible && entranceIsAccessible;
+    const reverseEdge = (graphEdges.get(edge.nodeId) ?? []).find(
+      (candidate) => candidate.nodeId === node.id
+    );
+    if (reverseEdge) {
+      reverseEdge.accessible = edge.accessible;
     }
   }
 }
@@ -132,12 +169,15 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
 export async function routeBetween(
   origin: RoutePoint,
   destination: RoutePoint,
+  options: { accessibleOnly?: boolean } = {},
 ): Promise<WalkingRoute> {
+  const accessibleOnly = options.accessibleOnly ?? false;
   const cacheKey = [
     origin.longitude,
     origin.latitude,
     destination.longitude,
     destination.latitude,
+    accessibleOnly ? "accessible" : "standard",
   ].join(",");
 
   const cachedRoute = routeCache.get(cacheKey);
@@ -145,7 +185,7 @@ export async function routeBetween(
     return cachedRoute;
   }
 
-  const route = findLocalWalkingRoute(origin, destination);
+  const route = findLocalWalkingRoute(origin, destination, accessibleOnly);
   routeCache.set(cacheKey, route);
   return route;
 }
@@ -158,6 +198,7 @@ export async function routeBetween(
 function findLocalWalkingRoute(
   origin: RoutePoint,
   destination: RoutePoint,
+  accessibleOnly: boolean,
 ): WalkingRoute {
   const startId = "__origin";
   const destinationId = "__destination";
@@ -170,13 +211,13 @@ function findLocalWalkingRoute(
 
   // Dynamically attach origin and destination points to nearby edges
   const edges = new Map(graphEdges);
-  edges.set(startId, nearestEdges(origin));
+  edges.set(startId, nearestEdges(origin, accessibleOnly));
   edges.set(destinationId, []);
 
-  for (const edge of nearestEdges(destination)) {
+  for (const edge of nearestEdges(destination, accessibleOnly)) {
     edges.set(edge.nodeId, [
       ...(edges.get(edge.nodeId) ?? []),
-      { nodeId: destinationId, distance: edge.distance },
+      { nodeId: destinationId, distance: edge.distance, accessible: true },
     ]);
   }
 
@@ -197,6 +238,7 @@ function findLocalWalkingRoute(
     if (current === destinationId) break;
 
     for (const edge of edges.get(current) ?? []) {
+      if (accessibleOnly && !edge.accessible) continue;
       const nextDistance = (distances.get(current) ?? 0) + edge.distance;
       if (nextDistance < (distances.get(edge.nodeId) ?? Number.POSITIVE_INFINITY)) {
         distances.set(edge.nodeId, nextDistance);
@@ -228,7 +270,9 @@ function findLocalWalkingRoute(
   const geometry = smoothPolyline(rawGeometry);
   const navigationPath = path.map((nodeId) => ({
     coordinate: nodes.find((candidate) => candidate.id === nodeId)!,
-    connectionCount: graphEdges.get(nodeId)?.length ?? 0,
+    connectionCount: (edges.get(nodeId) ?? []).filter(
+      (edge) => !accessibleOnly || edge.accessible
+    ).length,
   })).map(({ coordinate, connectionCount }) => ({
     coordinate: [coordinate.latitude, coordinate.longitude] as [number, number],
     connectionCount,
@@ -288,6 +332,7 @@ function smoothPolyline(
  */
 function nearestEdges(
   point: Pick<RoutePoint, "latitude" | "longitude">,
+  accessibleOnly = false,
 ): GraphEdge[] {
   let bestEdges: GraphEdge[] = [];
   let minDistanceToSegment = Number.POSITIVE_INFINITY;
@@ -301,6 +346,7 @@ function nearestEdges(
       const toId = neighbor.nodeId;
       const toNode = campusNodesById.get(toId);
       if (!toNode) continue;
+      if (accessibleOnly && !neighbor.accessible) continue;
 
       const edgeKey = [fromId, toId].sort().join("::");
       if (seenEdges.has(edgeKey)) continue;
@@ -316,8 +362,16 @@ function nearestEdges(
       if (distToSegment < minDistanceToSegment) {
         minDistanceToSegment = distToSegment;
         bestEdges = [
-          { nodeId: fromNode.id, distance: distToSegment + distToFrom },
-          { nodeId: toNode.id, distance: distToSegment + distToTo },
+        {
+          nodeId: fromNode.id,
+          distance: distToSegment + distToFrom,
+          accessible: neighbor.accessible,
+        },
+        {
+          nodeId: toNode.id,
+          distance: distToSegment + distToTo,
+          accessible: neighbor.accessible,
+        },
         ];
       }
     }
@@ -357,7 +411,11 @@ function projectPointToSegment(
   return { distToSegment, distToFrom, distToTo };
 }
 
-function connectWalkwayNodes(first: GraphNode, second: GraphNode) {
+function connectWalkwayNodes(
+  first: GraphNode,
+  second: GraphNode,
+  accessible: boolean,
+) {
   const distance = distanceBetween(
     first.latitude,
     first.longitude,
@@ -365,14 +423,26 @@ function connectWalkwayNodes(first: GraphNode, second: GraphNode) {
     second.longitude,
   );
 
-  graphEdges.set(first.id, [
-    ...(graphEdges.get(first.id) ?? []),
-    { nodeId: second.id, distance },
-  ]);
-  graphEdges.set(second.id, [
-    ...(graphEdges.get(second.id) ?? []),
-    { nodeId: first.id, distance },
-  ]);
+  addOrMergeEdge(first.id, {
+    nodeId: second.id,
+    distance,
+    accessible,
+  });
+  addOrMergeEdge(second.id, {
+    nodeId: first.id,
+    distance,
+    accessible,
+  });
+}
+
+function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
+  const edges = graphEdges.get(nodeId) ?? [];
+  const existingEdge = edges.find((candidate) => candidate.nodeId === edge.nodeId);
+  if (existingEdge) {
+    existingEdge.accessible = existingEdge.accessible && edge.accessible;
+    return;
+  }
+  graphEdges.set(nodeId, [...edges, edge]);
 }
 
 /**
