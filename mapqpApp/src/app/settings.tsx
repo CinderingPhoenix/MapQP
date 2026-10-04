@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const {
     navigationMode,
     setNavigationMode,
+    setHasSelectedMode,
     distanceUnits,
     setDistanceUnits,
     directionStyle,
@@ -38,6 +39,11 @@ export default function SettingsPage() {
     }
   };
 
+  const returnToLandingPage = () => {
+    setHasSelectedMode(false);
+    router.replace("/landing-page");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -46,10 +52,10 @@ export default function SettingsPage() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.backArrow}>‹</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.backArrow, { fontSize: 38 * fontSize }]}>‹</Text>
         </TouchableOpacity>
 
-        <Text maxFontSizeMultiplier={1.5} style={styles.headerTitle}>Settings</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.headerTitle, { fontSize: 21 * fontSize }]}>Settings</Text>
 
         <View style={styles.headerSpacer} />
       </View>
@@ -59,180 +65,187 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Navigation Mode */}
-        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>NAVIGATION MODE</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>NAVIGATION MODE</Text>
 
         <View style={styles.settingsCard}>
-        <View style={styles.optionRow}>
-            <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Navigation mode</Text>
+          <View style={styles.optionRow}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Navigation mode</Text>
 
             <View style={styles.segmentedControl}>
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[
-                styles.segmentButton,
-                navigationMode === "standard" && styles.segmentButtonSelected,
+                  styles.segmentButton,
+                  navigationMode === "standard" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => changeNavigationMode("standard")}
-            >
+              >
                 <Text
-                maxFontSizeMultiplier={1.5}
-                style={[
+                  maxFontSizeMultiplier={1.5}
+                  style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     navigationMode === "standard" && styles.segmentTextSelected,
-                ]}
+                  ]}
                 >
-                Standard
+                  Standard
                 </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[
-                styles.segmentButton,
-                navigationMode === "accessibility" && styles.segmentButtonSelected,
+                  styles.segmentButton,
+                  navigationMode === "accessibility" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => changeNavigationMode("accessibility")}
-            >
+              >
                 <Text
-                maxFontSizeMultiplier={1.5}
-                style={[
+                  maxFontSizeMultiplier={1.5}
+                  style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     navigationMode === "accessibility" && styles.segmentTextSelected,
-                ]}
+                  ]}
                 >
-                Accessible
+                  Accessible
                 </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
             </View>
-        </View>
+          </View>
         </View>
 
         {/* Navigation Preferences */}
-        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>NAVIGATION PREFERENCES</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>NAVIGATION PREFERENCES</Text>
 
         <View style={styles.settingsCard}>
-        <View style={styles.optionRow}>
-            <Text style={styles.settingTitle}>Distance units</Text>
+          <View style={styles.optionRow}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Distance units</Text>
 
             <View style={styles.segmentedControl}>
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[
-                styles.segmentButton,
-                distanceUnits === "imperial" && styles.segmentButtonSelected,
+                  styles.segmentButton,
+                  distanceUnits === "imperial" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDistanceUnits("imperial")}
-            >
+              >
                 <Text
-                maxFontSizeMultiplier={1.5}
-                style={[
+                  maxFontSizeMultiplier={1.5}
+                  style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     distanceUnits === "imperial" && styles.segmentTextSelected,
-                ]}
+                  ]}
                 >
-                ft / mi
+                  ft / mi
                 </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[
-                styles.segmentButton,
-                distanceUnits === "metric" && styles.segmentButtonSelected,
+                  styles.segmentButton,
+                  distanceUnits === "metric" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDistanceUnits("metric")}
-            >
+              >
                 <Text
-                maxFontSizeMultiplier={1.5}
-                style={[
+                  maxFontSizeMultiplier={1.5}
+                  style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     distanceUnits === "metric" && styles.segmentTextSelected,
-                ]}
+                  ]}
                 >
-                m / km
+                  m / km
                 </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
             </View>
-        </View>
+          </View>
 
-        <Divider />
+          <Divider />
 
-        <View style={styles.optionRow}>
-            <Text style={styles.settingTitle}>Direction style</Text>
+          <View style={styles.optionRow}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Direction style</Text>
 
             <View style={styles.segmentedControl}>
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[
-                styles.segmentButton,
-                directionStyle === "natural" && styles.segmentButtonSelected,
+                  styles.segmentButton,
+                  directionStyle === "natural" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDirectionStyle("natural")}
-            >
+              >
                 <Text
-                maxFontSizeMultiplier={1.5}
-                style={[
+                  maxFontSizeMultiplier={1.5}
+                  style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     directionStyle === "natural" && styles.segmentTextSelected,
-                ]}
+                  ]}
                 >
-                Natural
+                  Natural
                 </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[
-                styles.segmentButton,
-                directionStyle === "degrees" && styles.segmentButtonSelected,
+                  styles.segmentButton,
+                  directionStyle === "degrees" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDirectionStyle("degrees")}
-            >
+              >
                 <Text
-                maxFontSizeMultiplier={1.5}
-                style={[
+                  maxFontSizeMultiplier={1.5}
+                  style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     directionStyle === "degrees" && styles.segmentTextSelected,
-                ]}
+                  ]}
                 >
-                Degrees
+                  Degrees
                 </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
             </View>
-        </View>
+          </View>
         </View>
 
         {/* Display */}
-        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>DISPLAY</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>DISPLAY</Text>
 
         <View style={styles.settingsCard}>
-        <View style={styles.sliderRow}>
-            <Text style={styles.settingTitle}>Text size</Text>
+          <View style={styles.sliderRow}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Text size</Text>
 
             <View style={styles.sliderContainer}>
-            <Text maxFontSizeMultiplier={1.4} style={styles.smallA}>A</Text>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.smallA, { fontSize: 14 * fontSize }]}>A</Text>
 
-            <Slider
+              <Slider
                 style={styles.slider}
                 minimumValue={0.8}
-                maximumValue={1.2}
+                maximumValue={1.8}
                 step={0.1}
                 value={fontSize}
                 onValueChange={setFontSize}
                 minimumTrackTintColor="#AC2B37"
                 maximumTrackTintColor="#D1D5DB"
                 thumbTintColor="#AC2B37"
-            />
+              />
 
-            <Text maxFontSizeMultiplier={1.4} style={styles.largeA}>A</Text>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.largeA, { fontSize: 24 * fontSize }]}>A</Text>
             </View>
 
-            <Text maxFontSizeMultiplier={1.4} style={styles.fontSizeValue}>
-            {Math.round(fontSize * 100)}%
+            <Text maxFontSizeMultiplier={1.4} style={[styles.fontSizeValue, { fontSize: 12 * fontSize }]}>
+              {Math.round(fontSize * 100)}%
             </Text>
-        </View>
+          </View>
         </View>
 
-        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>DEVICE ACCESSIBILITY</Text>
+        {/* Device Accessibility */}
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>DEVICE ACCESSIBILITY</Text>
 
         <View style={styles.settingsCard}>
           <View style={styles.deviceSettingRow}>
-            <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Screen reader</Text>
-            <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Screen reader</Text>
+            <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
               {deviceAccessibility.screenReaderEnabled ? "On" : "Off"}
             </Text>
           </View>
@@ -240,8 +253,8 @@ export default function SettingsPage() {
           <Divider />
 
           <View style={styles.deviceSettingRow}>
-            <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Reduce motion</Text>
-            <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Reduce motion</Text>
+            <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
               {deviceAccessibility.reduceMotionEnabled ? "On" : "Off"}
             </Text>
           </View>
@@ -251,8 +264,8 @@ export default function SettingsPage() {
               <Divider />
 
               <View style={styles.deviceSettingRow}>
-                <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Bold text</Text>
-                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Bold text</Text>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.boldTextEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -260,8 +273,8 @@ export default function SettingsPage() {
               <Divider />
 
               <View style={styles.deviceSettingRow}>
-                <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Increase contrast</Text>
-                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Increase contrast</Text>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.darkerSystemColorsEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -269,8 +282,8 @@ export default function SettingsPage() {
               <Divider />
 
               <View style={styles.deviceSettingRow}>
-                <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Reduce transparency</Text>
-                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Reduce transparency</Text>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.reduceTransparencyEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -282,14 +295,21 @@ export default function SettingsPage() {
               <Divider />
 
               <View style={styles.deviceSettingRow}>
-                <Text style={styles.settingTitle}>High text contrast</Text>
-                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>High text contrast</Text>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.highTextContrastEnabled ? "On" : "Off"}
                 </Text>
               </View>
             </>
           )}
         </View>
+
+        <TouchableOpacity
+          style={styles.landingButton}
+          onPress={returnToLandingPage}
+        >
+          <Text maxFontSizeMultiplier={1.5} style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}>Back to landing page</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -338,6 +358,7 @@ const styles = StyleSheet.create({
   settingRow: { minHeight: 88, flexDirection: "row", alignItems: "center", paddingVertical: 14 },
   optionRow: { paddingVertical: 16 },
   settingTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", marginBottom: 4 },
+  deviceSettingTitle: { flex: 1, flexShrink: 1 },
   segmentedControl: { flexDirection: "row", backgroundColor: "#F1F2F4", borderRadius: 10, padding: 3, marginTop: 12 },
   segmentButton: { flex: 1, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   segmentButtonSelected: { backgroundColor: "#AC2B37" },
@@ -351,20 +372,8 @@ const styles = StyleSheet.create({
   fontSizeValue: { fontSize: 12, fontWeight: "600", color: "#6B7280", textAlign: "center" },
   divider: { height: 1, backgroundColor: "#ECEDEF" },
   footerText: { textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 30 },
-  
-  deviceSettingRow: {
-    minHeight: 60,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    gap: 12,
-  },
-
-  deviceValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#6B7280",
-    flexShrink: 0,
-  },
+  deviceSettingRow: { minHeight: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, gap: 12 },
+  deviceValue: { fontSize: 14, fontWeight: "700", color: "#6B7280", flexShrink: 0 },
+  landingButton: { marginTop: 28, paddingVertical: 14, alignItems: "center" },
+  landingButtonText: { color: "#AC2B37", fontSize: 15, fontWeight: "700" },
 });

@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Building, getSimilarityScore } from "../app/map-logic";
+import { useSettings } from "../context/settings-context";
+import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 
 let ExpoSpeechRecognitionModule: any = null;
 let useSpeechRecognitionEvent: (event: string, listener: (event: any) => void) => void = () => {};
@@ -25,9 +27,14 @@ type BuildingPickerProps = {
 };
 
 export default React.memo(function BuildingPicker({ buildings, value, onChange, onCancel, placeholder }: BuildingPickerProps) {
+  const { fontSize } = useSettings();
+  const { reduceMotionEnabled } = useDeviceAccessibility();
+  const textBoxHeight = Math.max(48, 48 * fontSize);
   const selectedBuilding = buildings.find((building) => building.id === value);
   const [query, setQuery] = useState(selectedBuilding?.name ?? "");
   const [isOpen, setIsOpen] = useState(false);
+  const [isBuildingSelectorOpen, setIsBuildingSelectorOpen] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recentSearchIds, setRecentSearchIds] = useState<string[]>([]);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,6 +54,8 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
     setQuery(building.name);
     void saveRecentSearch(building.id);
     setIsOpen(false);
+    setIsBuildingSelectorOpen(false);
+    setIsInputFocused(false);
   }, [onChange, saveRecentSearch]);
 
   useSpeechRecognitionEvent("result", (event: any) => {
@@ -132,19 +141,42 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
   const matchingBuildings = buildings.filter((building) => building.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return <View style={styles.container}>
-    {isOpen && !value && <ScrollView style={styles.dropdown} nestedScrollEnabled keyboardShouldPersistTaps="always">
-      {isQueryEmpty ? recentBuildings.length > 0 && <>
-        <View style={styles.dropdownHeader}><Text maxFontSizeMultiplier={1.5} style={styles.dropdownHeaderText}>Recent Searches</Text><TouchableOpacity onPress={() => void clearRecentSearches()}><Text maxFontSizeMultiplier={1.5} style={styles.clearRecentText}>Clear</Text></TouchableOpacity></View>
-        {recentBuildings.map((building) => <TouchableOpacity key={`recent-${building.id}`} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text maxFontSizeMultiplier={1.6} style={styles.dropdownItemText}>{building.name}</Text></TouchableOpacity>)}
-      </> : matchingBuildings.map((building) => <TouchableOpacity key={building.id} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text maxFontSizeMultiplier={1.6} style={styles.dropdownItemText}>{building.name}</Text></TouchableOpacity>)}
-    </ScrollView>}
     <View style={styles.inputWrapper}>
-      {isListening ? <TouchableOpacity style={styles.listeningActiveContainer} onPress={() => { ExpoSpeechRecognitionModule?.stop?.(); setIsListening(false); }}><Ionicons name="mic" size={24} color="#1d5962" /><Text maxFontSizeMultiplier={1.5} style={styles.listeningActiveText}>Listening...</Text></TouchableOpacity> : <>
-        <TouchableOpacity style={[styles.micButton, value !== "" && { opacity: 0.4 }]} disabled={!!value} onPress={() => void handleVoiceSearch()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Ionicons name="mic-outline" size={20} color="#666" /></TouchableOpacity>
-        <TextInput maxFontSizeMultiplier={1.5} style={[styles.input, styles.inputWithMic, (value !== "" || query !== "") && styles.inputWithClear, value !== "" && { backgroundColor: "#f9f9f9", color: "#333" }]} value={query} editable={!value} onChangeText={(text) => { setQuery(text); onChange(""); setIsOpen(text.trim() === "" ? recentBuildings.length > 0 : true); }} onFocus={() => { if (!value) setIsOpen(query.trim() !== "" || recentBuildings.length > 0); }} onBlur={() => { blurTimeoutRef.current = setTimeout(() => setIsOpen(false), 150); }} onSubmitEditing={() => setIsOpen(false)} placeholder={placeholder} />
-        {(value !== "" || query !== "") && <TouchableOpacity style={styles.clearButton} onPress={() => { setQuery(""); setIsOpen(false); onCancel(); Keyboard.dismiss(); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text maxFontSizeMultiplier={1.5} style={styles.cancelButtonText}>✕</Text></TouchableOpacity>}
+      {isListening ? <TouchableOpacity style={[styles.listeningActiveContainer, { height: textBoxHeight }]} onPress={() => { ExpoSpeechRecognitionModule?.stop?.(); setIsListening(false); }}><Ionicons name="mic" size={24 * fontSize} color="#1d5962" /><Text maxFontSizeMultiplier={1.5} style={[styles.listeningActiveText, { fontSize: 16 * fontSize, lineHeight: 20 * fontSize }]}>Listening...</Text></TouchableOpacity> : <>
+        <TouchableOpacity style={[styles.micButton, (value !== "" || query !== "") && styles.micButtonWithClear, value !== "" && { opacity: 0.4 }]} disabled={!!value} onPress={() => void handleVoiceSearch()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Ionicons name="mic-outline" size={20} color="#666" /></TouchableOpacity>
+        <TextInput maxFontSizeMultiplier={1.5} style={[styles.input, { height: textBoxHeight, fontSize: 16 * fontSize, lineHeight: 20 * fontSize }, styles.inputWithMic, (value !== "" || query !== "") && styles.inputWithClear, value !== "" && { backgroundColor: "#f9f9f9", color: "#333" }]} value={query} editable={!value} onChangeText={(text) => { setQuery(text); onChange(""); setIsOpen(text.trim() === "" ? recentBuildings.length > 0 : true); }} onFocus={() => { setIsInputFocused(true); if (!value) setIsOpen(query.trim() !== "" || recentBuildings.length > 0); }} onBlur={() => { blurTimeoutRef.current = setTimeout(() => { setIsOpen(false); setIsInputFocused(false); }, 150); }} onSubmitEditing={() => setIsOpen(false)} placeholder={placeholder} />
+        {(value !== "" || query !== "") && <TouchableOpacity style={styles.clearButton} onPress={() => { setQuery(""); setIsOpen(false); onCancel(); Keyboard.dismiss(); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text maxFontSizeMultiplier={1.5} style={[styles.cancelButtonText, { fontSize: 18 * fontSize }]}>✕</Text></TouchableOpacity>}
       </>}
     </View>
+
+    {isInputFocused && !value && <TouchableOpacity style={styles.buildingSelectorButton} onPress={() => { Keyboard.dismiss(); setIsOpen(false); setIsBuildingSelectorOpen(true); }} activeOpacity={0.75}>
+      <Ionicons name="list-outline" size={18} color="#1d5962" />
+      <Text maxFontSizeMultiplier={1.5} style={[styles.buildingSelectorText, { fontSize: 15 * fontSize }]}>Choose a building</Text>
+    </TouchableOpacity>}
+
+    {isInputFocused && isOpen && !value && (isQueryEmpty ? recentBuildings.length > 0 && <View style={styles.dropdown}>
+        <View style={styles.dropdownHeader}><Text maxFontSizeMultiplier={1.5} style={[styles.dropdownHeaderText, { fontSize: 12 * fontSize }]}>Recent Searches</Text><TouchableOpacity onPress={() => void clearRecentSearches()}><Text maxFontSizeMultiplier={1.5} style={[styles.clearRecentText, { fontSize: 12 * fontSize }]}>Clear</Text></TouchableOpacity></View>
+        {recentBuildings.map((building) => <TouchableOpacity key={`recent-${building.id}`} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text maxFontSizeMultiplier={1.6} style={[styles.dropdownItemText, { fontSize: 16 * fontSize }]}>{building.name}</Text></TouchableOpacity>)}
+      </View> : <ScrollView style={[styles.dropdown, styles.searchDropdown]} nestedScrollEnabled keyboardShouldPersistTaps="always">
+        {matchingBuildings.map((building) => <TouchableOpacity key={building.id} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text maxFontSizeMultiplier={1.6} style={[styles.dropdownItemText, { fontSize: 16 * fontSize }]}>{building.name}</Text></TouchableOpacity>)}
+      </ScrollView>)}
+
+    <Modal visible={isBuildingSelectorOpen} animationType={reduceMotionEnabled ? "none" : "slide"} onRequestClose={() => setIsBuildingSelectorOpen(false)}>
+      <View style={styles.selectorModal}>
+        <View style={styles.selectorHeader}>
+          <Text maxFontSizeMultiplier={1.6} style={[styles.selectorTitle, { fontSize: 24 * fontSize }]}>Choose a building</Text>
+          <TouchableOpacity onPress={() => setIsBuildingSelectorOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text maxFontSizeMultiplier={1.5} style={styles.selectorClose}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={styles.selectorList} keyboardShouldPersistTaps="always">
+          {buildings.map((building) => <TouchableOpacity key={building.id} style={[styles.selectorItem, value === building.id && styles.selectorItemSelected]} onPress={() => selectBuilding(building)}>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.selectorItemText, { fontSize: 17 * fontSize }, value === building.id && styles.selectorItemTextSelected]}>{building.name}</Text>
+            {value === building.id && <Ionicons name="checkmark" size={22} color="#1d5962" />}
+          </TouchableOpacity>)}
+        </ScrollView>
+      </View>
+    </Modal>
   </View>;
 });
 
@@ -152,17 +184,30 @@ const styles = StyleSheet.create({
   container: { zIndex: 10, position: "relative" },
   inputWrapper: { position: "relative", justifyContent: "center" },
   input: { height: 48, borderColor: "#ccc", borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, backgroundColor: "#fff", fontSize: 16 },
-  inputWithMic: { paddingLeft: 40 },
+  inputWithMic: { paddingRight: 40 },
   inputWithClear: { paddingRight: 40 },
-  micButton: { position: "absolute", left: 12, top: 0, bottom: 0, justifyContent: "center", alignItems: "center", zIndex: 11 },
+  micButton: { position: "absolute", right: 12, top: 0, bottom: 0, justifyContent: "center", alignItems: "center", zIndex: 11 },
+  micButtonWithClear: { right: 44 },
   clearButton: { position: "absolute", right: 12, top: 0, bottom: 0, justifyContent: "center", alignItems: "center", zIndex: 11 },
   cancelButtonText: { fontSize: 18, fontWeight: "bold", color: "#666" },
-  dropdown: { maxHeight: 280, backgroundColor: "#fff", borderColor: "#ccc", borderWidth: 1, borderRadius: 8, marginBottom: 8 },
+  dropdown: { backgroundColor: "#fff", borderColor: "#ccc", borderWidth: 1, borderRadius: 8, marginTop: 12, marginBottom: 8 },
+  searchDropdown: { maxHeight: 280 },
   dropdownHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#f7f7f7", borderBottomWidth: 1, borderBottomColor: "#eee" },
   dropdownHeaderText: { fontSize: 12, fontWeight: "bold", color: "#666", textTransform: "uppercase" },
   listeningActiveContainer: { height: 48, flexDirection: "row", borderColor: "#1d5962", borderWidth: 2, borderRadius: 8, backgroundColor: "#e8f4f5", justifyContent: "center", alignItems: "center" },
   listeningActiveText: { fontSize: 16, fontWeight: "600", color: "#1d5962", marginLeft: 8 },
+  buildingSelectorButton: { height: 42, marginTop: 8, borderWidth: 1, borderColor: "#b8d1d4", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#f4fafb" },
+  buildingSelectorText: { color: "#1d5962", fontSize: 15, fontWeight: "600" },
   clearRecentText: { fontSize: 12, color: "#d9534f", fontWeight: "600" },
   dropdownItem: { paddingVertical: 14, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
   dropdownItemText: { fontSize: 16, color: "#333" },
+  selectorModal: { flex: 1, backgroundColor: "#fff", paddingTop: 56 },
+  selectorHeader: { paddingHorizontal: 20, paddingBottom: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#e5e5e5" },
+  selectorTitle: { flex: 1, flexShrink: 1, fontSize: 24, fontWeight: "700", color: "#1d5962", paddingRight: 12 },
+  selectorClose: { fontSize: 22, fontWeight: "700", color: "#666" },
+  selectorList: { padding: 16 },
+  selectorItem: { minHeight: 52, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  selectorItemSelected: { borderColor: "#1d5962", backgroundColor: "#e8f4f5" },
+  selectorItemText: { flex: 1, flexShrink: 1, fontSize: 17, color: "#333", paddingRight: 8 },
+  selectorItemTextSelected: { color: "#1d5962", fontWeight: "700" },
 });

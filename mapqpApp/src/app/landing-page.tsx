@@ -9,18 +9,22 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useSettings } from "../context/settings-context";
 
 export default function LandingPage() {
-  const { setNavigationMode } = useSettings();
-  
+  useLocationWarmup();
+  const { setNavigationMode, setHasSelectedMode } = useSettings();
+
   const openStandardNavigation = () => {
     setNavigationMode("standard");
+    setHasSelectedMode(true);
     router.push("/standard-navigation");
   };
 
   const openAccessibilityNavigation = () => {
     setNavigationMode("accessibility");
+    setHasSelectedMode(true);
     router.push("/accessibility-navigation");
   };
 
