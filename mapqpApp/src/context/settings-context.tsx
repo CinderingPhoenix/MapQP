@@ -1,10 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 export type DistanceUnits = "imperial" | "metric";
@@ -91,7 +91,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if (
             typeof parsedSettings.fontSize === "number" &&
             parsedSettings.fontSize >= 0.8 &&
-            parsedSettings.fontSize <= 1.4
+            parsedSettings.fontSize <= 1.2
           ) {
             setFontSize(parsedSettings.fontSize);
           }

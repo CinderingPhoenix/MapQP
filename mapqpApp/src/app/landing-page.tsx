@@ -47,9 +47,7 @@ export default function LandingPage() {
           resizeMode="cover"
         >
           <View style={styles.presetArea}>
-            <View style={styles.presetLabel}>
-              <Text style={styles.presetText}>Select your preset</Text>
-            </View>
+            
 
             <View style={styles.buttonRow}>
               {/* Standard Mode */}

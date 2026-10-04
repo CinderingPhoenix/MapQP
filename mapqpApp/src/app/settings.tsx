@@ -1,6 +1,7 @@
 import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
+import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 
 export default function SettingsPage() {
   const {
@@ -22,6 +24,7 @@ export default function SettingsPage() {
     fontSize,
     setFontSize,
   } = useSettings();
+  const deviceAccessibility = useDeviceAccessibility();
 
   const changeNavigationMode = (
     mode: "standard" | "accessibility"
@@ -43,10 +46,10 @@ export default function SettingsPage() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backArrow}>‹</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.headerTitle}>Settings</Text>
 
         <View style={styles.headerSpacer} />
       </View>
@@ -56,11 +59,11 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Navigation Mode */}
-        <Text style={styles.sectionLabel}>NAVIGATION MODE</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>NAVIGATION MODE</Text>
 
         <View style={styles.settingsCard}>
         <View style={styles.optionRow}>
-            <Text style={styles.settingTitle}>Navigation mode</Text>
+            <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Navigation mode</Text>
 
             <View style={styles.segmentedControl}>
             <TouchableOpacity
@@ -71,6 +74,7 @@ export default function SettingsPage() {
                 onPress={() => changeNavigationMode("standard")}
             >
                 <Text
+                maxFontSizeMultiplier={1.5}
                 style={[
                     styles.segmentText,
                     navigationMode === "standard" && styles.segmentTextSelected,
@@ -88,6 +92,7 @@ export default function SettingsPage() {
                 onPress={() => changeNavigationMode("accessibility")}
             >
                 <Text
+                maxFontSizeMultiplier={1.5}
                 style={[
                     styles.segmentText,
                     navigationMode === "accessibility" && styles.segmentTextSelected,
@@ -101,7 +106,7 @@ export default function SettingsPage() {
         </View>
 
         {/* Navigation Preferences */}
-        <Text style={styles.sectionLabel}>NAVIGATION PREFERENCES</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>NAVIGATION PREFERENCES</Text>
 
         <View style={styles.settingsCard}>
         <View style={styles.optionRow}>
@@ -116,6 +121,7 @@ export default function SettingsPage() {
                 onPress={() => setDistanceUnits("imperial")}
             >
                 <Text
+                maxFontSizeMultiplier={1.5}
                 style={[
                     styles.segmentText,
                     distanceUnits === "imperial" && styles.segmentTextSelected,
@@ -133,6 +139,7 @@ export default function SettingsPage() {
                 onPress={() => setDistanceUnits("metric")}
             >
                 <Text
+                maxFontSizeMultiplier={1.5}
                 style={[
                     styles.segmentText,
                     distanceUnits === "metric" && styles.segmentTextSelected,
@@ -158,6 +165,7 @@ export default function SettingsPage() {
                 onPress={() => setDirectionStyle("natural")}
             >
                 <Text
+                maxFontSizeMultiplier={1.5}
                 style={[
                     styles.segmentText,
                     directionStyle === "natural" && styles.segmentTextSelected,
@@ -175,6 +183,7 @@ export default function SettingsPage() {
                 onPress={() => setDirectionStyle("degrees")}
             >
                 <Text
+                maxFontSizeMultiplier={1.5}
                 style={[
                     styles.segmentText,
                     directionStyle === "degrees" && styles.segmentTextSelected,
@@ -188,19 +197,19 @@ export default function SettingsPage() {
         </View>
 
         {/* Display */}
-        <Text style={styles.sectionLabel}>DISPLAY</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>DISPLAY</Text>
 
         <View style={styles.settingsCard}>
         <View style={styles.sliderRow}>
             <Text style={styles.settingTitle}>Text size</Text>
 
             <View style={styles.sliderContainer}>
-            <Text style={styles.smallA}>A</Text>
+            <Text maxFontSizeMultiplier={1.4} style={styles.smallA}>A</Text>
 
             <Slider
                 style={styles.slider}
                 minimumValue={0.8}
-                maximumValue={1.4}
+                maximumValue={1.2}
                 step={0.1}
                 value={fontSize}
                 onValueChange={setFontSize}
@@ -209,13 +218,77 @@ export default function SettingsPage() {
                 thumbTintColor="#AC2B37"
             />
 
-            <Text style={styles.largeA}>A</Text>
+            <Text maxFontSizeMultiplier={1.4} style={styles.largeA}>A</Text>
             </View>
 
-            <Text style={styles.fontSizeValue}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.fontSizeValue}>
             {Math.round(fontSize * 100)}%
             </Text>
         </View>
+        </View>
+
+        <Text maxFontSizeMultiplier={1.5} style={styles.sectionLabel}>DEVICE ACCESSIBILITY</Text>
+
+        <View style={styles.settingsCard}>
+          <View style={styles.deviceSettingRow}>
+            <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Screen reader</Text>
+            <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+              {deviceAccessibility.screenReaderEnabled ? "On" : "Off"}
+            </Text>
+          </View>
+
+          <Divider />
+
+          <View style={styles.deviceSettingRow}>
+            <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Reduce motion</Text>
+            <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+              {deviceAccessibility.reduceMotionEnabled ? "On" : "Off"}
+            </Text>
+          </View>
+
+          {Platform.OS === "ios" && (
+            <>
+              <Divider />
+
+              <View style={styles.deviceSettingRow}>
+                <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Bold text</Text>
+                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                  {deviceAccessibility.boldTextEnabled ? "On" : "Off"}
+                </Text>
+              </View>
+
+              <Divider />
+
+              <View style={styles.deviceSettingRow}>
+                <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Increase contrast</Text>
+                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                  {deviceAccessibility.darkerSystemColorsEnabled ? "On" : "Off"}
+                </Text>
+              </View>
+
+              <Divider />
+
+              <View style={styles.deviceSettingRow}>
+                <Text maxFontSizeMultiplier={1.6} style={styles.settingTitle}>Reduce transparency</Text>
+                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                  {deviceAccessibility.reduceTransparencyEnabled ? "On" : "Off"}
+                </Text>
+              </View>
+            </>
+          )}
+
+          {Platform.OS === "android" && (
+            <>
+              <Divider />
+
+              <View style={styles.deviceSettingRow}>
+                <Text style={styles.settingTitle}>High text contrast</Text>
+                <Text maxFontSizeMultiplier={1.5} style={styles.deviceValue}>
+                  {deviceAccessibility.highTextContrastEnabled ? "On" : "Off"}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -278,4 +351,20 @@ const styles = StyleSheet.create({
   fontSizeValue: { fontSize: 12, fontWeight: "600", color: "#6B7280", textAlign: "center" },
   divider: { height: 1, backgroundColor: "#ECEDEF" },
   footerText: { textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 30 },
+  
+  deviceSettingRow: {
+    minHeight: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    gap: 12,
+  },
+
+  deviceValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6B7280",
+    flexShrink: 0,
+  },
 });
