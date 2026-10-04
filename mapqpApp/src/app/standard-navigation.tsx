@@ -14,7 +14,7 @@ import {
   getDistanceToStepPoint,
   getSegmentDistance,
   useMapNavigation,
-} from "./map-logic";
+} from "../utils/map-logic";
 
 export default function Home() {
   const {

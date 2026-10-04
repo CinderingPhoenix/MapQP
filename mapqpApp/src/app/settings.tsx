@@ -1,6 +1,7 @@
 import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 
@@ -39,6 +41,48 @@ export default function SettingsPage() {
   const returnToLandingPage = () => {
     setHasSelectedMode(false);
     router.replace("/landing-page");
+  };
+
+  const deleteLocalStorage = () => {
+    Alert.alert(
+      "Delete local data?",
+      "This will remove your saved settings, login session, recent searches, and cached location from this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                await AsyncStorage.clear();
+                setNavigationMode("standard");
+                setHasSelectedMode(false);
+                setDistanceUnits("imperial");
+                setDirectionStyle("natural");
+                setFontSize(1);
+                Alert.alert(
+                  "Local data deleted",
+                  "Your saved app data was removed. You will be asked to sign in again.",
+                  [
+                    {
+                      text: "Continue",
+                      onPress: () => router.replace("/loading-screen"),
+                    },
+                  ]
+                );
+              } catch (error) {
+                console.error("Failed to delete local storage:", error);
+                Alert.alert(
+                  "Unable to delete local data",
+                  "Your saved app data could not be removed. Please try again."
+                );
+              }
+            })();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -236,6 +280,16 @@ export default function SettingsPage() {
         >
           <Text style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}>Back to landing page</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.deleteStorageButton}
+          onPress={deleteLocalStorage}
+        >
+          <Text style={[styles.deleteStorageText, { fontSize: 15 * fontSize }]}>
+            Delete all local data
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -299,4 +353,13 @@ const styles = StyleSheet.create({
   footerText: { textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 30 },
   landingButton: { marginTop: 28, paddingVertical: 14, alignItems: "center" },
   landingButtonText: { color: "#AC2B37", fontSize: 15, fontWeight: "700" },
+  deleteStorageButton: {
+    alignItems: "center",
+    borderColor: "#B42318",
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 8,
+    paddingVertical: 13,
+  },
+  deleteStorageText: { color: "#B42318", fontSize: 15, fontWeight: "700" },
 });

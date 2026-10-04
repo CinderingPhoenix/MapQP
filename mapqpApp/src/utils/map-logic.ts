@@ -6,7 +6,7 @@ import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Vibration } from "react-native";
 import buildingData from "../data/wpi-buildings.json";
-import { NavigationPoint, routeBetween, WalkingRoute } from "../utils/routing";
+import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
 
 let ExpoSpeechRecognitionModule: any = null;
 try {

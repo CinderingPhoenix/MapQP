@@ -10,7 +10,10 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="landing-page" />
+        <Stack.Screen 
+          name="landing-page"
+          options={{ gestureEnabled: false }}
+        />
         <Stack.Screen
           name="standard-navigation"
           options={{ gestureEnabled: false }}
