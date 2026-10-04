@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const {
     navigationMode,
     setNavigationMode,
+    setHasSelectedMode,
     distanceUnits,
     setDistanceUnits,
     directionStyle,
@@ -35,6 +36,11 @@ export default function SettingsPage() {
     }
   };
 
+  const returnToLandingPage = () => {
+    setHasSelectedMode(false);
+    router.replace("/landing-page");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -43,10 +49,10 @@ export default function SettingsPage() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backArrow}>‹</Text>
+          <Text style={[styles.backArrow, { fontSize: 38 * fontSize }]}>‹</Text>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={[styles.headerTitle, { fontSize: 21 * fontSize }]}>Settings</Text>
 
         <View style={styles.headerSpacer} />
       </View>
@@ -56,11 +62,11 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Navigation Mode */}
-        <Text style={styles.sectionLabel}>NAVIGATION MODE</Text>
+        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>NAVIGATION MODE</Text>
 
         <View style={styles.settingsCard}>
         <View style={styles.optionRow}>
-            <Text style={styles.settingTitle}>Navigation mode</Text>
+            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Navigation mode</Text>
 
             <View style={styles.segmentedControl}>
             <TouchableOpacity
@@ -73,6 +79,7 @@ export default function SettingsPage() {
                 <Text
                 style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     navigationMode === "standard" && styles.segmentTextSelected,
                 ]}
                 >
@@ -90,6 +97,7 @@ export default function SettingsPage() {
                 <Text
                 style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     navigationMode === "accessibility" && styles.segmentTextSelected,
                 ]}
                 >
@@ -101,11 +109,11 @@ export default function SettingsPage() {
         </View>
 
         {/* Navigation Preferences */}
-        <Text style={styles.sectionLabel}>NAVIGATION PREFERENCES</Text>
+        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>NAVIGATION PREFERENCES</Text>
 
         <View style={styles.settingsCard}>
         <View style={styles.optionRow}>
-            <Text style={styles.settingTitle}>Distance units</Text>
+            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Distance units</Text>
 
             <View style={styles.segmentedControl}>
             <TouchableOpacity
@@ -118,6 +126,7 @@ export default function SettingsPage() {
                 <Text
                 style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     distanceUnits === "imperial" && styles.segmentTextSelected,
                 ]}
                 >
@@ -135,6 +144,7 @@ export default function SettingsPage() {
                 <Text
                 style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     distanceUnits === "metric" && styles.segmentTextSelected,
                 ]}
                 >
@@ -147,7 +157,7 @@ export default function SettingsPage() {
         <Divider />
 
         <View style={styles.optionRow}>
-            <Text style={styles.settingTitle}>Direction style</Text>
+            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Direction style</Text>
 
             <View style={styles.segmentedControl}>
             <TouchableOpacity
@@ -160,6 +170,7 @@ export default function SettingsPage() {
                 <Text
                 style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     directionStyle === "natural" && styles.segmentTextSelected,
                 ]}
                 >
@@ -177,6 +188,7 @@ export default function SettingsPage() {
                 <Text
                 style={[
                     styles.segmentText,
+                    { fontSize: 13 * fontSize },
                     directionStyle === "degrees" && styles.segmentTextSelected,
                 ]}
                 >
@@ -188,19 +200,19 @@ export default function SettingsPage() {
         </View>
 
         {/* Display */}
-        <Text style={styles.sectionLabel}>DISPLAY</Text>
+        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>DISPLAY</Text>
 
         <View style={styles.settingsCard}>
         <View style={styles.sliderRow}>
-            <Text style={styles.settingTitle}>Text size</Text>
+            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Text size</Text>
 
             <View style={styles.sliderContainer}>
-            <Text style={styles.smallA}>A</Text>
+            <Text style={[styles.smallA, { fontSize: 14 * fontSize }]}>A</Text>
 
             <Slider
                 style={styles.slider}
                 minimumValue={0.8}
-                maximumValue={1.4}
+                maximumValue={1.8}
                 step={0.1}
                 value={fontSize}
                 onValueChange={setFontSize}
@@ -209,14 +221,21 @@ export default function SettingsPage() {
                 thumbTintColor="#AC2B37"
             />
 
-            <Text style={styles.largeA}>A</Text>
+            <Text style={[styles.largeA, { fontSize: 24 * fontSize }]}>A</Text>
             </View>
 
-            <Text style={styles.fontSizeValue}>
+            <Text style={[styles.fontSizeValue, { fontSize: 12 * fontSize }]}>
             {Math.round(fontSize * 100)}%
             </Text>
         </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.landingButton}
+          onPress={returnToLandingPage}
+        >
+          <Text style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}>Back to landing page</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -278,4 +297,6 @@ const styles = StyleSheet.create({
   fontSizeValue: { fontSize: 12, fontWeight: "600", color: "#6B7280", textAlign: "center" },
   divider: { height: 1, backgroundColor: "#ECEDEF" },
   footerText: { textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 30 },
+  landingButton: { marginTop: 28, paddingVertical: 14, alignItems: "center" },
+  landingButtonText: { color: "#AC2B37", fontSize: 15, fontWeight: "700" },
 });

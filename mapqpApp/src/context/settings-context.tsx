@@ -13,6 +13,7 @@ export type NavigationMode = "standard" | "accessibility";
 
 type AppSettings = {
   navigationMode: NavigationMode;
+  hasSelectedMode: boolean;
   distanceUnits: DistanceUnits;
   directionStyle: DirectionStyle;
   fontSize: number;
@@ -20,6 +21,7 @@ type AppSettings = {
 
 type SettingsContextType = AppSettings & {
   setNavigationMode: (mode: NavigationMode) => void;
+  setHasSelectedMode: (selected: boolean) => void;
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
@@ -30,6 +32,7 @@ const SETTINGS_STORAGE_KEY = "@mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
   navigationMode: "standard",
+  hasSelectedMode: false,
   distanceUnits: "imperial",
   directionStyle: "natural",
   fontSize: 1,
@@ -42,6 +45,10 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [navigationMode, setNavigationMode] = useState<NavigationMode>(
     DEFAULT_SETTINGS.navigationMode
+  );
+
+  const [hasSelectedMode, setHasSelectedMode] = useState(
+    DEFAULT_SETTINGS.hasSelectedMode
   );
 
   const [distanceUnits, setDistanceUnits] = useState<DistanceUnits>(
@@ -74,6 +81,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setNavigationMode(parsedSettings.navigationMode);
           }
 
+          if (typeof parsedSettings.hasSelectedMode === "boolean") {
+            setHasSelectedMode(parsedSettings.hasSelectedMode);
+          }
+
           if (
             parsedSettings.distanceUnits === "imperial" ||
             parsedSettings.distanceUnits === "metric"
@@ -91,7 +102,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if (
             typeof parsedSettings.fontSize === "number" &&
             parsedSettings.fontSize >= 0.8 &&
-            parsedSettings.fontSize <= 1.4
+            parsedSettings.fontSize <= 1.8
           ) {
             setFontSize(parsedSettings.fontSize);
           }
@@ -115,6 +126,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       try {
         const settings: AppSettings = {
           navigationMode,
+          hasSelectedMode,
           distanceUnits,
           directionStyle,
           fontSize,
@@ -132,6 +144,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     void saveSettings();
   }, [
     navigationMode,
+    hasSelectedMode,
     distanceUnits,
     directionStyle,
     fontSize,
@@ -142,10 +155,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     <SettingsContext.Provider
       value={{
         navigationMode,
+        hasSelectedMode,
         distanceUnits,
         directionStyle,
         fontSize,
         setNavigationMode,
+        setHasSelectedMode,
         setDistanceUnits,
         setDirectionStyle,
         setFontSize,

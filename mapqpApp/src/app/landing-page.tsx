@@ -14,15 +14,17 @@ import { useSettings } from "../context/settings-context";
 
 export default function LandingPage() {
   useLocationWarmup();
-  const { setNavigationMode } = useSettings();
+  const { setNavigationMode, setHasSelectedMode } = useSettings();
 
   const openStandardNavigation = () => {
     setNavigationMode("standard");
+    setHasSelectedMode(true);
     router.push("/standard-navigation");
   };
 
   const openAccessibilityNavigation = () => {
     setNavigationMode("accessibility");
+    setHasSelectedMode(true);
     router.push("/accessibility-navigation");
   };
 

@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
+import { useSettings } from '../context/settings-context';
 
 export interface MapQPProps {
   firstImage?: ImageSourcePropType;
@@ -28,11 +29,12 @@ export default function LoadingScreen({
   showSpinner = true,
 }: MapQPProps) {
   useLocationWarmup();
+  const { hasSelectedMode, navigationMode, settingsLoaded } = useSettings();
   const pulseAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0.75)).current;
 
-  const img1 = firstImage ?? require('../../assets/logos/535239.png');
-  const img2 = secondImage ?? require('../../assets/logos/free-user-icon-3296-thumb.png');
+  const img1 = firstImage ?? require('../../assets/images/wpi-logo.png');
+  const img2 = secondImage ?? require('../../assets/images/splash-icon.png');
 
   useEffect(() => {
     // Pulse animation loop
@@ -68,9 +70,21 @@ export default function LoadingScreen({
     pulseLoop.start();
 
     // Trigger redirection upon completion
+    if (!settingsLoaded) {
+      return () => {
+        pulseLoop.stop();
+      };
+    }
+
     const timer = setTimeout(() => {
       if (onFinish) {
         onFinish();
+      } else if (hasSelectedMode) {
+        router.replace(
+          navigationMode === 'standard'
+            ? '/standard-navigation'
+            : '/accessibility-navigation'
+        );
       } else {
         router.replace('/landing-page');
       }
@@ -80,7 +94,15 @@ export default function LoadingScreen({
       pulseLoop.stop();
       clearTimeout(timer);
     };
-  }, [duration, onFinish, pulseAnim, opacityAnim]);
+  }, [
+    duration,
+    hasSelectedMode,
+    navigationMode,
+    onFinish,
+    pulseAnim,
+    opacityAnim,
+    settingsLoaded,
+  ]);
 
   return (
     <SafeAreaView style={styles.container}>

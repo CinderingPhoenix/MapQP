@@ -58,7 +58,7 @@ export default function Home() {
             <View style={styles.expandedContainer}>
               <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={styles.expandedHeader}>
                 <Text style={[styles.boldText, { fontSize: 22 * fontSize },]}>Upcoming Directions</Text>
-                <Text style={styles.collapseHint}>Tap to collapse</Text>
+                <Text style={[styles.collapseHint, { fontSize: 13 * fontSize }]}>Tap to collapse</Text>
               </TouchableOpacity>
               <ScrollView style={styles.directionsList} nestedScrollEnabled keyboardShouldPersistTaps="always" showsVerticalScrollIndicator>
                 {upcomingSteps.map((step, index) => {
@@ -82,7 +82,7 @@ export default function Home() {
       )}
 
       <View style={styles.mapCanvas} onStartShouldSetResponderCapture={() => { Keyboard.dismiss(); if (directionsExpanded) setDirectionsExpanded(false); return false; }}>
-        {error ? <View style={styles.loadingContainer}><Text>{error}</Text></View> : <LocationMap
+        {error ? <View style={styles.loadingContainer}><Text style={{ fontSize: 16 * fontSize }}>{error}</Text></View> : <LocationMap
           latitude={showRecenter ? mapCenter.latitude : (coordinates?.latitude ?? mapCenter.latitude)}
           longitude={showRecenter ? mapCenter.longitude : (coordinates?.longitude ?? mapCenter.longitude)}
           userLatitude={coordinates?.latitude}
@@ -99,9 +99,9 @@ export default function Home() {
       </View>
 
       <Animated.View style={[styles.plannerPanel, { paddingBottom: keyboardHeight > 0 ? 48 : 40, transform: [{ translateY: keyboardTranslateY }] }]}> 
-        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text style={styles.recenterText}>Recenter</Text></TouchableOpacity>}
+        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
         <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
-        {routeError !== "" && <Text style={styles.errorText}>{routeError}</Text>}
+        {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>
     </SafeAreaView>
   );

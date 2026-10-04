@@ -3,6 +3,7 @@ import { Alert, Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, Toucha
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { Building, getSimilarityScore } from "../app/map-logic";
+import { useSettings } from "../context/settings-context";
 
 let ExpoSpeechRecognitionModule: any = null;
 let useSpeechRecognitionEvent: (event: string, listener: (event: any) => void) => void = () => {};
@@ -25,6 +26,8 @@ type BuildingPickerProps = {
 };
 
 export default React.memo(function BuildingPicker({ buildings, value, onChange, onCancel, placeholder }: BuildingPickerProps) {
+  const { fontSize } = useSettings();
+  const textBoxHeight = Math.max(48, 48 * fontSize);
   const selectedBuilding = buildings.find((building) => building.id === value);
   const [query, setQuery] = useState(selectedBuilding?.name ?? "");
   const [isOpen, setIsOpen] = useState(false);
@@ -137,36 +140,36 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
 
   return <View style={styles.container}>
     <View style={styles.inputWrapper}>
-      {isListening ? <TouchableOpacity style={styles.listeningActiveContainer} onPress={() => { ExpoSpeechRecognitionModule?.stop?.(); setIsListening(false); }}><Ionicons name="mic" size={24} color="#1d5962" /><Text style={styles.listeningActiveText}>Listening...</Text></TouchableOpacity> : <>
+      {isListening ? <TouchableOpacity style={[styles.listeningActiveContainer, { height: textBoxHeight }]} onPress={() => { ExpoSpeechRecognitionModule?.stop?.(); setIsListening(false); }}><Ionicons name="mic" size={24 * fontSize} color="#1d5962" /><Text style={[styles.listeningActiveText, { fontSize: 16 * fontSize, lineHeight: 20 * fontSize }]}>Listening...</Text></TouchableOpacity> : <>
         <TouchableOpacity style={[styles.micButton, (value !== "" || query !== "") && styles.micButtonWithClear, value !== "" && { opacity: 0.4 }]} disabled={!!value} onPress={() => void handleVoiceSearch()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Ionicons name="mic-outline" size={20} color="#666" /></TouchableOpacity>
-        <TextInput style={[styles.input, styles.inputWithMic, (value !== "" || query !== "") && styles.inputWithClear, value !== "" && { backgroundColor: "#f9f9f9", color: "#333" }]} value={query} editable={!value} onChangeText={(text) => { setQuery(text); onChange(""); setIsOpen(text.trim() === "" ? recentBuildings.length > 0 : true); }} onFocus={() => { setIsInputFocused(true); if (!value) setIsOpen(query.trim() !== "" || recentBuildings.length > 0); }} onBlur={() => { blurTimeoutRef.current = setTimeout(() => { setIsOpen(false); setIsInputFocused(false); }, 150); }} onSubmitEditing={() => setIsOpen(false)} placeholder={placeholder} />
-        {(value !== "" || query !== "") && <TouchableOpacity style={styles.clearButton} onPress={() => { setQuery(""); setIsOpen(false); onCancel(); Keyboard.dismiss(); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={styles.cancelButtonText}>✕</Text></TouchableOpacity>}
+        <TextInput style={[styles.input, { height: textBoxHeight, fontSize: 16 * fontSize, lineHeight: 20 * fontSize }, styles.inputWithMic, (value !== "" || query !== "") && styles.inputWithClear, value !== "" && { backgroundColor: "#f9f9f9", color: "#333" }]} value={query} editable={!value} onChangeText={(text) => { setQuery(text); onChange(""); setIsOpen(text.trim() === "" ? recentBuildings.length > 0 : true); }} onFocus={() => { setIsInputFocused(true); if (!value) setIsOpen(query.trim() !== "" || recentBuildings.length > 0); }} onBlur={() => { blurTimeoutRef.current = setTimeout(() => { setIsOpen(false); setIsInputFocused(false); }, 150); }} onSubmitEditing={() => setIsOpen(false)} placeholder={placeholder} />
+        {(value !== "" || query !== "") && <TouchableOpacity style={styles.clearButton} onPress={() => { setQuery(""); setIsOpen(false); onCancel(); Keyboard.dismiss(); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={[styles.cancelButtonText, { fontSize: 18 * fontSize }]}>✕</Text></TouchableOpacity>}
       </>}
     </View>
 
     {isInputFocused && !value && <TouchableOpacity style={styles.buildingSelectorButton} onPress={() => { Keyboard.dismiss(); setIsOpen(false); setIsBuildingSelectorOpen(true); }} activeOpacity={0.75}>
       <Ionicons name="list-outline" size={18} color="#1d5962" />
-      <Text style={styles.buildingSelectorText}>Choose a building</Text>
+      <Text style={[styles.buildingSelectorText, { fontSize: 15 * fontSize }]}>Choose a building</Text>
     </TouchableOpacity>}
 
     {isInputFocused && isOpen && !value && (isQueryEmpty ? recentBuildings.length > 0 && <View style={styles.dropdown}>
-        <View style={styles.dropdownHeader}><Text style={styles.dropdownHeaderText}>Recent Searches</Text><TouchableOpacity onPress={() => void clearRecentSearches()}><Text style={styles.clearRecentText}>Clear</Text></TouchableOpacity></View>
-        {recentBuildings.map((building) => <TouchableOpacity key={`recent-${building.id}`} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text style={styles.dropdownItemText}>{building.name}</Text></TouchableOpacity>)}
+        <View style={styles.dropdownHeader}><Text style={[styles.dropdownHeaderText, { fontSize: 12 * fontSize }]}>Recent Searches</Text><TouchableOpacity onPress={() => void clearRecentSearches()}><Text style={[styles.clearRecentText, { fontSize: 12 * fontSize }]}>Clear</Text></TouchableOpacity></View>
+        {recentBuildings.map((building) => <TouchableOpacity key={`recent-${building.id}`} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text style={[styles.dropdownItemText, { fontSize: 16 * fontSize }]}>{building.name}</Text></TouchableOpacity>)}
       </View> : <ScrollView style={[styles.dropdown, styles.searchDropdown]} nestedScrollEnabled keyboardShouldPersistTaps="always">
-        {matchingBuildings.map((building) => <TouchableOpacity key={building.id} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text style={styles.dropdownItemText}>{building.name}</Text></TouchableOpacity>)}
+        {matchingBuildings.map((building) => <TouchableOpacity key={building.id} style={styles.dropdownItem} onPress={() => selectBuilding(building)}><Text style={[styles.dropdownItemText, { fontSize: 16 * fontSize }]}>{building.name}</Text></TouchableOpacity>)}
       </ScrollView>)}
 
     <Modal visible={isBuildingSelectorOpen} animationType="slide" onRequestClose={() => setIsBuildingSelectorOpen(false)}>
       <View style={styles.selectorModal}>
         <View style={styles.selectorHeader}>
-          <Text style={styles.selectorTitle}>Choose a building</Text>
+          <Text style={[styles.selectorTitle, { fontSize: 24 * fontSize }]}>Choose a building</Text>
           <TouchableOpacity onPress={() => setIsBuildingSelectorOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.selectorClose}>✕</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.selectorList} keyboardShouldPersistTaps="always">
           {buildings.map((building) => <TouchableOpacity key={building.id} style={[styles.selectorItem, value === building.id && styles.selectorItemSelected]} onPress={() => selectBuilding(building)}>
-            <Text style={[styles.selectorItemText, value === building.id && styles.selectorItemTextSelected]}>{building.name}</Text>
+            <Text style={[styles.selectorItemText, { fontSize: 17 * fontSize }, value === building.id && styles.selectorItemTextSelected]}>{building.name}</Text>
             {value === building.id && <Ionicons name="checkmark" size={22} color="#1d5962" />}
           </TouchableOpacity>)}
         </ScrollView>
