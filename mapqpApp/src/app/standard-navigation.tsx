@@ -92,7 +92,7 @@ export default function Home() {
         <View style={[styles.topRouteSummary, directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed]}>
           {directionsExpanded ? (
             <View style={styles.expandedContainer}>
-              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={styles.expandedHeader}>
+              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={styles.expandedHeader} accessible accessibilityRole="button" accessibilityLabel="Upcoming directions" accessibilityHint="Double tap to collapse the directions list">
                 <Text maxFontSizeMultiplier={1.6} style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" },]}>Upcoming Directions</Text>
                 <Text maxFontSizeMultiplier={1.5} style={[styles.collapseHint, { fontSize: 13 * fontSize, color: darkerSystemColorsEnabled ? "#333" : "#888" }]}>Tap to collapse</Text>
               </TouchableOpacity>
@@ -108,9 +108,15 @@ export default function Home() {
               <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7}><Text maxFontSizeMultiplier={1.6} style={[styles.subText, { marginTop: 10 }, { fontSize: 16 * fontSize, fontWeight: boldTextEnabled ? "600" : "normal", color: darkerSystemColorsEnabled ? "#222" : "#555", }]}>{formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={() => setDirectionsExpanded(true)} activeOpacity={0.7}>
-              <Text maxFontSizeMultiplier={2} style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }, ]}>{nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
-              <Text maxFontSizeMultiplier={1.6} style={[styles.subText, { fontSize: 16 * fontSize, fontWeight: boldTextEnabled ? "600" : "normal", color: darkerSystemColorsEnabled ? "#222" : "#555" }, ]}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
+            <TouchableOpacity
+              onPress={() => setDirectionsExpanded(true)}
+              activeOpacity={0.7}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}
+              accessibilityHint="Double tap to show all upcoming directions">
+              <Text accessible={false} maxFontSizeMultiplier={2} style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }, ]}>{nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
+              <Text accessible={false} maxFontSizeMultiplier={1.6} style={[styles.subText, { fontSize: 16 * fontSize, fontWeight: boldTextEnabled ? "600" : "normal", color: darkerSystemColorsEnabled ? "#222" : "#555" }, ]}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
             </TouchableOpacity>
           )}
           {routeLoadingProgress < 1 && <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>}
@@ -136,7 +142,7 @@ export default function Home() {
       </View>
 
       <Animated.View style={[styles.plannerPanel, { paddingBottom: keyboardHeight > 0 ? 48 : 40, transform: [{ translateY: keyboardTranslateY }] }]}> 
-        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text maxFontSizeMultiplier={1.5} style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
+        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter} accessible accessibilityRole="button" accessibilityLabel="Recenter map" accessibilityHint="Moves the map back to your current location"><Text accessible={false} maxFontSizeMultiplier={1.5} style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
         <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
         {routeError !== "" && <Text maxFontSizeMultiplier={1.6} style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>

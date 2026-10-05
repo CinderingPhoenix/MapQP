@@ -86,6 +86,10 @@ export default function SettingsPage() {
                   navigationMode === "standard" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => changeNavigationMode("standard")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Standard navigation mode"
+                accessibilityState={{ selected: navigationMode === "standard" }}
               >
                 <Text
                   maxFontSizeMultiplier={1.5}
@@ -106,6 +110,10 @@ export default function SettingsPage() {
                   navigationMode === "accessibility" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => changeNavigationMode("accessibility")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Accessible navigation mode"
+                accessibilityState={{ selected: navigationMode === "accessibility" }}
               >
                 <Text
                   maxFontSizeMultiplier={1.5}
@@ -137,6 +145,10 @@ export default function SettingsPage() {
                   distanceUnits === "imperial" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDistanceUnits("imperial")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Feet and miles"
+                accessibilityState={{ selected: distanceUnits === "imperial" }}
               >
                 <Text
                   maxFontSizeMultiplier={1.5}
@@ -157,6 +169,10 @@ export default function SettingsPage() {
                   distanceUnits === "metric" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDistanceUnits("metric")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Meters and kilometers"
+                accessibilityState={{ selected: distanceUnits === "metric" }}
               >
                 <Text
                   maxFontSizeMultiplier={1.5}
@@ -185,6 +201,10 @@ export default function SettingsPage() {
                   directionStyle === "natural" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDirectionStyle("natural")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Natural directions"
+                accessibilityState={{ selected: directionStyle === "natural" }}
               >
                 <Text
                   maxFontSizeMultiplier={1.5}
@@ -205,6 +225,10 @@ export default function SettingsPage() {
                   directionStyle === "degrees" && styles.segmentButtonSelected,
                 ]}
                 onPress={() => setDirectionStyle("degrees")}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Degree based directions"
+                accessibilityState={{ selected: directionStyle === "degrees" }}
               >
                 <Text
                   maxFontSizeMultiplier={1.5}

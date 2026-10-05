@@ -180,7 +180,7 @@ export default function Home() {
       </View>
 
       <Animated.View style={[styles.plannerPanel, { paddingBottom: keyboardHeight > 0 ? 48 : 40, transform: [{ translateY: keyboardTranslateY }] }]}> 
-        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text maxFontSizeMultiplier={1.5} style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
+        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter} accessible accessibilityRole="button" accessibilityLabel="Recenter map" accessibilityHint="Moves the map back to your current location"><Text accessible={false} maxFontSizeMultiplier={1.5} style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
         <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
         {routeError !== "" && <Text maxFontSizeMultiplier={1.6} style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>

@@ -94,12 +94,19 @@ export function useDeviceAccessibility(): DeviceAccessibilitySettings {
         setReduceTransparencyEnabled
       );
 
+    const highTextContrastSubscription =
+      AccessibilityInfo.addEventListener(
+        "highTextContrastChanged",
+        setHighTextContrastEnabled
+      );
+
     return () => {
       screenReaderSubscription.remove();
       reduceMotionSubscription.remove();
       darkerSystemColorsSubscription.remove();
       boldTextSubscription.remove();
       reduceTransparencySubscription.remove();
+      highTextContrastSubscription.remove();
     };
   }, []);
 
