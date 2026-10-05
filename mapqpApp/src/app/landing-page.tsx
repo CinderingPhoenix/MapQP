@@ -1,12 +1,11 @@
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-  Image,
-  ImageBackground,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
@@ -30,11 +29,15 @@ export default function LandingPage() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require("../../assets/images/campus-map.png")}
-        style={styles.mapBackground}
-        resizeMode="cover"
-      >
+      <View style={styles.mapBackground}>
+        <ExpoImage
+          source={require("../../assets/images/campus-map.png")}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={0}
+        />
         <SafeAreaView style={styles.safeArea}>
           {/* Header */}
           <View style={styles.header}>
@@ -42,10 +45,13 @@ export default function LandingPage() {
               <Text style={styles.logoPlaceholderText}>Logo</Text>
             </View>
 
-            <Image
+            <ExpoImage
               source={require("../../assets/images/wpi-logo.png")}
               style={styles.wpiLogo}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={0}
               accessible={false}
             />
           </View>
@@ -128,7 +134,7 @@ export default function LandingPage() {
             </View>
           </View>
         </SafeAreaView>
-      </ImageBackground>
+      </View>
     </View>
   );
 }

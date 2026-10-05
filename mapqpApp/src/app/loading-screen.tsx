@@ -1,17 +1,17 @@
-import React, { useEffect, useRef } from 'react';
+import { router } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import {
-  View,
-  Image,
-  StyleSheet,
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   ImageSourcePropType,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
+import { useLocationWarmup } from '../hooks/use-location-warmup';
 
 export interface MapQPProps {
   firstImage?: ImageSourcePropType;
