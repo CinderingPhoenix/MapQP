@@ -30,30 +30,27 @@ export default function LandingPage() {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoPlaceholder} accessible={false}>
-            <Text style={styles.logoPlaceholderText}>Logo</Text>
+      <ImageBackground
+        source={require("../../assets/images/campus-map.png")}
+        style={styles.mapBackground}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logoPlaceholder} accessible={false}>
+              <Text style={styles.logoPlaceholderText}>Logo</Text>
+            </View>
+
+            <Image
+              source={require("../../assets/images/wpi-logo.png")}
+              style={styles.wpiLogo}
+              resizeMode="contain"
+              accessible={false}
+            />
           </View>
 
-          <Image
-            source={require("../../assets/images/wpi-logo.png")}
-            style={styles.wpiLogo}
-            resizeMode="contain"
-            accessible={false}
-          />
-        </View>
-
-        {/* Campus Map */}
-        <ImageBackground
-          source={require("../../assets/images/campus-map.png")}
-          style={styles.mapBackground}
-          resizeMode="cover"
-        >
           <View style={styles.presetArea}>
-            
-
             <View style={styles.buttonRow}>
               {/* Standard Mode */}
               <TouchableOpacity
@@ -130,8 +127,8 @@ export default function LandingPage() {
               </TouchableOpacity>
             </View>
           </View>
-        </ImageBackground>
-      </SafeAreaView>
+        </SafeAreaView>
+      </ImageBackground>
     </View>
   );
 }
@@ -144,21 +141,21 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
   },
 
   header: {
-    height: 130,
-    backgroundColor: "#FFFFFF",
+    height: 90,
+    backgroundColor: "rgba(255,255,255,0.55)",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     paddingHorizontal: 28,
   },
 
   logoPlaceholder: {
-    width: 105,
-    height: 105,
+    width: 75,
+    height: 75,
     borderRadius: 18,
     backgroundColor: "#D1D1D1",
     justifyContent: "center",
@@ -172,8 +169,8 @@ const styles = StyleSheet.create({
   },
 
   wpiLogo: {
-    width: 105,
-    height: 105,
+    width: 100,
+    height: 70,
   },
 
   mapBackground: {
