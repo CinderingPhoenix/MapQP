@@ -6,15 +6,7 @@ import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Vibration } from "react-native";
 import buildingData from "../data/wpi-buildings.json";
-import { NavigationPoint, routeBetween, WalkingRoute } from "../utils/routing";
-
-let ExpoSpeechRecognitionModule: any = null;
-try {
-  const speechModule = require("expo-speech-recognition");
-  ExpoSpeechRecognitionModule = speechModule.ExpoSpeechRecognitionModule;
-} catch {
-  console.warn("expo-speech-recognition is not available in this environment.");
-}
+import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
 
 export type Point = {
   latitude: number;
@@ -426,7 +418,6 @@ export function useMapNavigation() {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
     const initializeLocation = async () => {
-      if (ExpoSpeechRecognitionModule?.requestPermissionsAsync) await ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(() => undefined);
       const permissions = await Location.requestForegroundPermissionsAsync();
       if (permissions.status !== "granted") { if (isMounted) setError("Location permission is required to plan a route."); return; }
       subscription = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 250, distanceInterval: 0, mayShowUserSettingsDialog: true }, (location) => {

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { Building, getSimilarityScore } from "../app/map-logic";
+import { Building, getSimilarityScore } from "../utils/map-logic";
 import { useSettings } from "../context/settings-context";
 
 let ExpoSpeechRecognitionModule: any = null;
