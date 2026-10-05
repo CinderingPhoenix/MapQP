@@ -73,13 +73,13 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Navigation Mode */}
-        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>NAVIGATION MODE</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, deviceAccessibility.darkerSystemColorsEnabled && styles.sectionLabelHighContrast, { fontSize: 12 * fontSize }]}>NAVIGATION MODE</Text>
 
-        <View style={styles.settingsCard}>
+        <View style={[styles.settingsCard, deviceAccessibility.darkerSystemColorsEnabled && styles.settingsCardHighContrast]}>
           <View style={styles.optionRow}>
             <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Navigation mode</Text>
 
-            <View style={styles.segmentedControl}>
+            <View style={[styles.segmentedControl, deviceAccessibility.darkerSystemColorsEnabled && styles.segmentedControlHighContrast]}>
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
@@ -91,6 +91,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={1.5}
                   style={[
                     styles.segmentText,
+                    deviceAccessibility.darkerSystemColorsEnabled && styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     navigationMode === "standard" && styles.segmentTextSelected,
                   ]}
@@ -110,6 +111,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={1.5}
                   style={[
                     styles.segmentText,
+                    deviceAccessibility.darkerSystemColorsEnabled && styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     navigationMode === "accessibility" && styles.segmentTextSelected,
                   ]}
@@ -122,13 +124,13 @@ export default function SettingsPage() {
         </View>
 
         {/* Navigation Preferences */}
-        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>NAVIGATION PREFERENCES</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, deviceAccessibility.darkerSystemColorsEnabled && styles.sectionLabelHighContrast, { fontSize: 12 * fontSize }]}>NAVIGATION PREFERENCES</Text>
 
-        <View style={styles.settingsCard}>
+        <View style={[styles.settingsCard, deviceAccessibility.darkerSystemColorsEnabled && styles.settingsCardHighContrast]}>
           <View style={styles.optionRow}>
             <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Distance units</Text>
 
-            <View style={styles.segmentedControl}>
+            <View style={[styles.segmentedControl, deviceAccessibility.darkerSystemColorsEnabled && styles.segmentedControlHighContrast]}>
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
@@ -140,6 +142,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={1.5}
                   style={[
                     styles.segmentText,
+                    deviceAccessibility.darkerSystemColorsEnabled && styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     distanceUnits === "imperial" && styles.segmentTextSelected,
                   ]}
@@ -159,6 +162,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={1.5}
                   style={[
                     styles.segmentText,
+                    deviceAccessibility.darkerSystemColorsEnabled && styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     distanceUnits === "metric" && styles.segmentTextSelected,
                   ]}
@@ -174,7 +178,7 @@ export default function SettingsPage() {
           <View style={styles.optionRow}>
             <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Direction style</Text>
 
-            <View style={styles.segmentedControl}>
+            <View style={[styles.segmentedControl, deviceAccessibility.darkerSystemColorsEnabled && styles.segmentedControlHighContrast]}>
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
@@ -186,6 +190,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={1.5}
                   style={[
                     styles.segmentText,
+                    deviceAccessibility.darkerSystemColorsEnabled && styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     directionStyle === "natural" && styles.segmentTextSelected,
                   ]}
@@ -205,6 +210,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={1.5}
                   style={[
                     styles.segmentText,
+                    deviceAccessibility.darkerSystemColorsEnabled && styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     directionStyle === "degrees" && styles.segmentTextSelected,
                   ]}
@@ -217,14 +223,14 @@ export default function SettingsPage() {
         </View>
 
         {/* Display */}
-        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>DISPLAY</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, deviceAccessibility.darkerSystemColorsEnabled && styles.sectionLabelHighContrast, { fontSize: 12 * fontSize }]}>DISPLAY</Text>
 
-        <View style={styles.settingsCard}>
+        <View style={[styles.settingsCard, deviceAccessibility.darkerSystemColorsEnabled && styles.settingsCardHighContrast]}>
           <View style={styles.sliderRow}>
             <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Text size</Text>
 
             <View style={styles.sliderContainer}>
-              <Text maxFontSizeMultiplier={1.4} style={[styles.smallA, { fontSize: 14 * fontSize }]}>A</Text>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.smallA, deviceAccessibility.darkerSystemColorsEnabled && styles.secondaryTextHighContrast, { fontSize: 14 * fontSize }]}>A</Text>
 
               <View
                 style={styles.slider}
@@ -257,22 +263,22 @@ export default function SettingsPage() {
                 />
               </View>
 
-              <Text maxFontSizeMultiplier={1.4} style={[styles.largeA, { fontSize: 24 * fontSize }]}>A</Text>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.largeA, deviceAccessibility.darkerSystemColorsEnabled && styles.secondaryTextHighContrast, { fontSize: 24 * fontSize }]}>A</Text>
             </View>
 
-            <Text maxFontSizeMultiplier={1.4} style={[styles.fontSizeValue, { fontSize: 12 * fontSize }]}>
+            <Text maxFontSizeMultiplier={1.4} style={[styles.fontSizeValue, deviceAccessibility.darkerSystemColorsEnabled && styles.secondaryTextHighContrast, { fontSize: 12 * fontSize }]}>
               {Math.round(fontSize * 100)}%
             </Text>
           </View>
         </View>
 
         {/* Device Accessibility */}
-        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>DEVICE ACCESSIBILITY</Text>
+        <Text maxFontSizeMultiplier={1.5} style={[styles.sectionLabel, deviceAccessibility.darkerSystemColorsEnabled && styles.sectionLabelHighContrast, { fontSize: 12 * fontSize }]}>DEVICE ACCESSIBILITY</Text>
 
-        <View style={styles.settingsCard}>
+        <View style={[styles.settingsCard, deviceAccessibility.darkerSystemColorsEnabled && styles.settingsCardHighContrast]}>
           <View style={styles.deviceSettingRow}>
             <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Screen reader</Text>
-            <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
+            <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, deviceAccessibility.darkerSystemColorsEnabled && styles.deviceValueHighContrast, { fontSize: 14 * fontSize }]}>
               {deviceAccessibility.screenReaderEnabled ? "On" : "Off"}
             </Text>
           </View>
@@ -281,7 +287,7 @@ export default function SettingsPage() {
 
           <View style={styles.deviceSettingRow}>
             <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Reduce motion</Text>
-            <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
+            <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, deviceAccessibility.darkerSystemColorsEnabled && styles.deviceValueHighContrast, { fontSize: 14 * fontSize }]}>
               {deviceAccessibility.reduceMotionEnabled ? "On" : "Off"}
             </Text>
           </View>
@@ -292,7 +298,7 @@ export default function SettingsPage() {
 
               <View style={styles.deviceSettingRow}>
                 <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Bold text</Text>
-                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, deviceAccessibility.darkerSystemColorsEnabled && styles.deviceValueHighContrast, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.boldTextEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -301,7 +307,7 @@ export default function SettingsPage() {
 
               <View style={styles.deviceSettingRow}>
                 <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Increase contrast</Text>
-                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, deviceAccessibility.darkerSystemColorsEnabled && styles.deviceValueHighContrast, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.darkerSystemColorsEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -310,7 +316,7 @@ export default function SettingsPage() {
 
               <View style={styles.deviceSettingRow}>
                 <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>Reduce transparency</Text>
-                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, deviceAccessibility.darkerSystemColorsEnabled && styles.deviceValueHighContrast, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.reduceTransparencyEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -323,7 +329,7 @@ export default function SettingsPage() {
 
               <View style={styles.deviceSettingRow}>
                 <Text maxFontSizeMultiplier={1.6} style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>High text contrast</Text>
-                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, { fontSize: 14 * fontSize }]}>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.deviceValue, deviceAccessibility.darkerSystemColorsEnabled && styles.deviceValueHighContrast, { fontSize: 14 * fontSize }]}>
                   {deviceAccessibility.highTextContrastEnabled ? "On" : "Off"}
                 </Text>
               </View>
@@ -381,15 +387,18 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 42 },
   scrollContent: { paddingHorizontal: 18, paddingTop: 24, paddingBottom: 40 },
   sectionLabel: { fontSize: 12, fontWeight: "800", color: "#7A7A7A", marginLeft: 6, marginBottom: 8, marginTop: 12, letterSpacing: 0.8 },
-  settingsCard: { backgroundColor: "#FFFFFF", borderRadius: 18, paddingHorizontal: 16, shadowColor: "#000000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 2 },
+  sectionLabelHighContrast: { color: "#111827" },
+  settingsCard: { backgroundColor: "#FFFFFF", borderRadius: 18, paddingHorizontal: 16, shadowColor: "#000000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 2 },  settingsCardHighContrast: { borderWidth: 1.5, borderColor: "#4B5563" },
   settingRow: { minHeight: 88, flexDirection: "row", alignItems: "center", paddingVertical: 14 },
   optionRow: { paddingVertical: 16 },
   settingTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", marginBottom: 4 },
   deviceSettingTitle: { flex: 1, flexShrink: 1 },
   segmentedControl: { flexDirection: "row", backgroundColor: "#F1F2F4", borderRadius: 10, padding: 3, marginTop: 12 },
+  segmentedControlHighContrast: { backgroundColor: "#E1E3E6", borderWidth: 1, borderColor: "#6B7280" },
   segmentButton: { flex: 1, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   segmentButtonSelected: { backgroundColor: "#AC2B37" },
   segmentText: { fontSize: 13, fontWeight: "700", color: "#6B7280" },
+  segmentTextHighContrast: { color: "#111827" },
   segmentTextSelected: { color: "#FFFFFF" },
   sliderRow: { paddingVertical: 18 },
   sliderContainer: { flexDirection: "row", alignItems: "center", marginTop: 14 },
@@ -397,10 +406,12 @@ const styles = StyleSheet.create({
   smallA: { fontSize: 14, fontWeight: "700", color: "#4B5563" },
   largeA: { fontSize: 24, fontWeight: "700", color: "#4B5563" },
   fontSizeValue: { fontSize: 12, fontWeight: "600", color: "#6B7280", textAlign: "center" },
+  secondaryTextHighContrast: { color: "#111827" },
   divider: { height: 1, backgroundColor: "#ECEDEF" },
   footerText: { textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 30 },
   deviceSettingRow: { minHeight: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, gap: 12 },
   deviceValue: { fontSize: 14, fontWeight: "700", color: "#6B7280", flexShrink: 0 },
+  deviceValueHighContrast: { color: "#111827" },
   landingButton: { marginTop: 28, paddingVertical: 14, alignItems: "center" },
   landingButtonText: { color: "#AC2B37", fontSize: 15, fontWeight: "700" },
 });
