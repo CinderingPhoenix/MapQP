@@ -23,9 +23,11 @@ type BuildingPickerProps = {
   onChange: (buildingId: string) => void;
   onCancel: () => void;
   placeholder: string;
+  accessibilityControls?: boolean;
+  onOpenSettings?: () => void;
 };
 
-export default React.memo(function BuildingPicker({ buildings, value, onChange, onCancel, placeholder }: BuildingPickerProps) {
+export default React.memo(function BuildingPicker({ buildings, value, onChange, onCancel, placeholder, accessibilityControls = false, onOpenSettings }: BuildingPickerProps) {
   const { fontSize } = useSettings();
   const textBoxHeight = Math.max(48, 48 * fontSize);
   const selectedBuilding = buildings.find((building) => building.id === value);
@@ -90,11 +92,12 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
         if (Array.isArray(parsed)) setRecentSearchIds(parsed.filter((id): id is string => typeof id === "string"));
       }
     }).catch((storageError) => console.error("Failed to load recent searches:", storageError));
-    return () => {
-      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-      if (isListening) ExpoSpeechRecognitionModule?.stop?.();
-    };
-  }, [isListening]);
+  }, []);
+
+  useEffect(() => () => {
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    ExpoSpeechRecognitionModule?.stop?.();
+  }, []);
 
   useEffect(() => {
     if (!value) setQuery("");
@@ -102,7 +105,7 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
   }, [value, selectedBuilding]);
 
   const handleVoiceSearch = async () => {
-    if (value) return;
+    if (value && !accessibilityControls) return;
     if (!ExpoSpeechRecognitionModule?.isRecognitionAvailable) {
       Alert.alert("Expo Go Limitation", "Voice search requires a custom development build and is disabled inside Expo Go.");
       return;
@@ -121,6 +124,7 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
         setIsListening(false);
         return;
       }
+      if (value) onCancel();
       setQuery("");
       setIsOpen(false);
       setIsListening(true);
@@ -138,14 +142,29 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
   };
   const matchingBuildings = buildings.filter((building) => building.name.toLowerCase().includes(query.trim().toLowerCase()));
 
-  return <View style={styles.container}>
-    <View style={styles.inputWrapper}>
+  return <View style={accessibilityControls ? styles.accessibilityContainer : styles.container}>
+    {accessibilityControls && <View style={styles.accessibilityControls}>
+      <TouchableOpacity style={styles.secondaryControl} onPress={onOpenSettings} accessibilityRole="button" accessibilityLabel="Open settings" activeOpacity={0.75}>
+        <View style={styles.secondaryControlCircle}><Ionicons name="settings-outline" size={27} color="#333" /></View>
+        <Text style={[styles.accessibilityControlLabel, { fontSize: 13 * fontSize }]}>Settings</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.voiceControl, isListening && styles.voiceControlListening]} onPress={() => void handleVoiceSearch()} accessibilityRole="button" accessibilityLabel={isListening ? "Stop voice destination search" : "Search destinations by voice"} activeOpacity={0.8}>
+        <Ionicons name={isListening ? "mic" : "mic-outline"} size={36} color="#fff" />
+        <Text style={[styles.voiceControlLabel, { fontSize: 14 * fontSize }]}>{isListening ? "Listening" : "Speak"}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.secondaryControl} onPress={() => setIsBuildingSelectorOpen(true)} accessibilityRole="button" accessibilityLabel="Choose a destination from the locations list" activeOpacity={0.75}>
+        <View style={styles.secondaryControlCircle}><Ionicons name="list-outline" size={29} color="#333" /></View>
+        <Text style={[styles.accessibilityControlLabel, { fontSize: 13 * fontSize }]}>Locations</Text>
+      </TouchableOpacity>
+    </View>}
+
+    {!accessibilityControls && <View style={styles.inputWrapper}>
       {isListening ? <TouchableOpacity style={[styles.listeningActiveContainer, { height: textBoxHeight }]} onPress={() => { ExpoSpeechRecognitionModule?.stop?.(); setIsListening(false); }}><Ionicons name="mic" size={24 * fontSize} color="#1d5962" /><Text style={[styles.listeningActiveText, { fontSize: 16 * fontSize, lineHeight: 20 * fontSize }]}>Listening...</Text></TouchableOpacity> : <>
         <TouchableOpacity style={[styles.micButton, (value !== "" || query !== "") && styles.micButtonWithClear, value !== "" && { opacity: 0.4 }]} disabled={!!value} onPress={() => void handleVoiceSearch()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Ionicons name="mic-outline" size={20} color="#666" /></TouchableOpacity>
         <TextInput style={[styles.input, { height: textBoxHeight, fontSize: 16 * fontSize, lineHeight: 20 * fontSize }, styles.inputWithMic, (value !== "" || query !== "") && styles.inputWithClear, value !== "" && { backgroundColor: "#f9f9f9", color: "#333" }]} value={query} editable={!value} onChangeText={(text) => { setQuery(text); onChange(""); setIsOpen(text.trim() === "" ? recentBuildings.length > 0 : true); }} onFocus={() => { setIsInputFocused(true); if (!value) setIsOpen(query.trim() !== "" || recentBuildings.length > 0); }} onBlur={() => { blurTimeoutRef.current = setTimeout(() => { setIsOpen(false); setIsInputFocused(false); }, 150); }} onSubmitEditing={() => setIsOpen(false)} placeholder={placeholder} />
         {(value !== "" || query !== "") && <TouchableOpacity style={styles.clearButton} onPress={() => { setQuery(""); setIsOpen(false); onCancel(); Keyboard.dismiss(); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={[styles.cancelButtonText, { fontSize: 18 * fontSize }]}>✕</Text></TouchableOpacity>}
       </>}
-    </View>
+    </View>}
 
     {isInputFocused && !value && <TouchableOpacity style={styles.buildingSelectorButton} onPress={() => { Keyboard.dismiss(); setIsOpen(false); setIsBuildingSelectorOpen(true); }} activeOpacity={0.75}>
       <Ionicons name="list-outline" size={18} color="#1d5962" />
@@ -180,6 +199,14 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
 
 const styles = StyleSheet.create({
   container: { zIndex: 10, position: "relative" },
+  accessibilityContainer: { zIndex: 10, width: "100%" },
+  accessibilityControls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" },
+  secondaryControl: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 82 },
+  secondaryControlCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#f1f3f4", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d9dddf" },
+  accessibilityControlLabel: { color: "#333", fontWeight: "600", marginTop: 4 },
+  voiceControl: { width: 82, height: 82, borderRadius: 41, backgroundColor: "#1d5962", alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.22, shadowRadius: 4 },
+  voiceControlListening: { backgroundColor: "#ac2b37" },
+  voiceControlLabel: { color: "#fff", fontWeight: "700", marginTop: 1 },
   inputWrapper: { position: "relative", justifyContent: "center" },
   input: { height: 48, borderColor: "#ccc", borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, backgroundColor: "#fff", fontSize: 16 },
   inputWithMic: { paddingRight: 40 },
