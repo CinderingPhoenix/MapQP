@@ -2,8 +2,9 @@ import { useAssets } from "expo-asset";
 import { File } from "expo-file-system";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { WebView } from "react-native-webview";
+import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 
 type LocationMapProps = {
   latitude: number;
@@ -13,6 +14,7 @@ type LocationMapProps = {
   accuracy: number;
   heading?: number | null;
   route?: any;
+  directionsExpanded?: boolean;
   recenterSignal?: number;
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
@@ -33,6 +35,7 @@ export default function LocationMap({
   accuracy,
   heading,
   route,
+  directionsExpanded = false,
   recenterSignal,
   onUserDragged,
   onHeadingModeChange,
@@ -43,6 +46,7 @@ export default function LocationMap({
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [htmlContent, setHtmlContent] = useState<string>("");
+  const { screenReaderEnabled } = useDeviceAccessibility();
 
   // Track whether the user has manually dragged away from auto-centering
   const hasUserPannedAwayRef = useRef(false);
@@ -194,6 +198,31 @@ export default function LocationMap({
     }
   }, [recenterSignal]);
 
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
+      if (window.updateDirectionsExpanded) {
+        window.updateDirectionsExpanded(${directionsExpanded}, ${!!route});
+      }
+      true;
+    `);
+  }, [directionsExpanded, route]);
+
+  const handleAccessibleCompass = () => {
+    const nextFocused = !isHeadingFocused;
+
+    hasUserPannedAwayRef.current = false;
+    setIsHeadingFocused(nextFocused);
+    onHeadingModeChange?.(nextFocused);
+    onPanBack?.();
+
+    webViewRef.current?.injectJavaScript(`
+      if (window.setHeadingFocus) {
+        window.setHeadingFocus(${nextFocused});
+      }
+      true;
+    `);
+  };
+
   if (!htmlContent) {
     return <View style={styles.container} />;
   }
@@ -228,7 +257,30 @@ export default function LocationMap({
             onOpenSettings?.();
           }
         }}
-      />
+            />
+
+      {screenReaderEnabled && (
+        <>
+          <TouchableOpacity
+            style={[styles.accessibleControl, styles.accessibleSettings, route && styles.accessibleControlRoute, directionsExpanded && styles.accessibleControlExpanded]}
+            onPress={onOpenSettings}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            accessibilityHint="Opens navigation settings"
+          />
+
+          <TouchableOpacity
+            style={[styles.accessibleControl, styles.accessibleCompass, route && styles.accessibleControlRoute, directionsExpanded && styles.accessibleControlExpanded]}
+            onPress={handleAccessibleCompass}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Compass"
+            accessibilityHint={isHeadingFocused ? "Double tap to turn off heading tracking" : "Double tap to turn on heading tracking"}
+            accessibilityState={{ selected: isHeadingFocused }}
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -236,4 +288,9 @@ export default function LocationMap({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
+  accessibleControl: { position: "absolute", width: 54, height: 54, borderRadius: 27, backgroundColor: "transparent", zIndex: 100 },
+  accessibleSettings: { top: 66, left: 10 },
+  accessibleCompass: { top: 66, right: 22 },
+  accessibleControlRoute: { top: 156 },
+  accessibleControlExpanded: { top: "68%" },
 });

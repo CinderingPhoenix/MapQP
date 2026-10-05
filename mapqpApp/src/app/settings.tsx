@@ -44,6 +44,14 @@ export default function SettingsPage() {
     router.replace("/landing-page");
   };
 
+  const handleFontSizeAccessibilityAction = (event: any) => {
+    if (event.nativeEvent.actionName === "increment") {
+      setFontSize(Math.min(1.8, Math.round((fontSize + 0.1) * 10) / 10));
+    } else if (event.nativeEvent.actionName === "decrement") {
+      setFontSize(Math.max(0.8, Math.round((fontSize - 0.1) * 10) / 10));
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -218,17 +226,36 @@ export default function SettingsPage() {
             <View style={styles.sliderContainer}>
               <Text maxFontSizeMultiplier={1.4} style={[styles.smallA, { fontSize: 14 * fontSize }]}>A</Text>
 
-              <Slider
+              <View
                 style={styles.slider}
-                minimumValue={0.8}
-                maximumValue={1.8}
-                step={0.1}
-                value={fontSize}
-                onValueChange={setFontSize}
-                minimumTrackTintColor="#AC2B37"
-                maximumTrackTintColor="#D1D5DB"
-                thumbTintColor="#AC2B37"
-              />
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel="Text size"
+                accessibilityValue={{
+                  min: 80,
+                  max: 180,
+                  now: Math.round(fontSize * 100),
+                  text: `${Math.round(fontSize * 100)} percent`,
+                }}
+                accessibilityActions={[
+                  { name: "increment" },
+                  { name: "decrement" },
+                ]}
+                onAccessibilityAction={handleFontSizeAccessibilityAction}
+              >
+                <Slider
+                  style={{ flex: 1, height: 40 }}
+                  minimumValue={0.8}
+                  maximumValue={1.8}
+                  step={0.1}
+                  value={fontSize}
+                  onValueChange={setFontSize}
+                  minimumTrackTintColor="#AC2B37"
+                  maximumTrackTintColor="#D1D5DB"
+                  thumbTintColor="#AC2B37"
+                  accessible={false}
+                />
+              </View>
 
               <Text maxFontSizeMultiplier={1.4} style={[styles.largeA, { fontSize: 24 * fontSize }]}>A</Text>
             </View>

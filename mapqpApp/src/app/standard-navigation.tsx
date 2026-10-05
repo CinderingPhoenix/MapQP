@@ -125,6 +125,7 @@ export default function Home() {
           userLongitude={coordinates?.longitude}
           accuracy={coordinates?.accuracy ?? 0}
           route={route}
+          directionsExpanded={directionsExpanded}
           recenterSignal={recenterSignal}
           onUserDragged={() => setShowRecenter(true)}
           onPanBack={() => setShowRecenter(false)}

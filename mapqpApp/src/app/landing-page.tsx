@@ -9,8 +9,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useSettings } from "../context/settings-context";
+import { useLocationWarmup } from "../hooks/use-location-warmup";
 
 export default function LandingPage() {
   useLocationWarmup();
@@ -33,7 +33,7 @@ export default function LandingPage() {
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.logoPlaceholder}>
+          <View style={styles.logoPlaceholder} accessible={false}>
             <Text style={styles.logoPlaceholderText}>Logo</Text>
           </View>
 
@@ -41,6 +41,7 @@ export default function LandingPage() {
             source={require("../../assets/images/wpi-logo.png")}
             style={styles.wpiLogo}
             resizeMode="contain"
+            accessible={false}
           />
         </View>
 
@@ -59,8 +60,12 @@ export default function LandingPage() {
                 style={styles.buttonWrapper}
                 onPress={openStandardNavigation}
                 activeOpacity={0.85}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Standard mode"
+                accessibilityHint="Opens standard campus navigation"
               >
-                <LinearGradient
+                <LinearGradient 
                   colors={[
                     "rgba(255,255,255,0.72)",
                     "rgba(255,255,255,0.97)",
@@ -92,6 +97,10 @@ export default function LandingPage() {
                 style={styles.buttonWrapper}
                 onPress={openAccessibilityNavigation}
                 activeOpacity={0.85}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Accessibility mode"
+                accessibilityHint="Opens accessible campus navigation"
               >
                 <LinearGradient
                   colors={[

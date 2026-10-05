@@ -177,7 +177,9 @@
       var SettingsControl = L.Control.extend({
         options: { position: 'topleft' },
         onAdd: function (map) {
-          var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control settings-control');
+          var container = L.DomUtil.create('button', 'leaflet-bar leaflet-control settings-control');
+          container.type = 'button';
+          container.setAttribute('aria-label', 'Settings');
 
           container.innerHTML =
             '<svg viewBox="0 0 24 24" width="28" height="28" fill="#333">' +
@@ -199,7 +201,10 @@
       var CompassControl = L.Control.extend({
         options: { position: 'topright' },
         onAdd: function (map) {
-          var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control compass-control');
+          var container = L.DomUtil.create('button', 'leaflet-bar leaflet-control compass-control');
+          container.type = 'button';
+          container.setAttribute('aria-label', 'Compass');
+          container.setAttribute('aria-pressed', 'false');
           container.innerHTML = '<div id="compass-icon" class="compass-icon">' +
             '<svg viewBox="0 0 24 24" width="32" height="32">' +
               '<polygon points="12,2 15,12 12,10" fill="#e06b3c" />' +
@@ -213,6 +218,7 @@
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
             isHeadingFocused = !isHeadingFocused;
+            container.setAttribute('aria-pressed', isHeadingFocused ? 'true' : 'false');
             
             if (isHeadingFocused) {
               container.style.backgroundColor = '#d3e3fd'; 
@@ -251,7 +257,10 @@
       var MuteControl = L.Control.extend({
         options: { position: 'topright' },
         onAdd: function (map) {
-          var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control mute-control');
+          var container = L.DomUtil.create('button', 'leaflet-bar leaflet-control mute-control');
+          container.type = 'button';
+          container.setAttribute('aria-label', 'Mute navigation');
+          container.setAttribute('aria-pressed', 'false');
           var isMuted = false;
           
           var volHigh = '<svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
@@ -264,6 +273,8 @@
             L.DomEvent.preventDefault(e);
             isMuted = !isMuted;
             container.innerHTML = isMuted ? volMute : volHigh;
+            container.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
+            container.setAttribute('aria-label', isMuted ? 'Unmute navigation' : 'Mute navigation');
             window.ReactNativeWebView.postMessage('TOGGLE_MUTE');
           });
 
@@ -277,7 +288,10 @@
         if (isHeadingFocused) {
           isHeadingFocused = false;
           var compass = document.querySelector('.compass-control');
-          if (compass) compass.style.backgroundColor = 'white';
+          if (compass) {
+            compass.style.backgroundColor = 'white';
+            compass.setAttribute('aria-pressed', 'false');
+          }
           window.ReactNativeWebView.postMessage('HEADING_UNLOCKED');
         }
         window.ReactNativeWebView.postMessage('USER_DRAGGED');
@@ -316,6 +330,7 @@
       var compass = document.querySelector('.compass-control');
       if (compass) {
         compass.style.backgroundColor = focused ? '#d3e3fd' : 'white';
+        compass.setAttribute('aria-pressed', focused ? 'true' : 'false');
       }
       if (focused && marker && map) {
         map.setView(marker.getLatLng(), 32, { animate: true });
@@ -427,17 +442,31 @@
     /**
      * Dynamically adjusts the vertical position of map control buttons depending on route banner visibility.
      */
+    var directionsExpanded = false;
     function updateControlPositions(hasRoute) {
       var rightControlContainer = document.querySelector('.leaflet-top.leaflet-right');
       var leftControlContainer = document.querySelector('.leaflet-top.leaflet-left');
 
+      var topPosition;
+
+      if (directionsExpanded) {
+        topPosition = '68%';
+      } else {
+        topPosition = hasRoute ? '150px' : '60px';
+      }
+
       if (rightControlContainer) {
-        rightControlContainer.style.top = hasRoute ? '150px' : '60px';
+        rightControlContainer.style.top = topPosition;
       }
 
       if (leftControlContainer) {
-        leftControlContainer.style.top = hasRoute ? '150px' : '60px';
+        leftControlContainer.style.top = topPosition;
       }
     }
+
+    window.updateDirectionsExpanded = function(expanded, hasRoute) {
+      directionsExpanded = expanded;
+      updateControlPositions(hasRoute);
+    };
   </script>
 </body>

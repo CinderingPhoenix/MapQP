@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AccessibilityInfo, Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
@@ -42,7 +42,38 @@ export default function Home() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
   const { distanceUnits, directionStyle, fontSize } = useSettings();
-  const { reduceMotionEnabled, boldTextEnabled, darkerSystemColorsEnabled } = useDeviceAccessibility();
+  const { screenReaderEnabled, reduceMotionEnabled, boldTextEnabled, darkerSystemColorsEnabled } = useDeviceAccessibility();
+  const lastAnnouncedInstruction = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!screenReaderEnabled || !route || !nextStep) {
+      return;
+    }
+
+    const instruction = formatDirectionInstruction(nextStep, directionStyle);
+    const stepKey = `${nextStep.pointIndex}-${instruction}`;
+
+    if (lastAnnouncedInstruction.current === stepKey) {
+      return;
+    }
+
+    lastAnnouncedInstruction.current = stepKey;
+
+    const announcement = formatInstructionWithDistance(
+      instruction,
+      distToNextStepMeters,
+      distanceUnits
+    );
+
+    AccessibilityInfo.announceForAccessibility(announcement);
+  }, [
+    screenReaderEnabled,
+    route,
+    nextStep,
+    directionStyle,
+    distanceUnits,
+    distToNextStepMeters,
+  ]);
 
   useEffect(() => {
     const showEvent =
@@ -138,6 +169,7 @@ export default function Home() {
           userLongitude={coordinates?.longitude}
           accuracy={coordinates?.accuracy ?? 0}
           route={route}
+          directionsExpanded={directionsExpanded}
           recenterSignal={recenterSignal}
           onUserDragged={() => setShowRecenter(true)}
           onPanBack={() => setShowRecenter(false)}
