@@ -13,6 +13,7 @@ type LocationMapProps = {
   accuracy: number;
   heading?: number | null;
   route?: any;
+  accessibilityMode?: boolean;
   recenterSignal?: number;
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
@@ -33,6 +34,7 @@ export default function LocationMap({
   accuracy,
   heading,
   route,
+  accessibilityMode = false,
   recenterSignal,
   onUserDragged,
   onHeadingModeChange,
@@ -73,7 +75,8 @@ export default function LocationMap({
           ${currentMarkerLat}, 
           ${currentMarkerLng}, 
           ${accuracy}, 
-          ${JSON.stringify(route || null)}
+          ${JSON.stringify(route || null)},
+          ${accessibilityMode}
         );
       }
       true;

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
@@ -38,17 +38,7 @@ export default function Home() {
     setShowRecenter,
   } = useMapNavigation();
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const keyboardTranslateY = useRef(new Animated.Value(0)).current;
   const { distanceUnits, directionStyle, fontSize } = useSettings();
-
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const showSub = Keyboard.addListener(showEvent, (event) => { setKeyboardHeight(event.endCoordinates.height); Animated.timing(keyboardTranslateY, { toValue: -(event.endCoordinates.height + 24), duration: event.duration || 175, useNativeDriver: true }).start(); });
-    const hideSub = Keyboard.addListener(hideEvent, (event) => { setKeyboardHeight(0); Animated.timing(keyboardTranslateY, { toValue: 0, duration: event.duration || 200, useNativeDriver: true }).start(); });
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, [keyboardTranslateY]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -81,7 +71,7 @@ export default function Home() {
         </View>
       )}
 
-      <View style={styles.mapCanvas} onStartShouldSetResponderCapture={() => { Keyboard.dismiss(); if (directionsExpanded) setDirectionsExpanded(false); return false; }}>
+      <View style={styles.mapCanvas} onStartShouldSetResponderCapture={() => { if (directionsExpanded) setDirectionsExpanded(false); return false; }}>
         {error ? <View style={styles.loadingContainer}><Text style={{ fontSize: 16 * fontSize }}>{error}</Text></View> : <LocationMap
           latitude={showRecenter ? mapCenter.latitude : (coordinates?.latitude ?? mapCenter.latitude)}
           longitude={showRecenter ? mapCenter.longitude : (coordinates?.longitude ?? mapCenter.longitude)}
@@ -89,6 +79,7 @@ export default function Home() {
           userLongitude={coordinates?.longitude}
           accuracy={coordinates?.accuracy ?? 0}
           route={route}
+          accessibilityMode
           recenterSignal={recenterSignal}
           onUserDragged={() => setShowRecenter(true)}
           onPanBack={() => setShowRecenter(false)}
@@ -98,11 +89,11 @@ export default function Home() {
         />}
       </View>
 
-      <Animated.View style={[styles.plannerPanel, { paddingBottom: keyboardHeight > 0 ? 48 : 40, transform: [{ translateY: keyboardTranslateY }] }]}> 
+      <View style={styles.plannerPanel}>
         {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
-        <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
+        <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." accessibilityControls onOpenSettings={() => router.push("/settings")} />
         {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -121,7 +112,7 @@ const styles = StyleSheet.create({
   directionsList: { flex: 1, marginTop: 4 },
   directionItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
   directionInstruction: { fontSize: 19, fontWeight: "500", color: "#333" },
-  plannerPanel: { position: "absolute", bottom: -16, left: 16, right: 16, zIndex: 10, backgroundColor: "#fff", borderTopLeftRadius: 12, borderTopRightRadius: 12, padding: 16, paddingBottom: 40, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderBottomWidth: 0, borderColor: "#e0e0e0" },
+  plannerPanel: { position: "absolute", bottom: -16, left: 16, right: 16, zIndex: 10, backgroundColor: "#fff", borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 34, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderBottomWidth: 0, borderColor: "#e0e0e0" },
   recenterButton: { position: "absolute", top: -56, right: 0, backgroundColor: "white", padding: 12, borderRadius: 8, elevation: 4, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 4, zIndex: 20 },
   recenterText: { fontWeight: "bold", color: "#333" },
   subText: { fontSize: 16, color: "#555", marginTop: 4 },

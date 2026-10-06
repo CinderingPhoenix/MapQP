@@ -26,6 +26,7 @@ export type Building = {
     latitude: number;
     longitude: number;
     name: string;
+    accessibility: boolean;
   }[];
 };
 
@@ -342,7 +343,7 @@ export function useMapNavigation() {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle } = useSettings();
+  const { distanceUnits, directionStyle, navigationMode } = useSettings();
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
@@ -384,9 +385,28 @@ export function useMapNavigation() {
     setRouteLoading(true);
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const candidates = await Promise.all(selectedBuilding.entrances.map(async (_, index) => {
-        const destination = buildingPoint(selectedBuilding, index);
-        try { return { ...(await routeBetween(origin, destination)), origin, destination }; } catch { return null; }
+      const accessibleOnly = navigationMode === "accessibility";
+      const entrances = selectedBuilding.entrances.filter(
+        (entrance) => !accessibleOnly || entrance.accessibility
+      );
+      if (entrances.length === 0) {
+        throw new Error("This building has no accessible entrance.");
+      }
+      const candidates = await Promise.all(entrances.map(async (entrance) => {
+        const destination = {
+          latitude: entrance.latitude,
+          longitude: entrance.longitude,
+          label: `${selectedBuilding.name} ${entrance.name}`,
+        };
+        try {
+          return {
+            ...(await routeBetween(origin, destination, { accessibleOnly })),
+            origin,
+            destination,
+          };
+        } catch {
+          return null;
+        }
       }));
       if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
       const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
@@ -407,7 +427,7 @@ export function useMapNavigation() {
       setRouteLoading(false);
       isReroutingRef.current = false;
     }
-  }, [coordinates, isAudioMuted, startRoutePreviewCountdown]);
+  }, [coordinates, isAudioMuted, navigationMode, startRoutePreviewCountdown]);
 
   const planRouteRef = useRef(planRoute);
   const currentRouteIndexRef = useRef(currentRouteIndex);
