@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -23,8 +23,8 @@ import {
   makeRedirectUri,
   ResponseType,
   useAuthRequest,
-  useAutoDiscovery,
 } from 'expo-auth-session';
+import type { DiscoveryDocument } from 'expo-auth-session';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
 
@@ -60,7 +60,14 @@ export default function LoadingScreen({
   const [showLogin, setShowLogin] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const loginAttemptedRef = useRef(false);
-  const discovery = useAutoDiscovery(DISCOVERY_ISSUER);
+  const discovery = useMemo<DiscoveryDocument | null>(() => {
+    if (AUTH_CONFIGURATION_MISSING) return null;
+    const issuer = DISCOVERY_ISSUER.replace(/\/$/, '');
+    return {
+      authorizationEndpoint: `${issuer}/oauth2/v2.0/authorize`,
+      tokenEndpoint: `${issuer}/oauth2/v2.0/token`,
+    };
+  }, []);
   const redirectUri = makeRedirectUri({
     scheme: 'mapqpapp',
     path: 'auth',
@@ -265,7 +272,7 @@ export default function LoadingScreen({
             </Text>
             <Pressable
               accessibilityRole="button"
-              disabled={!request}
+              disabled={!request || AUTH_CONFIGURATION_MISSING}
               onPress={() => {
                 loginAttemptedRef.current = true;
                 void promptAsync();
@@ -273,7 +280,7 @@ export default function LoadingScreen({
               style={({ pressed }) => [
                 styles.loginButton,
                 pressed && styles.loginButtonPressed,
-                !request && styles.loginButtonDisabled,
+                (!request || AUTH_CONFIGURATION_MISSING) && styles.loginButtonDisabled,
               ]}
             >
               <Text style={styles.loginButtonText}>Log in with WPI</Text>
