@@ -60,6 +60,7 @@ export default function LoadingScreen({
   const [showLogin, setShowLogin] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const loginAttemptedRef = useRef(false);
+  const exchangeInProgressRef = useRef(false);
   const discovery = useMemo<DiscoveryDocument | null>(() => {
     if (AUTH_CONFIGURATION_MISSING) return null;
     const issuer = DISCOVERY_ISSUER.replace(/\/$/, '');
@@ -120,6 +121,7 @@ export default function LoadingScreen({
   useEffect(() => {
     if (
       AUTH_CONFIGURATION_MISSING ||
+      !loginAttemptedRef.current ||
       response?.type !== 'success' ||
       !response.params.code ||
       !request ||
@@ -134,6 +136,9 @@ export default function LoadingScreen({
       }
       return;
     }
+
+    if (exchangeInProgressRef.current) return;
+    exchangeInProgressRef.current = true;
 
     const exchangeCode = async () => {
       try {
@@ -158,12 +163,14 @@ export default function LoadingScreen({
         setShowLogin(false);
         continueToApp();
       } catch (error) {
-        loginAttemptedRef.current = false;
         console.error('Failed to complete Microsoft login:', error);
         Alert.alert(
           'WPI login failed',
           'The login response could not be verified. Please try again.'
         );
+      } finally {
+        loginAttemptedRef.current = false;
+        exchangeInProgressRef.current = false;
       }
     };
 
