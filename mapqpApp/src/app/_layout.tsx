@@ -1,7 +1,9 @@
 import { Stack } from "expo-router";
 import { SettingsProvider } from "../context/settings-context";
+import { useSessionMonitor } from '../hooks/use-session-monitor';
 
 export default function RootLayout() {
+  useSessionMonitor();
   return (
     <SettingsProvider>
       <Stack

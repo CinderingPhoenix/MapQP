@@ -11,9 +11,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useSettings } from "../context/settings-context";
+import { useAuthGuard } from "../hooks/use-auth-guard";
 
 export default function LandingPage() {
   useLocationWarmup();
+  useAuthGuard();
+  
   const { setNavigationMode, setHasSelectedMode } = useSettings();
 
   const openStandardNavigation = () => {

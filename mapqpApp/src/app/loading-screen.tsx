@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import {
   exchangeCodeAsync,
@@ -27,8 +27,26 @@ import {
 import type { DiscoveryDocument } from 'expo-auth-session';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
+import { useKeyLockout } from '../hooks/use-key-lockout';
 
-const AUTH_STORAGE_KEY = '@mapqp_microsoft_session';
+const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
+const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
+const TEMP_CODE_EXPIRES_AT_KEY = 'mapqp_temp_code_expires_at';
+
+// Strictly read environment variables without fallback address/port
+const SERVER_IP =
+  process.env.EXPO_PUBLIC_SERVER_IP ??
+  Constants.expoConfig?.extra?.SERVER_IP ??
+  process.env.SERVER_IP;
+
+const PORT =
+  process.env.EXPO_PUBLIC_PORT ??
+  Constants.expoConfig?.extra?.PORT ??
+  process.env.PORT;
+
+const IS_SERVER_CONFIGURED = Boolean(SERVER_IP && PORT);
+const API_BASE_URL = IS_SERVER_CONFIGURED ? `http://${SERVER_IP}:${PORT}` : null;
+
 const MICROSOFT_AUTHORITY = Constants.expoConfig?.extra?.AUTHORITY;
 const MICROSOFT_CLIENT_ID = Constants.expoConfig?.extra?.CLIENT_ID;
 const AUTH_CONFIGURATION_MISSING =
@@ -53,14 +71,25 @@ export default function LoadingScreen({
 }: MapQPProps) {
   useLocationWarmup();
   const { hasSelectedMode, navigationMode, settingsLoaded } = useSettings();
+  const {
+    isLockedOut,
+    remainingAttempts,
+    formattedRemainingTime,
+    registerFailedAttempt,
+    registerSuccess,
+  } = useKeyLockout();
+
   const pulseAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0.75)).current;
   const [authLoaded, setAuthLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+
   const loginAttemptedRef = useRef(false);
   const exchangeInProgressRef = useRef(false);
+
   const discovery = useMemo<DiscoveryDocument | null>(() => {
     if (AUTH_CONFIGURATION_MISSING) return null;
     const issuer = DISCOVERY_ISSUER.replace(/\/$/, '');
@@ -69,10 +98,12 @@ export default function LoadingScreen({
       tokenEndpoint: `${issuer}/oauth2/v2.0/token`,
     };
   }, []);
+
   const redirectUri = makeRedirectUri({
     scheme: 'mapqpapp',
     path: 'auth',
   });
+
   const [request, response, promptAsync] = useAuthRequest(
     {
       clientId: MICROSOFT_CLIENT_ID ?? '',
@@ -86,6 +117,7 @@ export default function LoadingScreen({
     },
     discovery
   );
+
   const continueToApp = useCallback(() => {
     if (onFinish) {
       onFinish();
@@ -103,13 +135,47 @@ export default function LoadingScreen({
   const img1 = firstImage ?? require('../../assets/images/wpi-logo.png');
   const img2 = secondImage ?? require('../../assets/images/splash-icon.png');
 
+  // Verify stored sessions (Microsoft OAuth or 6-Character Temp Code) on app startup
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const savedSession = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
-        setIsAuthenticated(Boolean(savedSession));
+        const msSession = await SecureStore.getItemAsync(AUTH_STORAGE_KEY);
+        if (msSession) {
+          setIsAuthenticated(true);
+          setAuthLoaded(true);
+          return;
+        }
+
+        const savedTempCode = await SecureStore.getItemAsync(TEMP_CODE_STORAGE_KEY);
+        if (savedTempCode) {
+          if (!API_BASE_URL) {
+            console.warn('Server configuration missing in .env file. Skipping temp code verification.');
+            setIsAuthenticated(false);
+          } else {
+            try {
+              const res = await fetch(`${API_BASE_URL}/auth/temp-login/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: savedTempCode }),
+              });
+
+              if (res.ok) {
+                setIsAuthenticated(true);
+              } else {
+                await SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY);
+                setIsAuthenticated(false);
+              }
+            } catch (error) {
+              console.error('Failed to verify stored temp code on backend:', error);
+              await SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY);
+              setIsAuthenticated(false);
+            }
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
       } catch (error) {
-        console.error('Failed to load Microsoft session:', error);
+        console.error('Failed to load authentication session:', error);
       } finally {
         setAuthLoaded(true);
       }
@@ -154,7 +220,7 @@ export default function LoadingScreen({
           discovery
         );
 
-        await AsyncStorage.setItem(
+        await SecureStore.setItemAsync(
           AUTH_STORAGE_KEY,
           JSON.stringify(tokenResponse)
         );
@@ -176,6 +242,79 @@ export default function LoadingScreen({
 
     void exchangeCode();
   }, [continueToApp, discovery, redirectUri, request, response]);
+
+  // Handle 6-Character Temp Code submission with lockout protection
+  const handleCodeLogin = async () => {
+    if (isLockedOut || verificationCode.length !== 6 || isVerifyingCode) return;
+
+    if (!API_BASE_URL) {
+      Alert.alert(
+        'Server Configuration Missing',
+        'SERVER_IP and PORT are not defined in the .env file.'
+      );
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/temp-login/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: verificationCode }),
+      });
+
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+
+        // Calculate absolute epoch milliseconds expiration time
+        const now = Date.now();
+        let expiresAtMs: number;
+
+        if (data.expires_at) {
+          expiresAtMs = new Date(data.expires_at).getTime();
+        } else if (data.expires_in) {
+          expiresAtMs = now + Number(data.expires_in) * 1000;
+        } else {
+          // Fallback default duration (1 hour)
+          expiresAtMs = now + 60 * 60 * 1000;
+        }
+
+        await Promise.all([
+          SecureStore.setItemAsync(TEMP_CODE_STORAGE_KEY, verificationCode),
+          SecureStore.setItemAsync(TEMP_CODE_EXPIRES_AT_KEY, expiresAtMs.toString()),
+        ]);
+
+        await registerSuccess();
+        setIsAuthenticated(true);
+        setShowLogin(false);
+        continueToApp();
+      } else {
+        const { lockedOut, remaining } = await registerFailedAttempt();
+        const errorData = await res.json().catch(() => ({}));
+
+        if (lockedOut) {
+          Alert.alert(
+            'Account Locked',
+            'You have entered 5 incorrect codes. Please wait 15 minutes before trying again.'
+          );
+        } else {
+          Alert.alert(
+            'Login Failed',
+            `${errorData.detail ?? 'Invalid or expired temporary login code.'}\nYou have ${remaining} ${remaining === 1 ? 'attempt' : 'attempts'} remaining.`
+          );
+        }
+      }
+    } catch (error) {
+      Alert.alert(
+        'Connection Error',
+        `Unable to reach backend server at ${API_BASE_URL}. Ensure the server is running and accessible.`
+      );
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
 
   useEffect(() => {
     // Pulse animation loop
@@ -210,8 +349,7 @@ export default function LoadingScreen({
 
     pulseLoop.start();
 
-    // Trigger redirection upon completion
-    if (!settingsLoaded || !authLoaded || AUTH_CONFIGURATION_MISSING) {
+    if (!settingsLoaded || !authLoaded) {
       return () => {
         pulseLoop.stop();
       };
@@ -275,7 +413,7 @@ export default function LoadingScreen({
           <View style={styles.loginCard}>
             <Text style={styles.loginTitle}>WPI login required</Text>
             <Text style={styles.loginMessage}>
-              Sign in with your WPI Microsoft account to continue.
+              Sign in with your WPI Microsoft account or enter a temporary code to continue.
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -292,34 +430,54 @@ export default function LoadingScreen({
             >
               <Text style={styles.loginButtonText}>Log in with WPI</Text>
             </Pressable>
+
             <Text style={styles.orText}>Or enter your 6-character code</Text>
+            
             <TextInput
               accessibilityLabel="WPI six-character code"
               autoCapitalize="characters"
               autoCorrect={false}
+              editable={!isLockedOut}
               maxLength={6}
               onChangeText={(text) =>
                 setVerificationCode(text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())
               }
-              placeholder="ABC123"
-              style={styles.codeInput}
+              placeholder={isLockedOut ? 'LOCKED' : 'ABC123'}
+              style={[
+                styles.codeInput,
+                isLockedOut && styles.codeInputDisabled,
+              ]}
               value={verificationCode}
             />
+
+            {isLockedOut ? (
+              <Text style={styles.lockoutText}>
+                Too many incorrect attempts. Try again in {formattedRemainingTime}
+              </Text>
+            ) : (
+              remainingAttempts < 5 && (
+                <Text style={styles.attemptsText}>
+                  Attempts remaining: {remainingAttempts}
+                </Text>
+              )
+            )}
+
             <Pressable
               accessibilityRole="button"
-              disabled={verificationCode.length !== 6}
-              onPress={() =>
-                Alert.alert(
-                  'Code login unavailable',
-                  'A WPI code verification service is not configured yet. Use WPI login instead.'
-                )
-              }
-              style={[
+              disabled={verificationCode.length !== 6 || isVerifyingCode || isLockedOut}
+              onPress={handleCodeLogin}
+              style={({ pressed }) => [
                 styles.codeButton,
-                verificationCode.length !== 6 && styles.codeButtonDisabled,
+                (verificationCode.length !== 6 || isVerifyingCode || isLockedOut) &&
+                  styles.codeButtonDisabled,
+                pressed && styles.codeButtonPressed,
               ]}
             >
-              <Text style={styles.codeButtonText}>Continue with code</Text>
+              {isVerifyingCode ? (
+                <ActivityIndicator size="small" color="#1464A5" />
+              ) : (
+                <Text style={styles.codeButtonText}>Continue with code</Text>
+              )}
             </Pressable>
           </View>
         </KeyboardAvoidingView>
@@ -337,7 +495,7 @@ export default function LoadingScreen({
         </View>
       )}
 
-      {showSpinner && !showLogin && !AUTH_CONFIGURATION_MISSING && (
+      {showSpinner && !showLogin && (
         <View style={styles.spinnerWrapper}>
           <ActivityIndicator size="small" color="#1A1A1A" />
         </View>
@@ -444,6 +602,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     textAlign: 'center',
   },
+  codeInputDisabled: {
+    backgroundColor: '#F3F3F3',
+    borderColor: '#D0D0D0',
+    color: '#A0A0A0',
+  },
+  lockoutText: {
+    color: '#D9534F',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  attemptsText: {
+    color: '#888888',
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
+  },
   codeButton: {
     alignItems: 'center',
     borderColor: '#1464A5',
@@ -451,6 +627,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 12,
     paddingVertical: 12,
+  },
+  codeButtonPressed: {
+    opacity: 0.8,
   },
   codeButtonDisabled: {
     borderColor: '#B8B8B8',

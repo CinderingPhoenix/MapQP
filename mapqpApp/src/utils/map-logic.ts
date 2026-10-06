@@ -1,5 +1,5 @@
 import { useSettings } from "@/context/settings-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
@@ -74,7 +74,7 @@ type RouteCandidate = WalkingRoute & {
 const BASE_MAX_SAMPLE_AGE_MS = 20_000;
 const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
-const LAST_LOCATION_STORAGE_KEY = "@wpi_map_last_location";
+const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
 export const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"),
@@ -350,7 +350,7 @@ export function useMapNavigation() {
   useEffect(() => { routeGeometryRef.current = route?.geometry ?? null; }, [route]);
 
   useEffect(() => {
-    AsyncStorage.getItem(LAST_LOCATION_STORAGE_KEY).then((savedLocation) => {
+    SecureStore.getItemAsync(LAST_LOCATION_STORAGE_KEY).then((savedLocation) => {
       if (!savedLocation || initialLocationSet.current) return;
       const parsed = JSON.parse(savedLocation);
       if (parsed.latitude && parsed.longitude) setMapCenter({ latitude: parsed.latitude, longitude: parsed.longitude });
@@ -456,7 +456,7 @@ export function useMapNavigation() {
         const displayedCoordinates = { ...processed, latitude: displayLat, longitude: displayLng };
         setCoordinates(displayedCoordinates);
         if (!showRecenterRef.current) setMapCenter({ latitude: displayLat, longitude: displayLng });
-        AsyncStorage.setItem(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
         if (newRouteIndex !== currentRouteIndexRef.current) setCurrentRouteIndex(newRouteIndex);
         if (!initialLocationSet.current) { setMapCenter({ latitude: displayLat, longitude: displayLng }); initialLocationSet.current = true; }
         if (routeGeometryRef.current && !isReroutingRef.current && destinationBuildingRef.current) {

@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import {
     createContext,
     ReactNode,
@@ -28,7 +28,7 @@ type SettingsContextType = AppSettings & {
   settingsLoaded: boolean;
 };
 
-const SETTINGS_STORAGE_KEY = "@mapqp_settings";
+const SETTINGS_STORAGE_KEY = "mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
   navigationMode: "standard",
@@ -66,7 +66,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedSettings = await AsyncStorage.getItem(
+        const savedSettings = await SecureStore.getItemAsync(
           SETTINGS_STORAGE_KEY
         );
 
@@ -132,7 +132,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           fontSize,
         };
 
-        await AsyncStorage.setItem(
+        await SecureStore.setItemAsync(
           SETTINGS_STORAGE_KEY,
           JSON.stringify(settings)
         );

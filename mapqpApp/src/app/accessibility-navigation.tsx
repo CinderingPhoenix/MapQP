@@ -16,9 +16,11 @@ import {
   getSegmentDistance,
   useMapNavigation,
 } from "../utils/map-logic";
+import { useAuthGuard } from "../hooks/use-auth-guard";
 
 export default function Home() {
   useKeepAwake();
+  useAuthGuard();
 
   const {
     coordinates,
