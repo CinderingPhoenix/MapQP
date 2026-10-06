@@ -59,6 +59,7 @@ export default function LoadingScreen({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const loginAttemptedRef = useRef(false);
   const discovery = useAutoDiscovery(DISCOVERY_ISSUER);
   const redirectUri = makeRedirectUri({
     scheme: 'mapqpapp',
@@ -117,7 +118,8 @@ export default function LoadingScreen({
       !request ||
       !discovery
     ) {
-      if (response?.type === 'error') {
+      if (response?.type === 'error' && loginAttemptedRef.current) {
+        loginAttemptedRef.current = false;
         Alert.alert(
           'WPI login failed',
           response.error?.message ?? 'Microsoft could not complete the login.'
@@ -144,10 +146,12 @@ export default function LoadingScreen({
           AUTH_STORAGE_KEY,
           JSON.stringify(tokenResponse)
         );
+        loginAttemptedRef.current = false;
         setIsAuthenticated(true);
         setShowLogin(false);
         continueToApp();
       } catch (error) {
+        loginAttemptedRef.current = false;
         console.error('Failed to complete Microsoft login:', error);
         Alert.alert(
           'WPI login failed',
@@ -262,7 +266,10 @@ export default function LoadingScreen({
             <Pressable
               accessibilityRole="button"
               disabled={!request}
-              onPress={() => void promptAsync()}
+              onPress={() => {
+                loginAttemptedRef.current = true;
+                void promptAsync();
+              }}
               style={({ pressed }) => [
                 styles.loginButton,
                 pressed && styles.loginButtonPressed,
