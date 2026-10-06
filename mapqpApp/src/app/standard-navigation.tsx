@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useKeepAwake } from "expo-keep-awake";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +18,8 @@ import {
 } from "../utils/map-logic";
 
 export default function Home() {
+  useKeepAwake();
+
   const {
     coordinates,
     mapCenter,
