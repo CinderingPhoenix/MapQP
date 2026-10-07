@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { Building, getSimilarityScore } from "../utils/map-logic";
 import { useSettings } from "../context/settings-context";
@@ -15,7 +15,7 @@ try {
   console.warn("expo-speech-recognition is not available in this environment.");
 }
 
-const RECENT_SEARCHES_STORAGE_KEY = "@wpi_map_recent_searches";
+const RECENT_SEARCHES_STORAGE_KEY = "wpi_map_recent_searches";
 
 type BuildingPickerProps = {
   buildings: Building[];
@@ -44,7 +44,7 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
   const saveRecentSearch = useCallback(async (buildingId: string) => {
     const updated = [buildingId, ...recentSearchIds.filter((id) => id !== buildingId)].slice(0, 5);
     setRecentSearchIds(updated);
-    await AsyncStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(updated));
+    await SecureStore.setItemAsync(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(updated));
   }, [recentSearchIds]);
 
   const selectBuilding = useCallback((building: Building) => {
@@ -86,7 +86,7 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
   });
 
   useEffect(() => {
-    AsyncStorage.getItem(RECENT_SEARCHES_STORAGE_KEY).then((valueFromStorage) => {
+    SecureStore.getItemAsync(RECENT_SEARCHES_STORAGE_KEY).then((valueFromStorage) => {
       if (valueFromStorage) {
         const parsed: unknown = JSON.parse(valueFromStorage);
         if (Array.isArray(parsed)) setRecentSearchIds(parsed.filter((id): id is string => typeof id === "string"));
@@ -138,7 +138,7 @@ export default React.memo(function BuildingPicker({ buildings, value, onChange, 
 
   const clearRecentSearches = async () => {
     setRecentSearchIds([]);
-    await AsyncStorage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
+    await SecureStore.deleteItemAsync(RECENT_SEARCHES_STORAGE_KEY);
   };
   const matchingBuildings = buildings.filter((building) => building.name.toLowerCase().includes(query.trim().toLowerCase()));
 

@@ -9,11 +9,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
+import { useAuthGuard } from "../hooks/use-auth-guard";
+
+const KEYS_TO_DELETE = [
+  "mapqp_microsoft_session",
+  "mapqp_temp_code_session",
+  "mapqp_temp_code_expires_at",
+  "wpi_map_last_location",
+];
 
 export default function SettingsPage() {
+  useAuthGuard();
   const {
     navigationMode,
     setNavigationMode,
@@ -55,7 +64,9 @@ export default function SettingsPage() {
           onPress: () => {
             void (async () => {
               try {
-                await AsyncStorage.clear();
+                await Promise.all(
+                  KEYS_TO_DELETE.map((key) => SecureStore.deleteItemAsync(key))
+                );
                 setNavigationMode("standard");
                 setHasSelectedMode(false);
                 setDistanceUnits("imperial");

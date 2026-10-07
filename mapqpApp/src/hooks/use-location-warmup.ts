@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import * as Location from "expo-location";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
-const LAST_LOCATION_STORAGE_KEY = "@wpi_map_last_location";
+const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
 let ExpoSpeechRecognitionModule: { requestPermissionsAsync?: () => Promise<unknown> } | null = null;
 try {
@@ -30,7 +30,7 @@ export function useLocationWarmup(): void {
             },
             (location) => {
               if (!isMounted) return;
-              AsyncStorage.setItem(
+              SecureStore.setItemAsync(
                 LAST_LOCATION_STORAGE_KEY,
                 JSON.stringify({
                   latitude: location.coords.latitude,
