@@ -1,4 +1,5 @@
 {
+  "version": "1.0",
   "nodes": [
     {"id":"quad-center","latitude":42.273833,"longitude":-71.8098},
     {"id":"quad-rec-harrington","latitude":42.274122,"longitude":-71.810023},

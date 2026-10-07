@@ -1,13 +1,15 @@
 import { router } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { File, Paths } from "expo-file-system";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
 import { useSettings } from "../context/settings-context";
 import {
-  WPI_BUILDINGS,
+  Building,
+  parseBuildingData,
   formatDirectionInstruction,
   formatDistance,
   formatDuration,
@@ -16,12 +18,56 @@ import {
   getSegmentDistance,
   useMapNavigation,
 } from "../utils/map-logic";
+import { initRoutingGraph } from "../utils/routing";
 import { useAuthGuard } from "../hooks/use-auth-guard";
+
+import defaultRoutePoints from "../data/route-points.json";
+import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
   useKeepAwake();
   useAuthGuard();
 
+  // --- Dynamic Map Data State ---
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [isMapDataLoaded, setIsMapDataLoaded] = useState(false);
+  const [dataError, setDataError] = useState("");
+
+  useEffect(() => {
+    async function loadLocalMapData() {
+      try {
+        let routeData = defaultRoutePoints;
+        let buildingData = defaultBuildings;
+
+        const routeFile = new File(Paths.document, "route-points.json");
+        const buildingsFile = new File(Paths.document, "wpi-buildings.json");
+
+        if (routeFile.exists) {
+          const routeContent = await routeFile.text();
+          routeData = JSON.parse(routeContent);
+        }
+
+        if (buildingsFile.exists) {
+          const buildingContent = await buildingsFile.text();
+          buildingData = JSON.parse(buildingContent);
+        }
+
+        // Initialize the in-memory graph with local/cached data
+        initRoutingGraph(routeData, buildingData);
+        
+        // Parse and save the buildings to state
+        setBuildings(parseBuildingData(buildingData));
+        setIsMapDataLoaded(true);
+      } catch (err) {
+        setDataError(err instanceof Error ? err.message : "Error loading map data");
+        console.error("Map Data Load Error:", err);
+      }
+    }
+    
+    loadLocalMapData();
+  }, []);
+
+  // Pass dynamic buildings array to the hook
   const {
     coordinates,
     mapCenter,
@@ -41,7 +87,8 @@ export default function Home() {
     handleCancelRoute,
     handleRecenter,
     setShowRecenter,
-  } = useMapNavigation();
+  } = useMapNavigation(buildings);
+
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
@@ -50,10 +97,31 @@ export default function Home() {
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const showSub = Keyboard.addListener(showEvent, (event) => { setKeyboardHeight(event.endCoordinates.height); Animated.timing(keyboardTranslateY, { toValue: -(event.endCoordinates.height + 24), duration: event.duration || 175, useNativeDriver: true }).start(); });
-    const hideSub = Keyboard.addListener(hideEvent, (event) => { setKeyboardHeight(0); Animated.timing(keyboardTranslateY, { toValue: 0, duration: event.duration || 200, useNativeDriver: true }).start(); });
+    const showSub = Keyboard.addListener(showEvent, (event) => { 
+      setKeyboardHeight(event.endCoordinates.height); 
+      Animated.timing(keyboardTranslateY, { toValue: -(event.endCoordinates.height + 24), duration: event.duration || 175, useNativeDriver: true }).start(); 
+    });
+    const hideSub = Keyboard.addListener(hideEvent, (event) => { 
+      setKeyboardHeight(0); 
+      Animated.timing(keyboardTranslateY, { toValue: 0, duration: event.duration || 200, useNativeDriver: true }).start(); 
+    });
     return () => { showSub.remove(); hideSub.remove(); };
   }, [keyboardTranslateY]);
+
+  if (!isMapDataLoaded) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        {dataError ? (
+          <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color="#1d5962" />
+            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: "#555" }}>Loading campus data...</Text>
+          </>
+        )}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,7 +173,8 @@ export default function Home() {
 
       <Animated.View style={[styles.plannerPanel, { paddingBottom: keyboardHeight > 0 ? 48 : 40, transform: [{ translateY: keyboardTranslateY }] }]}> 
         {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
-        <BuildingPicker buildings={WPI_BUILDINGS} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
+        {/* Pass dynamic buildings array to the picker */}
+        <BuildingPicker buildings={buildings} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." />
         {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>
     </SafeAreaView>

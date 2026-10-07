@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { File, Paths } from 'expo-file-system';
 import Constants from 'expo-constants';
 import {
   exchangeCodeAsync,
@@ -25,6 +26,8 @@ import {
   useAuthRequest,
 } from 'expo-auth-session';
 import type { DiscoveryDocument } from 'expo-auth-session';
+
+import defaultRoutePoints from '../data/route-points.json';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
 import { useKeyLockout } from '../hooks/use-key-lockout';
@@ -134,6 +137,44 @@ export default function LoadingScreen({
 
   const img1 = firstImage ?? require('../../assets/images/wpi-logo.png');
   const img2 = secondImage ?? require('../../assets/images/splash-icon.png');
+
+  // Sync route-points.json and wpi-buildings.json together on initial load
+  useEffect(() => {
+    const syncMapData = async () => {
+      if (!API_BASE_URL) return;
+
+      try {
+        const routeFile = new File(Paths.document, 'route-points.json');
+        const buildingsFile = new File(Paths.document, 'wpi-buildings.json');
+
+        let currentVersion = defaultRoutePoints.version ? parseFloat(defaultRoutePoints.version) : 0;
+
+        if (routeFile.exists) {
+          const existingContent = await routeFile.text();
+          const parsed = JSON.parse(existingContent);
+          if (parsed.version) {
+            currentVersion = parseFloat(parsed.version);
+          }
+        }
+
+        const res = await fetch(`${API_BASE_URL}/route-points?version=${currentVersion}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.update_required && data.route_points) {
+            routeFile.write(JSON.stringify(data.route_points, null, 2));
+
+            if (data.wpi_buildings) {
+              buildingsFile.write(JSON.stringify(data.wpi_buildings, null, 2));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing map data files:', error);
+      }
+    };
+
+    void syncMapData();
+  }, []);
 
   // Verify stored sessions (Microsoft OAuth or 6-Character Temp Code) on app startup
   useEffect(() => {
