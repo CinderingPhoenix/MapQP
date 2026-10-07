@@ -38,14 +38,19 @@ const TEMP_CODE_EXPIRES_AT_KEY = 'mapqp_temp_code_expires_at';
 
 // Strictly read environment variables without fallback address/port
 const SERVER_IP =
-  process.env.EXPO_PUBLIC_SERVER_IP ??
+  process.env.SERVER_IP ??
   Constants.expoConfig?.extra?.SERVER_IP ??
   process.env.SERVER_IP;
 
 const PORT =
-  process.env.EXPO_PUBLIC_PORT ??
+  process.env.PUBLIC_PORT ??
   Constants.expoConfig?.extra?.PORT ??
   process.env.PORT;
+
+const SECRET_KEY =
+  process.env.SECRET_KEY ??
+  Constants.expoConfig?.extra?.SECRET_KEY ??
+  process.env.SECRET_KEY;
 
 const IS_SERVER_CONFIGURED = Boolean(SERVER_IP && PORT);
 const API_BASE_URL = IS_SERVER_CONFIGURED ? `http://${SERVER_IP}:${PORT}` : null;
@@ -157,7 +162,12 @@ export default function LoadingScreen({
           }
         }
 
-        const res = await fetch(`${API_BASE_URL}/route-points?version=${currentVersion}`);
+        const res = await fetch(`${API_BASE_URL}/route-points?version=${currentVersion}`, {
+          headers: {
+            ...(SECRET_KEY ? { SECRET_KEY } : {}),
+          },
+        });
+        
         if (res.ok) {
           const data = await res.json();
           if (data.update_required && data.route_points) {
