@@ -659,6 +659,8 @@ export default React.memo(function BuildingPicker({
                 {(value !== "" || query !== "") && (
                   <TouchableOpacity
                     style={styles.actionIconButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear destination"
                     onPress={() => {
                       setQuery("");
                       setIsOpen(false);
@@ -778,6 +780,9 @@ export default React.memo(function BuildingPicker({
                   </Text>
 
                   <TouchableOpacity
+                    style={{ minHeight: 48, minWidth: 48, alignItems: "center", justifyContent: "center" }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear recent searches"
                     onPress={() =>
                       void clearRecentSearches()
                     }
@@ -841,6 +846,9 @@ export default React.memo(function BuildingPicker({
             </Text>
 
             <TouchableOpacity
+              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+              accessibilityRole="button"
+              accessibilityLabel="Close building selector"
               onPress={() => {
                 setIsBuildingSelectorOpen(false);
                 setShowSavedOnly(false);
@@ -1023,7 +1031,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   inputPadded: {
-    paddingRight: 96,
+    paddingRight: 132,
   },
   inputRightActions: {
     position: "absolute",
@@ -1034,6 +1042,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionIconButton: {
+    minWidth: 44,
+    minHeight: 48,
     paddingHorizontal: 6,
     paddingVertical: 8,
     justifyContent: "center",
@@ -1088,7 +1098,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   buildingSelectorButton: {
-    minHeight: 42,
+    minHeight: 48,
     paddingVertical: 10,
     marginTop: 8,
     borderWidth: 1,
@@ -1123,6 +1133,7 @@ const styles = StyleSheet.create({
   },
   buildingRowMain: {
     flex: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
@@ -1137,6 +1148,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   starIconButton: {
+    minWidth: 48,
+    minHeight: 48,
     padding: 8,
     justifyContent: "center",
     alignItems: "center",
@@ -1185,6 +1198,7 @@ const styles = StyleSheet.create({
   },
   modalTab: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",

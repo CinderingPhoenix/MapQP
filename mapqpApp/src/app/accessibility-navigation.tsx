@@ -1,3 +1,5 @@
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 
 import { router } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
@@ -13,6 +15,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -36,6 +39,17 @@ export default function Home() {
   useKeepAwake();
   useAuthGuard();
   const { fontScale } = useWindowDimensions();
+  const [textRefresh, setTextRefresh] = useState(0);
+
+  // iOS can retain stale native text measurements after returning from Settings.
+  // Refresh only Text elements, not the map/navigation component state.
+  useFocusEffect(
+    useCallback(() => {
+      setTextRefresh((previous) => previous + 1);
+      const currentScale = Dimensions.get("window").fontScale;
+      console.log("[MapQP Dynamic Type] screen focus", { fontScale, currentScale });
+    }, [fontScale])
+  );
 
   const {
     coordinates,
@@ -182,7 +196,7 @@ export default function Home() {
                 accessibilityLabel="Upcoming directions"
                 accessibilityHint="Double tap to collapse the directions list"
               >
-                <Text key={`text-${fontSize}-${fontScale}`}
+                <Text key={`nav-text-1-${fontSize}-${fontScale}-${textRefresh}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.boldText,
@@ -195,7 +209,7 @@ export default function Home() {
                   Upcoming Directions
                 </Text>
 
-                <Text key={`text-${fontSize}-${fontScale}`}
+                <Text key={`nav-text-2-${fontSize}-${fontScale}-${textRefresh}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.collapseHint,
@@ -247,7 +261,7 @@ export default function Home() {
                         },
                       ]}
                     >
-                      <Text key={`text-${fontSize}-${fontScale}`}
+                      <Text key={`nav-text-3-${fontSize}-${fontScale}-${textRefresh}`}
                         maxFontSizeMultiplier={2.5}
                         style={[
                           styles.directionInstruction,
@@ -284,7 +298,7 @@ export default function Home() {
                       },
                     ]}
                   >
-                    <Text key={`text-${fontSize}-${fontScale}`}
+                    <Text key={`nav-text-4-${fontSize}-${fontScale}-${textRefresh}`}
                       maxFontSizeMultiplier={2.5}
                       style={[
                         styles.directionInstruction,
@@ -306,7 +320,7 @@ export default function Home() {
                 onPress={() => setDirectionsExpanded(false)}
                 activeOpacity={0.7}
               >
-                <Text key={`text-${fontSize}-${fontScale}`}
+                <Text key={`nav-text-5-${fontSize}-${fontScale}-${textRefresh}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.subText,
@@ -331,6 +345,7 @@ export default function Home() {
           ) : (
             <TouchableOpacity
               onPress={() => setDirectionsExpanded(true)}
+              style={{ minHeight: 48, justifyContent: "center" }}
               activeOpacity={0.7}
               accessible
               accessibilityRole="button"
@@ -348,7 +363,7 @@ export default function Home() {
               }
               accessibilityHint="Double tap to show all upcoming directions"
             >
-              <Text key={`text-${fontSize}-${fontScale}`}
+              <Text key={`nav-text-6-${fontSize}-${fontScale}-${textRefresh}`}
                 accessible={false}
                 maxFontSizeMultiplier={2.5}
                 style={[
@@ -371,7 +386,7 @@ export default function Home() {
                   : "Follow route"}
               </Text>
 
-              <Text key={`text-${fontSize}-${fontScale}`}
+              <Text key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`}
                 accessible={false}
                 maxFontSizeMultiplier={2.5}
                 style={[
@@ -424,7 +439,7 @@ export default function Home() {
       >
         {error ? (
           <View style={styles.loadingContainer}>
-            <Text key={`text-${fontSize}-${fontScale}`}
+            <Text key={`nav-text-8-${fontSize}-${fontScale}-${textRefresh}`}
               maxFontSizeMultiplier={2.5}
               style={{ fontSize: 16 * fontSize, color: increasedContrast ? "#111" : "#333", fontWeight: emphasizedText ? "bold" : "normal" }}
             >
@@ -485,7 +500,7 @@ export default function Home() {
             accessibilityLabel="Recenter map"
             accessibilityHint="Moves the map back to your current location"
           >
-            <Text key={`text-${fontSize}-${fontScale}`}
+            <Text key={`nav-text-9-${fontSize}-${fontScale}-${textRefresh}`}
               accessible={false}
               maxFontSizeMultiplier={2.5}
               style={[
@@ -514,7 +529,7 @@ export default function Home() {
         />
 
         {routeError !== "" && (
-          <Text key={`text-${fontSize}-${fontScale}`}
+          <Text key={`nav-text-10-${fontSize}-${fontScale}-${textRefresh}`}
             maxFontSizeMultiplier={2.5}
             style={[
               styles.errorText,
@@ -586,6 +601,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   expandedHeader: {
+    minHeight: 48,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -638,6 +654,10 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
   },
   recenterButton: {
+    minHeight: 48,
+    minWidth: 48,
+    alignItems: "center",
+    justifyContent: "center",
     position: "absolute",
     top: -56,
     right: 0,
