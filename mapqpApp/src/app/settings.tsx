@@ -42,6 +42,9 @@ export default function SettingsPage() {
   } = useSettings();
 
   const deviceAccessibility = useDeviceAccessibility();
+  const increasedContrast =
+    deviceAccessibility.darkerSystemColorsEnabled ||
+    deviceAccessibility.highTextContrastEnabled;
 
   const changeNavigationMode = (
     mode: "standard" | "accessibility"
@@ -184,7 +187,7 @@ export default function SettingsPage() {
           accessibilityRole="header"
           style={[
             styles.sectionLabel,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.sectionLabelHighContrast,
             { fontSize: 12 * fontSize },
           ]}
@@ -195,7 +198,7 @@ export default function SettingsPage() {
         <View
           style={[
             styles.settingsCard,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.settingsCardHighContrast,
           ]}
         >
@@ -214,7 +217,7 @@ export default function SettingsPage() {
             <View
               style={[
                 styles.segmentedControl,
-                deviceAccessibility.darkerSystemColorsEnabled &&
+                increasedContrast &&
                   styles.segmentedControlHighContrast,
               ]}
             >
@@ -239,7 +242,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     navigationMode === "standard" &&
@@ -271,7 +274,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     navigationMode === "accessibility" &&
@@ -291,7 +294,7 @@ export default function SettingsPage() {
           accessibilityRole="header"
           style={[
             styles.sectionLabel,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.sectionLabelHighContrast,
             { fontSize: 12 * fontSize },
           ]}
@@ -302,7 +305,7 @@ export default function SettingsPage() {
         <View
           style={[
             styles.settingsCard,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.settingsCardHighContrast,
           ]}
         >
@@ -320,7 +323,7 @@ export default function SettingsPage() {
             <View
               style={[
                 styles.segmentedControl,
-                deviceAccessibility.darkerSystemColorsEnabled &&
+                increasedContrast &&
                   styles.segmentedControlHighContrast,
               ]}
             >
@@ -345,7 +348,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     distanceUnits === "imperial" &&
@@ -375,7 +378,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     distanceUnits === "metric" &&
@@ -404,7 +407,7 @@ export default function SettingsPage() {
             <View
               style={[
                 styles.segmentedControl,
-                deviceAccessibility.darkerSystemColorsEnabled &&
+                increasedContrast &&
                   styles.segmentedControlHighContrast,
               ]}
             >
@@ -429,7 +432,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     directionStyle === "natural" &&
@@ -461,7 +464,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.segmentTextHighContrast,
                     { fontSize: 13 * fontSize },
                     directionStyle === "degrees" &&
@@ -481,7 +484,7 @@ export default function SettingsPage() {
           accessibilityRole="header"
           style={[
             styles.sectionLabel,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.sectionLabelHighContrast,
             { fontSize: 12 * fontSize },
           ]}
@@ -492,7 +495,7 @@ export default function SettingsPage() {
         <View
           style={[
             styles.settingsCard,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.settingsCardHighContrast,
           ]}
         >
@@ -513,7 +516,7 @@ export default function SettingsPage() {
                 accessible={false}
                 style={[
                   styles.smallA,
-                  deviceAccessibility.darkerSystemColorsEnabled &&
+                  increasedContrast &&
                     styles.secondaryTextHighContrast,
                   { fontSize: 14 * fontSize },
                 ]}
@@ -560,7 +563,7 @@ export default function SettingsPage() {
                 accessible={false}
                 style={[
                   styles.largeA,
-                  deviceAccessibility.darkerSystemColorsEnabled &&
+                  increasedContrast &&
                     styles.secondaryTextHighContrast,
                   { fontSize: 24 * fontSize },
                 ]}
@@ -573,7 +576,7 @@ export default function SettingsPage() {
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.fontSizeValue,
-                deviceAccessibility.darkerSystemColorsEnabled &&
+                increasedContrast &&
                   styles.secondaryTextHighContrast,
                 { fontSize: 12 * fontSize },
               ]}
@@ -589,7 +592,7 @@ export default function SettingsPage() {
           accessibilityRole="header"
           style={[
             styles.sectionLabel,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.sectionLabelHighContrast,
             { fontSize: 12 * fontSize },
           ]}
@@ -600,7 +603,7 @@ export default function SettingsPage() {
         <View
           style={[
             styles.settingsCard,
-            deviceAccessibility.darkerSystemColorsEnabled &&
+            increasedContrast &&
               styles.settingsCardHighContrast,
           ]}
         >
@@ -619,7 +622,7 @@ export default function SettingsPage() {
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.deviceValue,
-                deviceAccessibility.darkerSystemColorsEnabled &&
+                increasedContrast &&
                   styles.deviceValueHighContrast,
                 { fontSize: 14 * fontSize },
               ]}
@@ -647,7 +650,7 @@ export default function SettingsPage() {
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.deviceValue,
-                deviceAccessibility.darkerSystemColorsEnabled &&
+                increasedContrast &&
                   styles.deviceValueHighContrast,
                 { fontSize: 14 * fontSize },
               ]}
@@ -677,7 +680,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.deviceValueHighContrast,
                     { fontSize: 14 * fontSize },
                   ]}
@@ -705,7 +708,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.deviceValueHighContrast,
                     { fontSize: 14 * fontSize },
                   ]}
@@ -733,7 +736,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.deviceValueHighContrast,
                     { fontSize: 14 * fontSize },
                   ]}
@@ -764,7 +767,7 @@ export default function SettingsPage() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
-                    deviceAccessibility.darkerSystemColorsEnabled &&
+                    increasedContrast &&
                       styles.deviceValueHighContrast,
                     { fontSize: 14 * fontSize },
                   ]}

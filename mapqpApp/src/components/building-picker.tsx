@@ -358,6 +358,7 @@ export default React.memo(function BuildingPicker({
         style={[
           styles.buildingRow,
           isSelected && styles.buildingRowSelected,
+          isSelected && increasedContrast && { borderLeftWidth: 4, borderLeftColor: "#10434b" },
           { borderBottomColor: increasedContrast ? "#666" : undefined },
         ]}
       >
@@ -389,7 +390,7 @@ export default React.memo(function BuildingPicker({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.starIconButton}
+          style={[styles.starIconButton, increasedContrast && { borderWidth: 1, borderColor: "#555", borderRadius: 8 }]}
           onPress={() => void toggleSaveBuilding(building.id)}
           hitSlop={{
             top: 10,
@@ -407,7 +408,7 @@ export default React.memo(function BuildingPicker({
           <Ionicons
             name={isSaved ? "star" : "star-outline"}
             size={22}
-            color={isSaved ? "#f1c40f" : "#888"}
+            color={increasedContrast ? (isSaved ? "#805500" : "#333") : (isSaved ? "#f1c40f" : "#888")}
           />
         </TouchableOpacity>
       </View>
@@ -431,7 +432,7 @@ export default React.memo(function BuildingPicker({
             accessibilityLabel="Open settings"
             activeOpacity={0.75}
           >
-            <View style={styles.secondaryControlCircle}>
+            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}>
               <Ionicons
                 name="settings-outline"
                 size={27}
@@ -493,8 +494,8 @@ export default React.memo(function BuildingPicker({
             accessibilityLabel="View saved locations"
             activeOpacity={0.75}
           >
-            <View style={styles.secondaryControlCircle}>
-              <Ionicons name="star" size={27} color="#f1c40f" />
+            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}>
+              <Ionicons name="star" size={27} color={increasedContrast ? "#805500" : "#f1c40f"} />
             </View>
 
             <Text key={`picker-text-4-${fontSize}-${systemFontScale}`}
@@ -695,7 +696,7 @@ export default React.memo(function BuildingPicker({
 
       {isInputFocused && !value && (
         <TouchableOpacity
-          style={styles.buildingSelectorButton}
+          style={[styles.buildingSelectorButton, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}
           onPress={() => {
             Keyboard.dismiss();
             setIsOpen(false);
@@ -875,6 +876,7 @@ export default React.memo(function BuildingPicker({
               style={[
                 styles.modalTab,
                 !showSavedOnly && styles.modalTabActive,
+                increasedContrast && !showSavedOnly && { borderBottomWidth: 4, borderBottomColor: "#10434b" },
               ]}
               onPress={() => setShowSavedOnly(false)}
             >
@@ -896,6 +898,7 @@ export default React.memo(function BuildingPicker({
               style={[
                 styles.modalTab,
                 showSavedOnly && styles.modalTabActive,
+                increasedContrast && showSavedOnly && { borderBottomWidth: 4, borderBottomColor: "#10434b" },
               ]}
               onPress={() => setShowSavedOnly(true)}
             >

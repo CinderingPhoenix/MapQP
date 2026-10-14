@@ -8,12 +8,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
+import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 
 export default function LandingPage() {
   useLocationWarmup();
   useAuthGuard();
   const { setNavigationMode, setHasSelectedMode } = useSettings();
   const { fontScale, width } = useWindowDimensions();
+  const { darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled } = useDeviceAccessibility();
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
   const largeText = fontScale > 1.25;
   const stackButtons = width < 340 || fontScale >= 1.65;
   const headingRef = useRef<Text>(null);
@@ -63,7 +67,7 @@ export default function LandingPage() {
           accessible={false}
         />
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
+          <View style={[styles.header, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 2, borderBottomColor: "#172033" }]}>
             <ExpoImage
               source={require("../../assets/images/mapqp-logo.png")}
               style={styles.mapqpLogo}
@@ -75,7 +79,7 @@ export default function LandingPage() {
             />
             <View style={styles.headerRight}>
               <TouchableOpacity
-                style={styles.settingsButton}
+                style={[styles.settingsButton, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
                 onPress={() => router.push("/settings")}
                 activeOpacity={0.7}
                 accessible
@@ -104,7 +108,7 @@ export default function LandingPage() {
             showsVerticalScrollIndicator={largeText}
           >
             <View style={styles.presetArea}>
-              <View style={styles.presetLabel}>
+              <View style={[styles.presetLabel, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}>
                 <Text
                   ref={headingRef}
                   key={`landing-heading-${fontScale}`}
@@ -128,15 +132,17 @@ export default function LandingPage() {
                   accessibilityHint="Opens standard campus navigation"
                 >
                   <LinearGradient
-                    colors={[
-                      "rgba(255,255,255,0.72)",
-                      "rgba(255,255,255,0.97)",
-                      "rgba(255,255,255,0.97)",
-                      "rgba(220,240,255,0.72)",
-                    ]}
+                    colors={opaqueSurfaces
+                      ? ["#fff", "#fff", "#fff", "#fff"]
+                      : [
+                          "rgba(255,255,255,0.72)",
+                          "rgba(255,255,255,0.97)",
+                          "rgba(255,255,255,0.97)",
+                          "rgba(220,240,255,0.72)",
+                        ]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.modeButton, largeText && styles.modeButtonLargeText]}
+                    style={[styles.modeButton, largeText && styles.modeButtonLargeText, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
                   >
                     <View style={[styles.modeIcon, styles.standardIcon]}>
                       <Text style={styles.standardIconText} allowFontScaling={false}>➤</Text>
@@ -169,15 +175,17 @@ export default function LandingPage() {
                   accessibilityHint="Opens accessible campus navigation"
                 >
                   <LinearGradient
-                    colors={[
-                      "rgba(255,255,255,0.72)",
-                      "rgba(255,255,255,0.97)",
-                      "rgba(255,255,255,0.97)",
-                      "rgba(255,225,228,0.72)",
-                    ]}
+                    colors={opaqueSurfaces
+                      ? ["#fff", "#fff", "#fff", "#fff"]
+                      : [
+                          "rgba(255,255,255,0.72)",
+                          "rgba(255,255,255,0.97)",
+                          "rgba(255,255,255,0.97)",
+                          "rgba(255,225,228,0.72)",
+                        ]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.modeButton, largeText && styles.modeButtonLargeText]}
+                    style={[styles.modeButton, largeText && styles.modeButtonLargeText, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
                   >
                     <View style={[styles.modeIcon, styles.accessibilityIcon]}>
                       <Text style={styles.accessibilityIconText} allowFontScaling={false}>♿</Text>
