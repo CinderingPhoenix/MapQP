@@ -54,6 +54,15 @@
       transition: transform 0.1s ease-out;
       will-change: transform;
     }
+    .compass-control.accessibility-compass-control {
+      width: 72px !important;
+      height: 72px !important;
+      line-height: 72px !important;
+    }
+    .accessibility-compass-control .compass-icon {
+      width: 48px;
+      height: 48px;
+    }
     .mute-control {
       background: white;
       border-radius: 50% !important;
@@ -144,7 +153,7 @@
     /**
      * Bootstraps the Leaflet map container, tile layer, custom user location markers, custom controls (Compass & Mute), and event listeners.
      */
-    window.initMap = function(centerLat, centerLng, userLat, userLng, accuracy, route) {
+    window.initMap = function(centerLat, centerLng, userLat, userLng, accuracy, route, accessibilityMode) {
       if (map) return;
 
       map = L.map('map', { 
@@ -196,17 +205,23 @@
         }
       });
 
-      map.addControl(new SettingsControl());
+      if (!accessibilityMode) map.addControl(new SettingsControl());
 
       var CompassControl = L.Control.extend({
         options: { position: 'topright' },
         onAdd: function (map) {
-          var container = L.DomUtil.create('button', 'leaflet-bar leaflet-control compass-control');
-          container.type = 'button';
-          container.setAttribute('aria-label', 'Compass');
-          container.setAttribute('aria-pressed', 'false');
+        var compassClass = accessibilityMode
+          ? 'leaflet-bar leaflet-control compass-control accessibility-compass-control'
+          : 'leaflet-bar leaflet-control compass-control';
+
+        var container = L.DomUtil.create('button', compassClass);
+        container.type = 'button';
+        container.setAttribute('aria-label', 'Compass');
+        container.setAttribute('aria-pressed', 'false');
+
+        var compassSize = accessibilityMode ? 48 : 32;
           container.innerHTML = '<div id="compass-icon" class="compass-icon">' +
-            '<svg viewBox="0 0 24 24" width="32" height="32">' +
+            '<svg viewBox="0 0 24 24" width="' + compassSize + '" height="' + compassSize + '">' +
               '<polygon points="12,2 15,12 12,10" fill="#e06b3c" />' +
               '<polygon points="12,2 9,12 12,10" fill="#f09068" />' +
               '<polygon points="12,22 15,12 12,14" fill="#1d5962" />' +

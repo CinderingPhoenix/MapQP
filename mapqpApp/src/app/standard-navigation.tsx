@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useKeepAwake } from "expo-keep-awake";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,9 +16,13 @@ import {
   getDistanceToStepPoint,
   getSegmentDistance,
   useMapNavigation,
-} from "./map-logic";
+} from "../utils/map-logic";
+import { useAuthGuard } from "../hooks/use-auth-guard";
 
 export default function Home() {
+  useKeepAwake();
+  useAuthGuard();
+
   const {
     coordinates,
     mapCenter,

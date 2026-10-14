@@ -1,8 +1,13 @@
+
 import { useAssets } from "expo-asset";
 import { File } from "expo-file-system";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { WebView } from "react-native-webview";
 import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 
@@ -15,6 +20,7 @@ type LocationMapProps = {
   heading?: number | null;
   route?: any;
   directionsExpanded?: boolean;
+  accessibilityMode?: boolean;
   recenterSignal?: number;
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
@@ -24,8 +30,9 @@ type LocationMapProps = {
 };
 
 /**
- * LocationMap component embeds and bridges a Leaflet map HTML file within a React Native WebView.
- * Manages map initialization assets, user position updates, heading tracking subscriptions, and interaction callbacks.
+ * LocationMap embeds a Leaflet map in a React Native WebView.
+ * Handles map initialization, user position updates,
+ * heading tracking, and interaction callbacks.
  */
 export default function LocationMap({
   latitude,
@@ -36,6 +43,7 @@ export default function LocationMap({
   heading,
   route,
   directionsExpanded = false,
+  accessibilityMode = false,
   recenterSignal,
   onUserDragged,
   onHeadingModeChange,
@@ -44,11 +52,12 @@ export default function LocationMap({
   onPanBack,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
+
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [htmlContent, setHtmlContent] = useState<string>("");
+
   const { screenReaderEnabled } = useDeviceAccessibility();
 
-  // Track whether the user has manually dragged away from auto-centering
   const hasUserPannedAwayRef = useRef(false);
 
   const currentMarkerLat = userLatitude ?? latitude;
@@ -56,50 +65,83 @@ export default function LocationMap({
 
   const [assets] = useAssets([require("./leaflet.html")]);
 
+  // Load the Leaflet HTML file.
   useEffect(() => {
     if (assets && assets[0]?.localUri) {
       const file = new File(assets[0].localUri);
-      file.text().then((content) => {
-        setHtmlContent(content);
-      });
+
+      file
+        .text()
+        .then((content) => {
+          setHtmlContent(content);
+        })
+        .catch((error) => {
+          console.error("Failed to load Leaflet HTML:", error);
+        });
     }
   }, [assets]);
 
   /**
-   * Injects initialization script into the WebView once the HTML content has loaded.
+   * Initialize the map after the WebView loads.
+   * Includes the accessibility mode added in main.
    */
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
       if (window.initMap) {
         window.initMap(
-          ${latitude}, 
-          ${longitude}, 
-          ${currentMarkerLat}, 
-          ${currentMarkerLng}, 
-          ${accuracy}, 
-          ${JSON.stringify(route || null)}
+          ${latitude},
+          ${longitude},
+          ${currentMarkerLat},
+          ${currentMarkerLng},
+          ${accuracy},
+          ${JSON.stringify(route || null)},
+          ${accessibilityMode}
+        );
+      }
+      true;
+    `);
+
+    // Synchronize the directions overlay with Leaflet.
+    webViewRef.current?.injectJavaScript(`
+      if (window.updateDirectionsExpanded) {
+        window.updateDirectionsExpanded(
+          ${directionsExpanded},
+          ${!!route}
         );
       }
       true;
     `);
   };
 
-  // 1. Initial route overview fitBounds -> 4 second silent delay -> focuses on user & sets heading focused
+  /**
+   * Show the complete route, then return to
+   * heading-focused navigation after four seconds.
+   */
   useEffect(() => {
     if (route && route.geometry && route.geometry.length > 0) {
       hasUserPannedAwayRef.current = false;
-      const routeCoords = route.geometry.map((pt: [number, number]) => [pt[0], pt[1]]);
+
+      const routeCoords = route.geometry.map(
+        (pt: [number, number]) => [pt[0], pt[1]]
+      );
 
       webViewRef.current?.injectJavaScript(`
         if (window.map) {
-          var bounds = L.latLngBounds(${JSON.stringify(routeCoords)});
-          window.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+          var bounds = L.latLngBounds(
+            ${JSON.stringify(routeCoords)}
+          );
+
+          window.map.fitBounds(bounds, {
+            padding: [60, 60],
+            maxZoom: 16
+          });
         }
         true;
       `);
 
       const timeoutId = setTimeout(() => {
         hasUserPannedAwayRef.current = false;
+
         setIsHeadingFocused(true);
         onHeadingModeChange?.(true);
         onPanBack?.();
@@ -108,9 +150,16 @@ export default function LocationMap({
           if (window.setHeadingFocus) {
             window.setHeadingFocus(true);
           }
+
           if (window.updateMap) {
-            window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(route)});
+            window.updateMap(
+              ${currentMarkerLat},
+              ${currentMarkerLng},
+              ${accuracy},
+              ${JSON.stringify(route)}
+            );
           }
+
           true;
         `);
       }, 4000);
@@ -122,43 +171,55 @@ export default function LocationMap({
   }, [route]);
 
   /**
-   * Subscribes to device heading updates when heading focus is locked.
+   * Subscribe to compass updates while heading focus
+   * is enabled.
    */
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
+
     let previousRawHeading: number | null = null;
     let absoluteHeading: number | null = null;
 
     async function startHeadingTracking() {
       if (isHeadingFocused) {
-        const sub = await Location.watchHeadingAsync((headingData) => {
-          let rawHeadingDeg = headingData.trueHeading >= 0 
-            ? headingData.trueHeading 
-            : headingData.magHeading;
+        const sub = await Location.watchHeadingAsync(
+          (headingData) => {
+            let rawHeadingDeg =
+              headingData.trueHeading >= 0
+                ? headingData.trueHeading
+                : headingData.magHeading;
 
-          rawHeadingDeg = rawHeadingDeg % 360;
+            rawHeadingDeg = rawHeadingDeg % 360;
 
-          if (absoluteHeading === null || previousRawHeading === null) {
-            absoluteHeading = rawHeadingDeg;
-            previousRawHeading = rawHeadingDeg; 
-          } else {
-            let diff = rawHeadingDeg - previousRawHeading;
-            
-            if (diff > 180) diff -= 360;
-            if (diff < -180) diff += 360;
+            if (
+              absoluteHeading === null ||
+              previousRawHeading === null
+            ) {
+              absoluteHeading = rawHeadingDeg;
+              previousRawHeading = rawHeadingDeg;
+            } else {
+              let diff = rawHeadingDeg - previousRawHeading;
 
-            if (Math.abs(diff) < 0.5) return;
+              if (diff > 180) diff -= 360;
+              if (diff < -180) diff += 360;
 
-            absoluteHeading += diff;
-            previousRawHeading = rawHeadingDeg;
+              if (Math.abs(diff) < 0.5) return;
 
-            webViewRef.current?.injectJavaScript(`
-              if (window.setTargetHeading) window.setTargetHeading(${absoluteHeading.toFixed(2)});
-              true;
-            `);
+              absoluteHeading += diff;
+              previousRawHeading = rawHeadingDeg;
+
+              webViewRef.current?.injectJavaScript(`
+                if (window.setTargetHeading) {
+                  window.setTargetHeading(
+                    ${absoluteHeading.toFixed(2)}
+                  );
+                }
+                true;
+              `);
+            }
           }
-        });
+        );
 
         if (isMounted) {
           subscription = sub;
@@ -168,7 +229,7 @@ export default function LocationMap({
       }
     }
 
-    startHeadingTracking();
+    void startHeadingTracking();
 
     return () => {
       isMounted = false;
@@ -176,41 +237,70 @@ export default function LocationMap({
     };
   }, [isHeadingFocused]);
 
-  // Keep the marker and route progress synchronized even when the viewport is manually panned.
+  /**
+   * Keep the marker and route synchronized,
+   * including while the user manually pans the map.
+   */
   useEffect(() => {
     webViewRef.current?.injectJavaScript(`
       if (window.updateMap) {
-        window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
-      route || null
-    )});
+        window.updateMap(
+          ${currentMarkerLat},
+          ${currentMarkerLng},
+          ${accuracy},
+          ${JSON.stringify(route || null)}
+        );
       }
       true;
     `);
-  }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
+  }, [
+    currentMarkerLat,
+    currentMarkerLng,
+    accuracy,
+    route,
+    heading,
+  ]);
 
-  // Recenter signal explicitly resets the view and re-enables tracking
+  /**
+   * Recenter the map when requested.
+   */
   useEffect(() => {
-    if (recenterSignal !== undefined && recenterSignal > 0) {
+    if (
+      recenterSignal !== undefined &&
+      recenterSignal > 0
+    ) {
       hasUserPannedAwayRef.current = false;
+
       webViewRef.current?.injectJavaScript(
         "if (window.resetView) window.resetView(); true;"
       );
     }
   }, [recenterSignal]);
 
+  /**
+   * Update Leaflet when the upcoming-directions
+   * panel expands or collapses.
+   */
   useEffect(() => {
     webViewRef.current?.injectJavaScript(`
       if (window.updateDirectionsExpanded) {
-        window.updateDirectionsExpanded(${directionsExpanded}, ${!!route});
+        window.updateDirectionsExpanded(
+          ${directionsExpanded},
+          ${!!route}
+        );
       }
       true;
     `);
   }, [directionsExpanded, route]);
 
+  /**
+   * Accessible compass control.
+   */
   const handleAccessibleCompass = () => {
     const nextFocused = !isHeadingFocused;
 
     hasUserPannedAwayRef.current = false;
+
     setIsHeadingFocused(nextFocused);
     onHeadingModeChange?.(nextFocused);
     onPanBack?.();
@@ -232,11 +322,15 @@ export default function LocationMap({
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
-        source={{ html: htmlContent, baseUrl: "https://localhost" }}
+        source={{
+          html: htmlContent,
+          baseUrl: "https://localhost",
+        }}
         style={styles.map}
         onLoadEnd={handleLoadEnd}
         onMessage={(event) => {
           const data = event.nativeEvent.data;
+
           if (data === "USER_DRAGGED") {
             hasUserPannedAwayRef.current = true;
             setIsHeadingFocused(false);
@@ -257,12 +351,19 @@ export default function LocationMap({
             onOpenSettings?.();
           }
         }}
-            />
+      />
 
+      {/* Screen-reader accessible map controls */}
       {screenReaderEnabled && (
         <>
           <TouchableOpacity
-            style={[styles.accessibleControl, styles.accessibleSettings, route && styles.accessibleControlRoute, directionsExpanded && styles.accessibleControlExpanded]}
+            style={[
+              styles.accessibleControl,
+              styles.accessibleSettings,
+              route && styles.accessibleControlRoute,
+              directionsExpanded &&
+                styles.accessibleControlExpanded,
+            ]}
             onPress={onOpenSettings}
             accessible
             accessibilityRole="button"
@@ -271,13 +372,25 @@ export default function LocationMap({
           />
 
           <TouchableOpacity
-            style={[styles.accessibleControl, styles.accessibleCompass, route && styles.accessibleControlRoute, directionsExpanded && styles.accessibleControlExpanded]}
+            style={[
+              styles.accessibleControl,
+              styles.accessibleCompass,
+              route && styles.accessibleControlRoute,
+              directionsExpanded &&
+                styles.accessibleControlExpanded,
+            ]}
             onPress={handleAccessibleCompass}
             accessible
             accessibilityRole="button"
             accessibilityLabel="Compass"
-            accessibilityHint={isHeadingFocused ? "Double tap to turn off heading tracking" : "Double tap to turn on heading tracking"}
-            accessibilityState={{ selected: isHeadingFocused }}
+            accessibilityHint={
+              isHeadingFocused
+                ? "Double tap to turn off heading tracking"
+                : "Double tap to turn on heading tracking"
+            }
+            accessibilityState={{
+              selected: isHeadingFocused,
+            }}
           />
         </>
       )}
@@ -286,11 +399,33 @@ export default function LocationMap({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { width: "100%", height: "100%" },
-  accessibleControl: { position: "absolute", width: 54, height: 54, borderRadius: 27, backgroundColor: "transparent", zIndex: 100 },
-  accessibleSettings: { top: 66, left: 10 },
-  accessibleCompass: { top: 66, right: 22 },
-  accessibleControlRoute: { top: 156 },
-  accessibleControlExpanded: { top: "68%" },
+  container: {
+    flex: 1,
+  },
+  map: {
+    width: "100%",
+    height: "100%",
+  },
+  accessibleControl: {
+    position: "absolute",
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "transparent",
+    zIndex: 100,
+  },
+  accessibleSettings: {
+    top: 66,
+    left: 10,
+  },
+  accessibleCompass: {
+    top: 66,
+    right: 22,
+  },
+  accessibleControlRoute: {
+    top: 156,
+  },
+  accessibleControlExpanded: {
+    top: "68%",
+  },
 });

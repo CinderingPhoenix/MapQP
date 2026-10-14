@@ -1,21 +1,13 @@
 import { useSettings } from "@/context/settings-context";
 import { useDeviceAccessibility } from "@/hooks/use-device-accessibility";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Platform, Vibration } from "react-native";
 import buildingData from "../data/wpi-buildings.json";
-import { NavigationPoint, routeBetween, WalkingRoute } from "../utils/routing";
-
-let ExpoSpeechRecognitionModule: any = null;
-try {
-  const speechModule = require("expo-speech-recognition");
-  ExpoSpeechRecognitionModule = speechModule.ExpoSpeechRecognitionModule;
-} catch {
-  console.warn("expo-speech-recognition is not available in this environment.");
-}
+import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
 
 export type Point = {
   latitude: number;
@@ -35,6 +27,7 @@ export type Building = {
     latitude: number;
     longitude: number;
     name: string;
+    accessibility: boolean;
   }[];
 };
 
@@ -82,7 +75,7 @@ type RouteCandidate = WalkingRoute & {
 const BASE_MAX_SAMPLE_AGE_MS = 20_000;
 const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
-const LAST_LOCATION_STORAGE_KEY = "@wpi_map_last_location";
+const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
 export const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
   id: building.name.toLowerCase().replaceAll(" ", "-"),
@@ -351,7 +344,7 @@ export function useMapNavigation() {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle } = useSettings();
+  const { distanceUnits, directionStyle, navigationMode } = useSettings();
   const { screenReaderEnabled } = useDeviceAccessibility();
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
@@ -359,7 +352,7 @@ export function useMapNavigation() {
   useEffect(() => { routeGeometryRef.current = route?.geometry ?? null; }, [route]);
 
   useEffect(() => {
-    AsyncStorage.getItem(LAST_LOCATION_STORAGE_KEY).then((savedLocation) => {
+    SecureStore.getItemAsync(LAST_LOCATION_STORAGE_KEY).then((savedLocation) => {
       if (!savedLocation || initialLocationSet.current) return;
       const parsed = JSON.parse(savedLocation);
       if (parsed.latitude && parsed.longitude) setMapCenter({ latitude: parsed.latitude, longitude: parsed.longitude });
@@ -394,9 +387,28 @@ export function useMapNavigation() {
     setRouteLoading(true);
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const candidates = await Promise.all(selectedBuilding.entrances.map(async (_, index) => {
-        const destination = buildingPoint(selectedBuilding, index);
-        try { return { ...(await routeBetween(origin, destination)), origin, destination }; } catch { return null; }
+      const accessibleOnly = navigationMode === "accessibility";
+      const entrances = selectedBuilding.entrances.filter(
+        (entrance) => !accessibleOnly || entrance.accessibility
+      );
+      if (entrances.length === 0) {
+        throw new Error("This building has no accessible entrance.");
+      }
+      const candidates = await Promise.all(entrances.map(async (entrance) => {
+        const destination = {
+          latitude: entrance.latitude,
+          longitude: entrance.longitude,
+          label: `${selectedBuilding.name} ${entrance.name}`,
+        };
+        try {
+          return {
+            ...(await routeBetween(origin, destination, { accessibleOnly })),
+            origin,
+            destination,
+          };
+        } catch {
+          return null;
+        }
       }));
       if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
       const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
@@ -423,7 +435,13 @@ export function useMapNavigation() {
       setRouteLoading(false);
       isReroutingRef.current = false;
     }
-  }, [coordinates, isAudioMuted, screenReaderEnabled, startRoutePreviewCountdown]);
+  }, [
+    coordinates,
+    isAudioMuted,
+    navigationMode,
+    screenReaderEnabled,
+    startRoutePreviewCountdown,
+  ]);
 
   const planRouteRef = useRef(planRoute);
   const currentRouteIndexRef = useRef(currentRouteIndex);
@@ -434,7 +452,6 @@ export function useMapNavigation() {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
     const initializeLocation = async () => {
-      if (ExpoSpeechRecognitionModule?.requestPermissionsAsync) await ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(() => undefined);
       const permissions = await Location.requestForegroundPermissionsAsync();
       if (permissions.status !== "granted") { if (isMounted) setError("Location permission is required to plan a route."); return; }
       subscription = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 250, distanceInterval: 0, mayShowUserSettingsDialog: true }, (location) => {
@@ -453,7 +470,7 @@ export function useMapNavigation() {
         const displayedCoordinates = { ...processed, latitude: displayLat, longitude: displayLng };
         setCoordinates(displayedCoordinates);
         if (!showRecenterRef.current) setMapCenter({ latitude: displayLat, longitude: displayLng });
-        AsyncStorage.setItem(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
         if (newRouteIndex !== currentRouteIndexRef.current) setCurrentRouteIndex(newRouteIndex);
         if (!initialLocationSet.current) { setMapCenter({ latitude: displayLat, longitude: displayLng }); initialLocationSet.current = true; }
         if (routeGeometryRef.current && !isReroutingRef.current && destinationBuildingRef.current) {
