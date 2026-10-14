@@ -1,8 +1,9 @@
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useRef } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
@@ -15,6 +16,27 @@ export default function LandingPage() {
   const { fontScale, width } = useWindowDimensions();
   const largeText = fontScale > 1.25;
   const stackButtons = width < 340 || fontScale >= 1.65;
+  const headingRef = useRef<Text>(null);
+
+  // Focus the page introduction after navigation settles, only with VoiceOver.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      let focusTimer: ReturnType<typeof setTimeout> | undefined;
+      void AccessibilityInfo.isScreenReaderEnabled().then((enabled) => {
+        if (!active || !enabled) return;
+        focusTimer = setTimeout(() => {
+          if (!active) return;
+          const node = findNodeHandle(headingRef.current);
+          if (node != null) AccessibilityInfo.setAccessibilityFocus(node);
+        }, 650);
+      }).catch(() => {});
+      return () => {
+        active = false;
+        if (focusTimer) clearTimeout(focusTimer);
+      };
+    }, [])
+  );
 
   const openStandardNavigation = () => {
     setNavigationMode("standard");
@@ -84,10 +106,12 @@ export default function LandingPage() {
             <View style={styles.presetArea}>
               <View style={styles.presetLabel}>
                 <Text
+                  ref={headingRef}
                   key={`landing-heading-${fontScale}`}
                   style={styles.presetText}
                   maxFontSizeMultiplier={3}
                   accessibilityRole="header"
+                  accessibilityLabel="MapQP, accessible campus navigation. Choose your navigation mode"
                 >
                   Choose Your Navigation Mode
                 </Text>
