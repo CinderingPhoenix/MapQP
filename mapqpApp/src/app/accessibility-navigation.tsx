@@ -12,6 +12,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -34,6 +35,7 @@ import {
 export default function Home() {
   useKeepAwake();
   useAuthGuard();
+  const { fontScale } = useWindowDimensions();
 
   const {
     coordinates,
@@ -67,7 +69,11 @@ export default function Home() {
     reduceMotionEnabled,
     boldTextEnabled,
     darkerSystemColorsEnabled,
+    highTextContrastEnabled,
+    reduceTransparencyEnabled,
   } = useDeviceAccessibility();
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const emphasizedText = boldTextEnabled || highTextContrastEnabled;
 
   const lastAnnouncedInstruction = useRef<string | null>(null);
 
@@ -159,7 +165,7 @@ export default function Home() {
       {route && (
         <View
           style={[
-            styles.topRouteSummary,
+            styles.topRouteSummary, increasedContrast && { borderColor: "#1d5962", borderWidth: 2 }, reduceTransparencyEnabled && { backgroundColor: "#fff" },
             directionsExpanded
               ? styles.topRouteSummaryExpanded
               : styles.topRouteSummaryCollapsed,
@@ -176,8 +182,8 @@ export default function Home() {
                 accessibilityLabel="Upcoming directions"
                 accessibilityHint="Double tap to collapse the directions list"
               >
-                <Text
-                  maxFontSizeMultiplier={1.6}
+                <Text key={`text-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.boldText,
                     {
@@ -189,8 +195,8 @@ export default function Home() {
                   Upcoming Directions
                 </Text>
 
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`text-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.collapseHint,
                     {
@@ -241,8 +247,8 @@ export default function Home() {
                         },
                       ]}
                     >
-                      <Text
-                        maxFontSizeMultiplier={1.8}
+                      <Text key={`text-${fontSize}-${fontScale}`}
+                        maxFontSizeMultiplier={2.5}
                         style={[
                           styles.directionInstruction,
                           {
@@ -278,8 +284,8 @@ export default function Home() {
                       },
                     ]}
                   >
-                    <Text
-                      maxFontSizeMultiplier={1.8}
+                    <Text key={`text-${fontSize}-${fontScale}`}
+                      maxFontSizeMultiplier={2.5}
                       style={[
                         styles.directionInstruction,
                         {
@@ -300,8 +306,8 @@ export default function Home() {
                 onPress={() => setDirectionsExpanded(false)}
                 activeOpacity={0.7}
               >
-                <Text
-                  maxFontSizeMultiplier={1.6}
+                <Text key={`text-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.subText,
                     {
@@ -342,9 +348,9 @@ export default function Home() {
               }
               accessibilityHint="Double tap to show all upcoming directions"
             >
-              <Text
+              <Text key={`text-${fontSize}-${fontScale}`}
                 accessible={false}
-                maxFontSizeMultiplier={2}
+                maxFontSizeMultiplier={2.5}
                 style={[
                   styles.boldText,
                   {
@@ -365,9 +371,9 @@ export default function Home() {
                   : "Follow route"}
               </Text>
 
-              <Text
+              <Text key={`text-${fontSize}-${fontScale}`}
                 accessible={false}
-                maxFontSizeMultiplier={1.6}
+                maxFontSizeMultiplier={2.5}
                 style={[
                   styles.subText,
                   {
@@ -418,9 +424,9 @@ export default function Home() {
       >
         {error ? (
           <View style={styles.loadingContainer}>
-            <Text
-              maxFontSizeMultiplier={1.6}
-              style={{ fontSize: 16 * fontSize }}
+            <Text key={`text-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
+              style={{ fontSize: 16 * fontSize, color: increasedContrast ? "#111" : "#333", fontWeight: emphasizedText ? "bold" : "normal" }}
             >
               {error}
             </Text>
@@ -448,7 +454,12 @@ export default function Home() {
             onPanBack={() => setShowRecenter(false)}
             onHeadingModeChange={() => setShowRecenter(false)}
             onToggleMute={toggleMute}
-            onOpenSettings={() => router.push("/settings")}
+            onOpenSettings={() =>
+              router.push({
+                pathname: "/settings",
+                params: { from: "accessibility-navigation" },
+              })
+            }
           />
         )}
       </View>
@@ -456,7 +467,7 @@ export default function Home() {
       {/* Destination picker */}
       <Animated.View
         style={[
-          styles.plannerPanel,
+          styles.plannerPanel, increasedContrast && { borderColor: "#1d5962", borderWidth: 2 }, reduceTransparencyEnabled && { backgroundColor: "#fff" },
           {
             paddingBottom: keyboardHeight > 0 ? 48 : 40,
             transform: [
@@ -467,16 +478,16 @@ export default function Home() {
       >
         {showRecenter && (
           <TouchableOpacity
-            style={styles.recenterButton}
+            style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: "#1d5962" }]}
             onPress={handleRecenter}
             accessible
             accessibilityRole="button"
             accessibilityLabel="Recenter map"
             accessibilityHint="Moves the map back to your current location"
           >
-            <Text
+            <Text key={`text-${fontSize}-${fontScale}`}
               accessible={false}
-              maxFontSizeMultiplier={1.5}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.recenterText,
                 { fontSize: 14 * fontSize },
@@ -494,12 +505,17 @@ export default function Home() {
           onCancel={handleCancelRoute}
           placeholder="Search WPI destinations..."
           accessibilityControls
-          onOpenSettings={() => router.push("/settings")}
+          onOpenSettings={() =>
+            router.push({
+              pathname: "/settings",
+              params: { from: "accessibility-navigation" },
+            })
+          }
         />
 
         {routeError !== "" && (
-          <Text
-            maxFontSizeMultiplier={1.6}
+          <Text key={`text-${fontSize}-${fontScale}`}
+            maxFontSizeMultiplier={2.5}
             style={[
               styles.errorText,
               { fontSize: 14 * fontSize },
@@ -544,10 +560,10 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 1,
     borderColor: "#e0e0e0",
-    overflow: "hidden",
+    overflow: "visible",
   },
   topRouteSummaryCollapsed: {
-    maxHeight: 260,
+    maxHeight: 420,
   },
   topRouteSummaryExpanded: {
     height: "65%",

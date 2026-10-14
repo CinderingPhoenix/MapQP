@@ -6,6 +6,7 @@ import {
   Alert,
   Keyboard,
   Modal,
+  useWindowDimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,9 +58,32 @@ export default React.memo(function BuildingPicker({
   onOpenSettings,
 }: BuildingPickerProps) {
   const { fontSize } = useSettings();
-  const { reduceMotionEnabled } = useDeviceAccessibility();
+  const {
+    reduceMotionEnabled,
+    boldTextEnabled,
+    darkerSystemColorsEnabled,
+    highTextContrastEnabled,
+  } = useDeviceAccessibility();
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const accessibleText = {
+    fontWeight: boldTextEnabled ? ("700" as const) : undefined,
+    color: increasedContrast ? "#111" : undefined,
+  };
+  const accessibleAccentText = {
+    fontWeight: boldTextEnabled ? ("700" as const) : undefined,
+    color: increasedContrast ? "#10434b" : undefined,
+  };
+  const accessibleLightText = {
+    fontWeight: boldTextEnabled ? ("800" as const) : undefined,
+  };
+  const accessibleBorder = {
+    borderColor: increasedContrast ? "#444" : undefined,
+  };
 
-  const textBoxHeight = Math.max(48, 48 * fontSize);
+  const { fontScale: systemFontScale } = useWindowDimensions();
+  // A single-line destination field stays aligned with its action icons.
+  // Use a responsive height, but never allow the selected name to wrap under the border.
+  const textBoxHeight = Math.max(48, 20 * fontSize * Math.min(systemFontScale, 2.5) + 24);
   const selectedBuilding = buildings.find(
     (building) => building.id === value
   );
@@ -334,6 +358,7 @@ export default React.memo(function BuildingPicker({
         style={[
           styles.buildingRow,
           isSelected && styles.buildingRowSelected,
+          { borderBottomColor: increasedContrast ? "#666" : undefined },
         ]}
       >
         <TouchableOpacity
@@ -341,12 +366,13 @@ export default React.memo(function BuildingPicker({
           onPress={() => selectBuilding(building)}
           activeOpacity={0.7}
         >
-          <Text
-            maxFontSizeMultiplier={1.6}
+          <Text key={`picker-text-1-${fontSize}-${systemFontScale}`}
+            maxFontSizeMultiplier={2.5}
             style={[
               styles.buildingRowText,
               { fontSize: 16 * fontSize },
               isSelected && styles.buildingRowTextSelected,
+              accessibleText,
             ]}
           >
             {building.name}
@@ -413,11 +439,12 @@ export default React.memo(function BuildingPicker({
               />
             </View>
 
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`picker-text-2-${fontSize}-${systemFontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.accessibilityControlLabel,
                 { fontSize: 13 * fontSize },
+                accessibleText,
               ]}
             >
               Settings
@@ -444,11 +471,12 @@ export default React.memo(function BuildingPicker({
               color="#fff"
             />
 
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`picker-text-3-${fontSize}-${systemFontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.voiceControlLabel,
                 { fontSize: 14 * fontSize },
+                accessibleLightText,
               ]}
             >
               {isListening ? "Listening" : "Speak"}
@@ -469,11 +497,12 @@ export default React.memo(function BuildingPicker({
               <Ionicons name="star" size={27} color="#f1c40f" />
             </View>
 
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`picker-text-4-${fontSize}-${systemFontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.accessibilityControlLabel,
                 { fontSize: 13 * fontSize },
+                accessibleText,
               ]}
             >
               Saved
@@ -501,14 +530,15 @@ export default React.memo(function BuildingPicker({
                 color="#1d5962"
               />
 
-              <Text
-                maxFontSizeMultiplier={1.6}
+              <Text key={`picker-text-5-${fontSize}-${systemFontScale}`}
+                maxFontSizeMultiplier={2.5}
                 style={[
                   styles.listeningActiveText,
                   {
                     fontSize: 16 * fontSize,
                     lineHeight: 20 * fontSize,
                   },
+                  accessibleAccentText,
                 ]}
               >
                 Listening...
@@ -517,19 +547,23 @@ export default React.memo(function BuildingPicker({
           ) : (
             <>
               <TextInput
-                maxFontSizeMultiplier={1.5}
+                key={`picker-input-${fontSize}-${systemFontScale}`}
+                maxFontSizeMultiplier={2.5}
+                multiline={false}
+                numberOfLines={1}
                 style={[
                   styles.input,
                   {
                     height: textBoxHeight,
                     fontSize: 16 * fontSize,
-                    lineHeight: 20 * fontSize,
                   },
                   styles.inputPadded,
                   value !== "" && {
                     backgroundColor: "#f9f9f9",
                     color: "#333",
                   },
+                  accessibleText,
+                  accessibleBorder,
                 ]}
                 value={query}
                 editable={!value}
@@ -639,11 +673,12 @@ export default React.memo(function BuildingPicker({
                       right: 6,
                     }}
                   >
-                    <Text
-                      maxFontSizeMultiplier={1.6}
+                    <Text key={`picker-text-6-${fontSize}-${systemFontScale}`}
+                      maxFontSizeMultiplier={2.5}
                       style={[
                         styles.cancelButtonText,
                         { fontSize: 18 * fontSize },
+                        accessibleText,
                       ]}
                     >
                       ✕
@@ -672,8 +707,8 @@ export default React.memo(function BuildingPicker({
             color="#1d5962"
           />
 
-          <Text
-            maxFontSizeMultiplier={1.6}
+          <Text key={`picker-text-7-${fontSize}-${systemFontScale}`}
+            maxFontSizeMultiplier={2.5}
             style={[
               styles.buildingSelectorText,
               { fontSize: 15 * fontSize },
@@ -686,18 +721,19 @@ export default React.memo(function BuildingPicker({
 
       {isInputFocused && isOpen && !value && (
         <ScrollView
-          style={[styles.dropdown, styles.searchDropdown]}
+          style={[styles.dropdown, styles.searchDropdown, accessibleBorder]}
           nestedScrollEnabled
           keyboardShouldPersistTaps="always"
         >
           {showSavedOnly ? (
             <>
               <View style={styles.dropdownHeader}>
-                <Text
-                  maxFontSizeMultiplier={1.6}
+                <Text key={`picker-text-8-${fontSize}-${systemFontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.dropdownHeaderText,
                     { fontSize: 12 * fontSize },
+                    accessibleText,
                   ]}
                 >
                   Saved Locations
@@ -713,11 +749,12 @@ export default React.memo(function BuildingPicker({
                 )
               ) : (
                 <View style={styles.emptyState}>
-                  <Text
-                    maxFontSizeMultiplier={1.6}
+                  <Text key={`picker-text-9-${fontSize}-${systemFontScale}`}
+                    maxFontSizeMultiplier={2.5}
                     style={[
                       styles.emptyStateText,
                       { fontSize: 14 * fontSize },
+                      accessibleText,
                     ]}
                   >
                     No saved locations yet.
@@ -729,11 +766,12 @@ export default React.memo(function BuildingPicker({
             recentBuildings.length > 0 && (
               <View>
                 <View style={styles.dropdownHeader}>
-                  <Text
-                    maxFontSizeMultiplier={1.6}
+                  <Text key={`picker-text-10-${fontSize}-${systemFontScale}`}
+                    maxFontSizeMultiplier={2.5}
                     style={[
                       styles.dropdownHeaderText,
                       { fontSize: 12 * fontSize },
+                    accessibleText,
                     ]}
                   >
                     Recent Searches
@@ -744,11 +782,13 @@ export default React.memo(function BuildingPicker({
                       void clearRecentSearches()
                     }
                   >
-                    <Text
-                      maxFontSizeMultiplier={1.6}
+                    <Text key={`picker-text-11-${fontSize}-${systemFontScale}`}
+                      maxFontSizeMultiplier={2.5}
                       style={[
                         styles.clearRecentText,
                         { fontSize: 12 * fontSize },
+                        accessibleText,
+                        accessibleText,
                       ]}
                     >
                       Clear
@@ -787,11 +827,12 @@ export default React.memo(function BuildingPicker({
       >
         <View style={styles.selectorModal}>
           <View style={styles.selectorHeader}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`picker-text-12-${fontSize}-${systemFontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.selectorTitle,
                 { fontSize: 24 * fontSize },
+                accessibleAccentText,
               ]}
             >
               {showSavedOnly
@@ -811,9 +852,9 @@ export default React.memo(function BuildingPicker({
                 right: 10,
               }}
             >
-              <Text
-                maxFontSizeMultiplier={1.6}
-                style={styles.selectorClose}
+              <Text key={`picker-text-13-${fontSize}-${systemFontScale}`}
+                maxFontSizeMultiplier={2.5}
+                style={[styles.selectorClose, accessibleText]}
               >
                 ✕
               </Text>
@@ -829,13 +870,14 @@ export default React.memo(function BuildingPicker({
               ]}
               onPress={() => setShowSavedOnly(false)}
             >
-              <Text
-                maxFontSizeMultiplier={1.6}
+              <Text key={`picker-text-14-${fontSize}-${systemFontScale}`}
+                maxFontSizeMultiplier={2.5}
                 style={[
                   styles.modalTabText,
                   !showSavedOnly &&
                     styles.modalTabTextActive,
                   { fontSize: 15 * fontSize },
+                  accessibleText,
                 ]}
               >
                 All Locations
@@ -858,13 +900,14 @@ export default React.memo(function BuildingPicker({
                 style={{ marginRight: 6 }}
               />
 
-              <Text
-                maxFontSizeMultiplier={1.6}
+              <Text key={`picker-text-15-${fontSize}-${systemFontScale}`}
+                maxFontSizeMultiplier={2.5}
                 style={[
                   styles.modalTabText,
                   showSavedOnly &&
                     styles.modalTabTextActive,
                   { fontSize: 15 * fontSize },
+                  accessibleText,
                 ]}
               >
                 Saved ({savedBuildings.length})
@@ -889,11 +932,13 @@ export default React.memo(function BuildingPicker({
             {showSavedOnly &&
               savedBuildings.length === 0 && (
                 <View style={styles.emptyState}>
-                  <Text
-                    maxFontSizeMultiplier={1.6}
+                  <Text key={`picker-text-16-${fontSize}-${systemFontScale}`}
+                    maxFontSizeMultiplier={2.5}
                     style={[
                       styles.emptyStateText,
                       { fontSize: 15 * fontSize },
+                      accessibleText,
+                  accessibleText,
                     ]}
                   >
                     No saved locations found.
@@ -1008,7 +1053,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   searchDropdown: {
-    maxHeight: 280,
+    maxHeight: 340,
   },
   dropdownHeader: {
     flexDirection: "row",
@@ -1043,7 +1088,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   buildingSelectorButton: {
-    height: 42,
+    minHeight: 42,
+    paddingVertical: 10,
     marginTop: 8,
     borderWidth: 1,
     borderColor: "#b8d1d4",
@@ -1143,6 +1189,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    flexWrap: "wrap",
   },
   modalTabActive: {
     borderBottomWidth: 2,

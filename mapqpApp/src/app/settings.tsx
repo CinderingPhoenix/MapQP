@@ -1,6 +1,6 @@
 
 import Slider from "@react-native-community/slider";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   Alert,
   Platform,
@@ -9,12 +9,14 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 import { useAuthGuard } from "../hooks/use-auth-guard";
+
 
 const KEYS_TO_DELETE = [
   "mapqp_microsoft_session",
@@ -25,6 +27,7 @@ const KEYS_TO_DELETE = [
 
 export default function SettingsPage() {
   useAuthGuard();
+  const { fontScale } = useWindowDimensions();
 
   const {
     navigationMode,
@@ -44,6 +47,30 @@ export default function SettingsPage() {
     mode: "standard" | "accessibility"
   ) => {
     setNavigationMode(mode);
+  };
+
+  const { from } = useLocalSearchParams<{ from?: string }>();
+
+  const handleBackFromSettings = () => {
+    const originalMode =
+      from === "standard-navigation"
+        ? "standard"
+        : from === "accessibility-navigation"
+          ? "accessibility"
+          : null;
+
+    // No mode change: return to the existing screen.
+    if (!originalMode || navigationMode === originalMode) {
+      router.back();
+      return;
+    }
+
+    // Mode changed: open the newly selected navigation screen.
+    router.replace(
+      navigationMode === "standard"
+        ? "/standard-navigation"
+        : "/accessibility-navigation"
+    );
   };
 
   const returnToLandingPage = () => {
@@ -121,23 +148,21 @@ export default function SettingsPage() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={handleBackFromSettings}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel="Back to navigation"
+          accessibilityHint="Returns to navigation and applies the selected navigation mode"
         >
           <Text
-            maxFontSizeMultiplier={1.3}
-            style={[
-              styles.backArrow,
-              { fontSize: 38 * fontSize },
-            ]}
+            allowFontScaling={false}
+            style={styles.backArrow}
           >
             ‹
           </Text>
         </TouchableOpacity>
 
-        <Text
-          maxFontSizeMultiplier={1.5}
+        <Text key={`settings-text-1-${fontSize}-${fontScale}`}
+          maxFontSizeMultiplier={2.5}
           style={[
             styles.headerTitle,
             { fontSize: 21 * fontSize },
@@ -154,8 +179,9 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Navigation Mode */}
-        <Text
-          maxFontSizeMultiplier={1.5}
+        <Text key={`settings-text-2-${fontSize}-${fontScale}`}
+          maxFontSizeMultiplier={2.5}
+          accessibilityRole="header"
           style={[
             styles.sectionLabel,
             deviceAccessibility.darkerSystemColorsEnabled &&
@@ -174,8 +200,8 @@ export default function SettingsPage() {
           ]}
         >
           <View style={styles.optionRow}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`settings-text-3-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
                 styles.deviceSettingTitle,
@@ -204,12 +230,13 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Standard navigation mode"
+                accessibilityHint="Uses standard navigation when you return to the map"
                 accessibilityState={{
                   selected: navigationMode === "standard",
                 }}
               >
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-4-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -235,12 +262,13 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Accessible navigation mode"
+                accessibilityHint="Uses accessible navigation when you return to the map"
                 accessibilityState={{
                   selected: navigationMode === "accessibility",
                 }}
               >
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-5-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -258,8 +286,9 @@ export default function SettingsPage() {
         </View>
 
         {/* Navigation Preferences */}
-        <Text
-          maxFontSizeMultiplier={1.5}
+        <Text key={`settings-text-6-${fontSize}-${fontScale}`}
+          maxFontSizeMultiplier={2.5}
+          accessibilityRole="header"
           style={[
             styles.sectionLabel,
             deviceAccessibility.darkerSystemColorsEnabled &&
@@ -278,8 +307,8 @@ export default function SettingsPage() {
           ]}
         >
           <View style={styles.optionRow}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`settings-text-7-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
                 { fontSize: 16 * fontSize },
@@ -307,12 +336,13 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Feet and miles"
+                accessibilityHint="Displays distances in feet and miles"
                 accessibilityState={{
                   selected: distanceUnits === "imperial",
                 }}
               >
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-8-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -336,12 +366,13 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Meters and kilometers"
+                accessibilityHint="Displays distances in meters and kilometers"
                 accessibilityState={{
                   selected: distanceUnits === "metric",
                 }}
               >
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-9-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -360,8 +391,8 @@ export default function SettingsPage() {
           <Divider />
 
           <View style={styles.optionRow}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`settings-text-10-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
                 { fontSize: 16 * fontSize },
@@ -389,12 +420,13 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Natural directions"
+                accessibilityHint="Uses directions such as turn left or turn right"
                 accessibilityState={{
                   selected: directionStyle === "natural",
                 }}
               >
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-11-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -420,12 +452,13 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="button"
                 accessibilityLabel="Degree based directions"
+                accessibilityHint="Uses turning angles in degrees"
                 accessibilityState={{
                   selected: directionStyle === "degrees",
                 }}
               >
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-12-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -443,8 +476,9 @@ export default function SettingsPage() {
         </View>
 
         {/* Display */}
-        <Text
-          maxFontSizeMultiplier={1.5}
+        <Text key={`settings-text-13-${fontSize}-${fontScale}`}
+          maxFontSizeMultiplier={2.5}
+          accessibilityRole="header"
           style={[
             styles.sectionLabel,
             deviceAccessibility.darkerSystemColorsEnabled &&
@@ -463,8 +497,8 @@ export default function SettingsPage() {
           ]}
         >
           <View style={styles.sliderRow}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+            <Text key={`settings-text-14-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
                 { fontSize: 16 * fontSize },
@@ -474,8 +508,9 @@ export default function SettingsPage() {
             </Text>
 
             <View style={styles.sliderContainer}>
-              <Text
-                maxFontSizeMultiplier={1.4}
+              <Text key={`settings-text-15-${fontSize}-${fontScale}`}
+                maxFontSizeMultiplier={2.5}
+                accessible={false}
                 style={[
                   styles.smallA,
                   deviceAccessibility.darkerSystemColorsEnabled &&
@@ -491,6 +526,7 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="adjustable"
                 accessibilityLabel="Text size"
+                accessibilityHint="Swipe up or down to adjust text size"
                 accessibilityValue={{
                   min: 80,
                   max: 180,
@@ -519,8 +555,9 @@ export default function SettingsPage() {
                 />
               </View>
 
-              <Text
-                maxFontSizeMultiplier={1.4}
+              <Text key={`settings-text-16-${fontSize}-${fontScale}`}
+                maxFontSizeMultiplier={2.5}
+                accessible={false}
                 style={[
                   styles.largeA,
                   deviceAccessibility.darkerSystemColorsEnabled &&
@@ -532,8 +569,8 @@ export default function SettingsPage() {
               </Text>
             </View>
 
-            <Text
-              maxFontSizeMultiplier={1.4}
+            <Text key={`settings-text-17-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.fontSizeValue,
                 deviceAccessibility.darkerSystemColorsEnabled &&
@@ -547,8 +584,9 @@ export default function SettingsPage() {
         </View>
 
         {/* Device Accessibility */}
-        <Text
-          maxFontSizeMultiplier={1.5}
+        <Text key={`settings-text-18-${fontSize}-${fontScale}`}
+          maxFontSizeMultiplier={2.5}
+          accessibilityRole="header"
           style={[
             styles.sectionLabel,
             deviceAccessibility.darkerSystemColorsEnabled &&
@@ -566,9 +604,9 @@ export default function SettingsPage() {
               styles.settingsCardHighContrast,
           ]}
         >
-          <View style={styles.deviceSettingRow}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceAccessibility.screenReaderEnabled ? "On" : "Off"}`}>
+            <Text key={`settings-text-19-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
                 styles.deviceSettingTitle,
@@ -577,8 +615,8 @@ export default function SettingsPage() {
             >
               Screen reader
             </Text>
-            <Text
-              maxFontSizeMultiplier={1.5}
+            <Text key={`settings-text-20-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.deviceValue,
                 deviceAccessibility.darkerSystemColorsEnabled &&
@@ -594,9 +632,9 @@ export default function SettingsPage() {
 
           <Divider />
 
-          <View style={styles.deviceSettingRow}>
-            <Text
-              maxFontSizeMultiplier={1.6}
+          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce motion, ${deviceAccessibility.reduceMotionEnabled ? "On" : "Off"}`}>
+            <Text key={`settings-text-21-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
                 styles.deviceSettingTitle,
@@ -605,8 +643,8 @@ export default function SettingsPage() {
             >
               Reduce motion
             </Text>
-            <Text
-              maxFontSizeMultiplier={1.5}
+            <Text key={`settings-text-22-${fontSize}-${fontScale}`}
+              maxFontSizeMultiplier={2.5}
               style={[
                 styles.deviceValue,
                 deviceAccessibility.darkerSystemColorsEnabled &&
@@ -624,9 +662,9 @@ export default function SettingsPage() {
             <>
               <Divider />
 
-              <View style={styles.deviceSettingRow}>
-                <Text
-                  maxFontSizeMultiplier={1.6}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Bold text, ${deviceAccessibility.boldTextEnabled ? "On" : "Off"}`}>
+                <Text key={`settings-text-23-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
                     styles.deviceSettingTitle,
@@ -635,8 +673,8 @@ export default function SettingsPage() {
                 >
                   Bold text
                 </Text>
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-24-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -652,9 +690,9 @@ export default function SettingsPage() {
 
               <Divider />
 
-              <View style={styles.deviceSettingRow}>
-                <Text
-                  maxFontSizeMultiplier={1.6}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Increase contrast, ${deviceAccessibility.darkerSystemColorsEnabled ? "On" : "Off"}`}>
+                <Text key={`settings-text-25-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
                     styles.deviceSettingTitle,
@@ -663,8 +701,8 @@ export default function SettingsPage() {
                 >
                   Increase contrast
                 </Text>
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-26-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -680,9 +718,9 @@ export default function SettingsPage() {
 
               <Divider />
 
-              <View style={styles.deviceSettingRow}>
-                <Text
-                  maxFontSizeMultiplier={1.6}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce transparency, ${deviceAccessibility.reduceTransparencyEnabled ? "On" : "Off"}`}>
+                <Text key={`settings-text-27-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
                     styles.deviceSettingTitle,
@@ -691,8 +729,8 @@ export default function SettingsPage() {
                 >
                   Reduce transparency
                 </Text>
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-28-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -712,9 +750,9 @@ export default function SettingsPage() {
             <>
               <Divider />
 
-              <View style={styles.deviceSettingRow}>
-                <Text
-                  maxFontSizeMultiplier={1.6}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`High text contrast, ${deviceAccessibility.highTextContrastEnabled ? "On" : "Off"}`}>
+                <Text key={`settings-text-29-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
                     { fontSize: 16 * fontSize },
@@ -722,8 +760,8 @@ export default function SettingsPage() {
                 >
                   High text contrast
                 </Text>
-                <Text
-                  maxFontSizeMultiplier={1.5}
+                <Text key={`settings-text-30-${fontSize}-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
                     deviceAccessibility.darkerSystemColorsEnabled &&
@@ -745,9 +783,10 @@ export default function SettingsPage() {
           onPress={returnToLandingPage}
           accessibilityRole="button"
           accessibilityLabel="Back to landing page"
+          accessibilityHint="Leaves navigation and returns to the landing page"
         >
-          <Text
-            maxFontSizeMultiplier={1.5}
+          <Text key={`settings-text-31-${fontSize}-${fontScale}`}
+            maxFontSizeMultiplier={2.5}
             style={[
               styles.landingButtonText,
               { fontSize: 15 * fontSize },
@@ -759,10 +798,12 @@ export default function SettingsPage() {
 
         <TouchableOpacity
           accessibilityRole="button"
+          accessibilityLabel="Delete all local data"
+          accessibilityHint="Opens a confirmation dialog before deleting saved data"
           style={styles.deleteStorageButton}
           onPress={deleteLocalStorage}
         >
-          <Text
+          <Text key={`settings-text-32-${fontSize}-${fontScale}`}
             style={[
               styles.deleteStorageText,
               { fontSize: 15 * fontSize },
@@ -777,7 +818,7 @@ export default function SettingsPage() {
 }
 
 function Divider() {
-  return <View style={styles.divider} />;
+  return <View style={styles.divider} accessible={false} />;
 }
 
 const styles = StyleSheet.create({
@@ -786,22 +827,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#F6F6F7",
   },
   header: {
-    height: 68,
+    minHeight: 68,
+    paddingVertical: 12,
     backgroundColor: "#AC2B37",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
+    flexShrink: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   backArrow: {
     color: "#FFFFFF",
     fontSize: 38,
-    lineHeight: 40,
   },
   headerTitle: {
     flex: 1,
@@ -809,9 +851,10 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: "800",
     textAlign: "center",
+    flexShrink: 1,
   },
   headerSpacer: {
-    width: 42,
+    width: 48,
   },
   scrollContent: {
     paddingHorizontal: 18,
@@ -871,8 +914,9 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    minHeight: 44,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -883,6 +927,8 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: 13,
     fontWeight: "700",
+    textAlign: "center",
+    flexShrink: 1,
     color: "#6B7280",
   },
   segmentTextHighContrast: {
