@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function LandingPage() {
   useLocationWarmup();
@@ -41,22 +42,48 @@ export default function LandingPage() {
         <SafeAreaView style={styles.safeArea}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoPlaceholder} accessible={false}>
-              <Text style={styles.logoPlaceholderText}>Logo</Text>
-            </View>
-
             <ExpoImage
-              source={require("../../assets/images/wpi-logo.png")}
-              style={styles.wpiLogo}
+              source={require("../../assets/images/mapqp-logo.png")}
+              style={styles.mapqpLogo}
               contentFit="contain"
               cachePolicy="memory-disk"
               priority="high"
               transition={0}
-              accessible={false}
+              accessibilityLabel="MapQP logo"
             />
+
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={styles.settingsButton}
+                onPress={() => router.push("/settings")}
+                activeOpacity={0.7}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+                accessibilityHint="Opens the application settings"
+              >
+                <Ionicons name="settings-outline" size={28} color="#172033" />
+              </TouchableOpacity>
+
+              <ExpoImage
+                source={require("../../assets/images/wpi-logo.png")}
+                style={styles.wpiLogo}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={0}
+                accessible={false}
+              />
+            </View>
           </View>
 
           <View style={styles.presetArea}>
+            <View style={styles.presetLabel}>
+              <Text style={styles.presetText}>
+                Choose Your Navigation Mode
+              </Text>
+            </View>
+
             <View style={styles.buttonRow}>
               {/* Standard Mode */}
               <TouchableOpacity
@@ -175,8 +202,13 @@ const styles = StyleSheet.create({
   },
 
   wpiLogo: {
-    width: 100,
-    height: 70,
+    width: 150,
+    height: 120,
+  },
+
+  mapqpLogo: {
+    width: 150,
+    height: 140,
   },
 
   mapBackground: {
@@ -194,15 +226,16 @@ const styles = StyleSheet.create({
   presetLabel: {
     alignSelf: "center",
     backgroundColor: "rgba(255,255,255,0.88)",
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    marginBottom: 38,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginBottom: 20,
   },
 
   presetText: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#000000",
+    color: "#172033",
     textAlign: "center",
   },
 
@@ -301,5 +334,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#AC2B37",
     borderTopLeftRadius: 5,
     borderTopRightRadius: 5,
+  },
+
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  settingsButton: {
+    position: "absolute",
+    top: 130,
+    right: 0,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
 });
