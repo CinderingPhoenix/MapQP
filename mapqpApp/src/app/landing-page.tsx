@@ -15,7 +15,7 @@ export default function LandingPage() {
   useAuthGuard();
   const { setNavigationMode, setHasSelectedMode } = useSettings();
   const { fontScale, width } = useWindowDimensions();
-  const { darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled } = useDeviceAccessibility();
+  const { darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useDeviceAccessibility();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
   const largeText = fontScale > 1.25;
@@ -59,7 +59,7 @@ export default function LandingPage() {
       <View style={styles.mapBackground}>
         <ExpoImage
           source={require("../../assets/images/campus-map.png")}
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, styles.mapImage]}
           contentFit="cover"
           cachePolicy="memory-disk"
           priority="high"
@@ -67,7 +67,7 @@ export default function LandingPage() {
           accessible={false}
         />
         <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.header, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 2, borderBottomColor: "#172033" }]}>
+          <View style={[styles.header, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 3, borderBottomColor: "#761723" }]}>
             <ExpoImage
               source={require("../../assets/images/mapqp-logo.png")}
               style={styles.mapqpLogo}
@@ -102,17 +102,18 @@ export default function LandingPage() {
           </View>
 
           <ScrollView
+            key={`landing-scroll-${stackButtons ? "stacked" : "row"}-${fontScale.toFixed(2)}`}
             style={styles.contentScroll}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={largeText}
           >
             <View style={styles.presetArea}>
-              <View style={[styles.presetLabel, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}>
+              <View style={[styles.presetLabel, increasedContrast && styles.presetLabelHighContrast]}>
                 <Text
                   ref={headingRef}
                   key={`landing-heading-${fontScale}`}
-                  style={styles.presetText}
+                  style={[styles.presetText, boldTextEnabled && styles.boldHeading, increasedContrast && styles.highContrastHeading]}
                   maxFontSizeMultiplier={3}
                   accessibilityRole="header"
                   accessibilityLabel="MapQP, accessible campus navigation. Choose your navigation mode"
@@ -133,30 +134,25 @@ export default function LandingPage() {
                 >
                   <LinearGradient
                     colors={opaqueSurfaces
-                      ? ["#fff", "#fff", "#fff", "#fff"]
-                      : [
-                          "rgba(255,255,255,0.72)",
-                          "rgba(255,255,255,0.97)",
-                          "rgba(255,255,255,0.97)",
-                          "rgba(220,240,255,0.72)",
-                        ]}
+                      ? ["#FFF5F5", "#F9E5E7"]
+                      : ["rgba(255,245,245,0.96)", "rgba(249,229,231,0.96)"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.modeButton, largeText && styles.modeButtonLargeText, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+                    style={[styles.modeButton, styles.standardModeButton, largeText && styles.modeButtonLargeText, increasedContrast && styles.modeButtonHighContrast]}
                   >
                     <View style={[styles.modeIcon, styles.standardIcon]}>
                       <Text style={styles.standardIconText} allowFontScaling={false}>➤</Text>
                     </View>
                     <Text
                       key={`standard-title-${fontScale}`}
-                      style={styles.modeTitle}
+                      style={[styles.modeTitle, styles.standardTitle, boldTextEnabled && styles.boldHeading]}
                       maxFontSizeMultiplier={3}
                     >
                       Standard{"\n"}Mode
                     </Text>
                     <Text
                       key={`standard-description-${fontScale}`}
-                      style={styles.modeDescription}
+                      style={[styles.modeDescription, styles.standardDescription, boldTextEnabled && styles.boldDescription]}
                       maxFontSizeMultiplier={3}
                     >
                       General campus navigation
@@ -176,30 +172,25 @@ export default function LandingPage() {
                 >
                   <LinearGradient
                     colors={opaqueSurfaces
-                      ? ["#fff", "#fff", "#fff", "#fff"]
-                      : [
-                          "rgba(255,255,255,0.72)",
-                          "rgba(255,255,255,0.97)",
-                          "rgba(255,255,255,0.97)",
-                          "rgba(255,225,228,0.72)",
-                        ]}
+                      ? ["#F1FAF9", "#DDF2F0"]
+                      : ["rgba(241,250,249,0.96)", "rgba(221,242,240,0.96)"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.modeButton, largeText && styles.modeButtonLargeText, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+                    style={[styles.modeButton, styles.accessibilityModeButton, largeText && styles.modeButtonLargeText, increasedContrast && styles.modeButtonHighContrast]}
                   >
                     <View style={[styles.modeIcon, styles.accessibilityIcon]}>
                       <Text style={styles.accessibilityIconText} allowFontScaling={false}>♿</Text>
                     </View>
                     <Text
                       key={`accessibility-title-${fontScale}`}
-                      style={styles.modeTitle}
+                      style={[styles.modeTitle, styles.accessibilityTitle, boldTextEnabled && styles.boldHeading]}
                       maxFontSizeMultiplier={3}
                     >
                       Accessibility{"\n"}Mode
                     </Text>
                     <Text
                       key={`accessibility-description-${fontScale}`}
-                      style={styles.modeDescription}
+                      style={[styles.modeDescription, styles.accessibilityDescription, boldTextEnabled && styles.boldDescription]}
                       maxFontSizeMultiplier={3}
                     >
                       Navigation built around your needs
@@ -222,6 +213,8 @@ const styles = StyleSheet.create({
   header: {
     height: 90,
     backgroundColor: "rgba(255,255,255,0.55)",
+    borderBottomWidth: 3,
+    borderBottomColor: "#AC2B37",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -230,24 +223,46 @@ const styles = StyleSheet.create({
   },
   wpiLogo: { width: 150, height: 120 },
   mapqpLogo: { width: 150, height: 140 },
-  mapBackground: { flex: 1, width: "100%" },
+  mapBackground: { flex: 1, width: "100%", backgroundColor: "#63865B", overflow: "hidden" },
+  mapImage: { transform: [{ scale: 1 }] },
   contentScroll: { flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: "flex-end" },
   presetArea: { paddingHorizontal: 18, paddingBottom: 26, paddingTop: 30 },
   presetLabel: {
+    transform: [{ translateY: 10 }],
     alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.88)",
+    backgroundColor: "#F1F5F9",
+    borderLeftWidth: 5,
+    borderLeftColor: "#475569",
+    borderRightWidth: 5,
+    borderRightColor: "#475569",
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 14,
     marginBottom: 20,
     maxWidth: "100%",
   },
+  presetLabelHighContrast: {
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderLeftColor: "#172033",
+    borderRightColor: "#172033",
+    borderTopWidth: 2,
+    borderBottomWidth: 2,
+    borderTopColor: "#172033",
+    borderBottomColor: "#172033",
+    backgroundColor: "#FFFFFF",
+  },
+  boldHeading: { fontWeight: "900" },
+  boldDescription: { fontWeight: "800" },
+  highContrastHeading: { color: "#000000" },
   presetText: { fontSize: 22, fontWeight: "800", color: "#172033", textAlign: "center" },
   buttonRow: { flexDirection: "row", gap: 14, alignItems: "stretch" },
   buttonRowStacked: { flexDirection: "column" },
   buttonWrapper: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     minWidth: 0,
     minHeight: 200,
     borderRadius: 28,
@@ -257,7 +272,12 @@ const styles = StyleSheet.create({
     shadowRadius: 9,
     elevation: 6,
   },
-  buttonWrapperStacked: { flex: 0, width: "100%" },
+  buttonWrapperStacked: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
+    width: "100%",
+  },
   modeButton: {
     flexGrow: 1,
     borderRadius: 28,
@@ -269,6 +289,13 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.8)",
     overflow: "hidden",
   },
+  standardModeButton: { borderColor: "#AC2B37", borderWidth: 2 },
+  accessibilityModeButton: { borderColor: "#087F8C", borderWidth: 2 },
+  modeButtonHighContrast: { borderWidth: 4 },
+  standardTitle: { color: "#761723" },
+  accessibilityTitle: { color: "#064C52" },
+  standardDescription: { color: "#761723" },
+  accessibilityDescription: { color: "#064C52" },
   modeButtonLargeText: { paddingVertical: 24 },
   modeIcon: {
     width: 58,
@@ -278,8 +305,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
-  standardIcon: { backgroundColor: "#246B96" },
-  accessibilityIcon: { backgroundColor: "#AC2B37" },
+  standardIcon: { backgroundColor: "#761723" },
+  accessibilityIcon: { backgroundColor: "#064C52" },
   standardIconText: { color: "#FFFFFF", fontSize: 28, fontWeight: "900" },
   accessibilityIconText: { color: "#FFFFFF", fontSize: 29 },
   modeTitle: {
@@ -292,12 +319,12 @@ const styles = StyleSheet.create({
   modeDescription: { fontSize: 12, color: "#4B5563", textAlign: "center" },
   standardAccent: {
     position: "absolute", bottom: 0, left: 24, right: 24,
-    height: 5, backgroundColor: "#246B96",
+    height: 5, backgroundColor: "#761723",
     borderTopLeftRadius: 5, borderTopRightRadius: 5,
   },
   accessibilityAccent: {
     position: "absolute", bottom: 0, left: 24, right: 24,
-    height: 5, backgroundColor: "#AC2B37",
+    height: 5, backgroundColor: "#064C52",
     borderTopLeftRadius: 5, borderTopRightRadius: 5,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
