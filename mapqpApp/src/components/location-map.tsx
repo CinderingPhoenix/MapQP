@@ -175,64 +175,59 @@ export default function LocationMap({
    * is enabled.
    */
   useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
-    let isMounted = true;
+    if (!isHeadingFocused) return;
 
-    let previousRawHeading: number | null = null;
-    let absoluteHeading: number | null = null;
+    let subscription: Location.LocationSubscription | null = null;
+    let cancelled = false;
 
     async function startHeadingTracking() {
-      if (isHeadingFocused) {
-        const sub = await Location.watchHeadingAsync(
-          (headingData) => {
-            let rawHeadingDeg =
-              headingData.trueHeading >= 0
-                ? headingData.trueHeading
-                : headingData.magHeading;
+      try {
+        const sub = await Location.watchHeadingAsync((headingData) => {
+          const rawHeading =
+            headingData.trueHeading >= 0
+              ? headingData.trueHeading
+              : headingData.magHeading;
 
-            rawHeadingDeg = rawHeadingDeg % 360;
-
-            if (
-              absoluteHeading === null ||
-              previousRawHeading === null
-            ) {
-              absoluteHeading = rawHeadingDeg;
-              previousRawHeading = rawHeadingDeg;
-            } else {
-              let diff = rawHeadingDeg - previousRawHeading;
-
-              if (diff > 180) diff -= 360;
-              if (diff < -180) diff += 360;
-
-              if (Math.abs(diff) < 0.5) return;
-
-              absoluteHeading += diff;
-              previousRawHeading = rawHeadingDeg;
-
-              webViewRef.current?.injectJavaScript(`
-                if (window.setTargetHeading) {
-                  window.setTargetHeading(
-                    ${absoluteHeading.toFixed(2)}
-                  );
-                }
-                true;
-              `);
-            }
+          if (
+            !Number.isFinite(rawHeading) ||
+            rawHeading < 0 ||
+            headingData.accuracy === 0
+          ) {
+            return;
           }
-        );
 
-        if (isMounted) {
-          subscription = sub;
-        } else {
+          const normalizedHeading =
+            ((rawHeading % 360) + 360) % 360;
+
+          console.log("[MapQP Compass]", {
+            trueHeading: headingData.trueHeading,
+            magneticHeading: headingData.magHeading,
+            accuracy: headingData.accuracy,
+            selectedHeading: normalizedHeading,
+          });
+
+          webViewRef.current?.injectJavaScript(`
+            if (window.setTargetHeading) {
+              window.setTargetHeading(${normalizedHeading});
+            }
+            true;
+          `);
+        });
+
+        if (cancelled) {
           sub.remove();
+        } else {
+          subscription = sub;
         }
+      } catch (error) {
+        console.error("[MapQP Compass] Tracking failed:", error);
       }
     }
 
     void startHeadingTracking();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
       subscription?.remove();
     };
   }, [isHeadingFocused]);
