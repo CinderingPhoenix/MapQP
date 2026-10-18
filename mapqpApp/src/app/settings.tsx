@@ -1,5 +1,6 @@
 import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -10,9 +11,11 @@ import {
   View,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { File, Paths } from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
+import defaultRoutePoints from "../data/route-points.json";
 
 const KEYS_TO_DELETE = [
   "mapqp_microsoft_session",
@@ -34,6 +37,28 @@ export default function SettingsPage() {
     fontSize,
     setFontSize,
   } = useSettings();
+
+  const [mapVersion, setMapVersion] = useState<string>(
+    defaultRoutePoints.version ? String(defaultRoutePoints.version) : "1.0"
+  );
+
+  useEffect(() => {
+    async function loadMapVersion() {
+      try {
+        const routeFile = new File(Paths.document, "route-points.json");
+        if (routeFile.exists) {
+          const content = await routeFile.text();
+          const parsed = JSON.parse(content);
+          if (parsed.version) {
+            setMapVersion(String(parsed.version));
+          }
+        }
+      } catch (err) {
+        console.error("Error reading local map version:", err);
+      }
+    }
+    void loadMapVersion();
+  }, []);
 
   const changeNavigationMode = (
     mode: "standard" | "accessibility"
@@ -285,6 +310,16 @@ export default function SettingsPage() {
         </View>
         </View>
 
+        {/* About / Route Version Info */}
+        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>ABOUT</Text>
+
+        <View style={styles.settingsCard}>
+          <View style={styles.infoRow}>
+            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Route Data Version</Text>
+            <Text style={[styles.infoValue, { fontSize: 15 * fontSize }]}>v{mapVersion}</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={styles.landingButton}
           onPress={returnToLandingPage}
@@ -348,6 +383,8 @@ const styles = StyleSheet.create({
   settingsCard: { backgroundColor: "#FFFFFF", borderRadius: 18, paddingHorizontal: 16, shadowColor: "#000000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 2 },
   settingRow: { minHeight: 88, flexDirection: "row", alignItems: "center", paddingVertical: 14 },
   optionRow: { paddingVertical: 16 },
+  infoRow: { paddingVertical: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  infoValue: { fontWeight: "600", color: "#6B7280" },
   settingTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", marginBottom: 4 },
   segmentedControl: { flexDirection: "row", backgroundColor: "#F1F2F4", borderRadius: 10, padding: 3, marginTop: 12 },
   segmentButton: { flex: 1, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 8, alignItems: "center", justifyContent: "center" },
