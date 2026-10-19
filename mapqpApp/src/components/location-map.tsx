@@ -56,7 +56,16 @@ export default function LocationMap({
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [htmlContent, setHtmlContent] = useState<string>("");
 
-  const { screenReaderEnabled } = useDeviceAccessibility();
+  const { screenReaderEnabled, reduceMotionEnabled, loaded: accessibilityLoaded } = useDeviceAccessibility();
+
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
+      if (window.setReduceMotion) {
+        window.setReduceMotion(${!accessibilityLoaded || reduceMotionEnabled});
+      }
+      true;
+    `);
+  }, [accessibilityLoaded, reduceMotionEnabled]);
 
   const hasUserPannedAwayRef = useRef(false);
 
@@ -87,6 +96,9 @@ export default function LocationMap({
    */
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
+      if (window.setReduceMotion) {
+        window.setReduceMotion(${!accessibilityLoaded || reduceMotionEnabled});
+      }
       if (window.initMap) {
         window.initMap(
           ${latitude},
@@ -133,7 +145,8 @@ export default function LocationMap({
 
           window.map.fitBounds(bounds, {
             padding: [60, 60],
-            maxZoom: 16
+            maxZoom: 16,
+            animate: !window.reduceMotionEnabled
           });
         }
         true;

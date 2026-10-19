@@ -61,6 +61,13 @@
       will-change: transform;
     }
 
+    /* Applies to both our compass and Leaflet's CSS transitions. */
+    .reduce-motion #map,
+    .reduce-motion #map * {
+      transition: none !important;
+      animation: none !important;
+    }
+
     .compass-control.accessibility-compass-control {
       width: 72px !important;
       height: 72px !important;
@@ -110,6 +117,27 @@
     var isHeadingFocused = false;
     var routeData = null;
     var currentCompassAngle = null;
+    // Remain still until React Native supplies the device preference.
+    window.reduceMotionEnabled = true;
+
+    window.setReduceMotion = function(enabled) {
+      window.reduceMotionEnabled = !!enabled;
+      document.documentElement.classList.toggle('reduce-motion', !!enabled);
+      if (!enabled) return;
+
+      var wasResetting = resetFrameId !== null;
+      cancelBearingAnimations();
+      if (map) {
+        map.stop();
+        if (isHeadingFocused && currentAnimatedBearing !== null) {
+          currentAnimatedBearing = currentTargetBearing;
+          map.setBearing(currentTargetBearing);
+        } else if (wasResetting) {
+          currentAnimatedBearing = 0;
+          map.setBearing(0);
+        }
+      }
+    };
 
     /**
      * Calculates the closest projected point on a line segment
@@ -254,7 +282,8 @@
       );
 
       map.fitBounds(remainingPolyline.getBounds(), {
-        padding: [36, 36]
+        padding: [36, 36],
+        animate: !window.reduceMotionEnabled
       });
     }
 
@@ -387,6 +416,7 @@
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
 
+            cancelBearingAnimations();
             isHeadingFocused = !isHeadingFocused;
 
             container.setAttribute(
@@ -402,7 +432,7 @@
               );
 
               map.setView(marker.getLatLng(), 32, {
-                animate: true
+                animate: !window.reduceMotionEnabled
               });
             } else {
               container.style.backgroundColor = 'white';
@@ -540,6 +570,16 @@
     var currentTargetBearing = 0;
     var currentAnimatedBearing = null;
     var isAnimatingBearing = false;
+    var bearingFrameId = null;
+    var resetFrameId = null;
+
+    function cancelBearingAnimations() {
+      if (bearingFrameId !== null) cancelAnimationFrame(bearingFrameId);
+      if (resetFrameId !== null) cancelAnimationFrame(resetFrameId);
+      bearingFrameId = null;
+      resetFrameId = null;
+      isAnimatingBearing = false;
+    }
 
     /**
      * Updates the target heading angle.
@@ -557,6 +597,13 @@
 
       currentTargetBearing = -rawDeg;
 
+      if (window.reduceMotionEnabled) {
+        cancelBearingAnimations();
+        currentAnimatedBearing = currentTargetBearing;
+        map.setBearing(currentTargetBearing);
+        return;
+      }
+
       if (!isAnimatingBearing) {
         if (currentAnimatedBearing === null) {
           currentAnimatedBearing = map.getBearing
@@ -565,7 +612,7 @@
         }
 
         isAnimatingBearing = true;
-        requestAnimationFrame(animateBearingStep);
+        bearingFrameId = requestAnimationFrame(animateBearingStep);
       }
     };
 
@@ -573,6 +620,7 @@
      * Sets heading focus state.
      */
     window.setHeadingFocus = function(focused) {
+      cancelBearingAnimations();
       isHeadingFocused = focused;
 
       var compass = document.querySelector(
@@ -592,7 +640,7 @@
 
       if (focused && marker && map) {
         map.setView(marker.getLatLng(), 32, {
-          animate: true
+          animate: !window.reduceMotionEnabled
         });
       }
     };
@@ -601,6 +649,7 @@
      * Animates map rotation.
      */
     function animateBearingStep() {
+      bearingFrameId = null;
       if (!isHeadingFocused || !map) {
         isAnimatingBearing = false;
         return;
@@ -613,7 +662,7 @@
       if (Math.abs(diff) > 0.05) {
         currentAnimatedBearing += diff * 0.03;
         map.setBearing(currentAnimatedBearing);
-        requestAnimationFrame(animateBearingStep);
+        bearingFrameId = requestAnimationFrame(animateBearingStep);
       } else {
         currentAnimatedBearing = currentTargetBearing;
         map.setBearing(currentTargetBearing);
@@ -625,6 +674,12 @@
      * Smoothly resets rotation.
      */
     function smoothRotateToZero() {
+      cancelBearingAnimations();
+      if (window.reduceMotionEnabled) {
+        currentAnimatedBearing = 0;
+        map.setBearing(0);
+        return;
+      }
       var startBearing = map.getBearing
         ? map.getBearing()
         : 0;
@@ -638,6 +693,7 @@
       var duration = 300;
 
       function step(timestamp) {
+        resetFrameId = null;
         if (!startTime) {
           startTime = timestamp;
         }
@@ -659,14 +715,14 @@
         currentAnimatedBearing = stepBearing;
 
         if (progress < 1) {
-          requestAnimationFrame(step);
+          resetFrameId = requestAnimationFrame(step);
         } else {
           map.setBearing(targetBearing);
           currentAnimatedBearing = targetBearing;
         }
       }
 
-      requestAnimationFrame(step);
+      resetFrameId = requestAnimationFrame(step);
     }
 
     /**
@@ -690,7 +746,7 @@
         map.setView(
           userLatLng,
           Math.max(map.getZoom(), 32),
-          { animate: true }
+          { animate: !window.reduceMotionEnabled }
         );
       }
 
@@ -755,7 +811,7 @@
     window.resetView = function() {
       if (map && marker) {
         map.panTo(marker.getLatLng(), {
-          animate: true
+          animate: !window.reduceMotionEnabled
         });
       }
     };

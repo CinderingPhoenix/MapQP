@@ -28,6 +28,7 @@ import type { DiscoveryDocument } from 'expo-auth-session';
 import { useSettings } from '../context/settings-context';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useKeyLockout } from '../hooks/use-key-lockout';
+import { useDeviceAccessibility } from '../hooks/use-device-accessibility';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
@@ -66,6 +67,7 @@ export default function LoadingScreen({
   showSpinner = true,
 }: MapQPProps) {
   useLocationWarmup();
+  const { reduceMotionEnabled, loaded: accessibilityLoaded } = useDeviceAccessibility();
   const { hasSelectedMode, navigationMode, settingsLoaded } = useSettings();
   const {
     isLockedOut,
@@ -75,8 +77,8 @@ export default function LoadingScreen({
     registerSuccess,
   } = useKeyLockout();
 
-  const pulseAnim = useRef(new Animated.Value(0.96)).current;
-  const opacityAnim = useRef(new Animated.Value(0.75)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
   const [authLoaded, setAuthLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -313,6 +315,12 @@ export default function LoadingScreen({
   };
 
   useEffect(() => {
+    if (!accessibilityLoaded || reduceMotionEnabled) {
+      pulseAnim.setValue(1);
+      opacityAnim.setValue(1);
+      return;
+    }
+
     // Pulse animation loop
     const pulseLoop = Animated.loop(
       Animated.parallel([
@@ -345,10 +353,13 @@ export default function LoadingScreen({
 
     pulseLoop.start();
 
+    return () => pulseLoop.stop();
+  }, [accessibilityLoaded, reduceMotionEnabled, pulseAnim, opacityAnim]);
+
+  // Keep startup timing independent of changes to the motion preference.
+  useEffect(() => {
     if (!settingsLoaded || !authLoaded) {
-      return () => {
-        pulseLoop.stop();
-      };
+      return;
     }
 
     const timer = setTimeout(() => {
@@ -360,7 +371,6 @@ export default function LoadingScreen({
     }, duration);
 
     return () => {
-      pulseLoop.stop();
       clearTimeout(timer);
     };
   }, [
