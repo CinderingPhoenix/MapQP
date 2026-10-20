@@ -16,7 +16,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { useDeviceAccessibility, type DeviceAccessibilityPreference } from "../hooks/use-device-accessibility";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 
 
@@ -63,8 +63,22 @@ export default function SettingsPage() {
     deviceAccessibility.darkerSystemColorsEnabled ||
     deviceAccessibility.highTextContrastEnabled;
 
-  const deviceSettingValue = (enabled: boolean) =>
-    deviceAccessibility.loaded ? (enabled ? "On" : "Off") : "Loading";
+  const deviceSettingValue = (preference: DeviceAccessibilityPreference) => {
+    const status = deviceAccessibility.detectionStatus[preference];
+    if (status === "loading") return "Loading";
+    if (status === "unavailable") return "Unavailable";
+    return deviceAccessibility[preference] ? "On" : "Off";
+  };
+
+  const deviceSettingStyles = (preference: DeviceAccessibilityPreference) => {
+    const verifiedOn = deviceAccessibility.detectionStatus[preference] === "available"
+      && deviceAccessibility[preference];
+    return [
+      styles.deviceValue,
+      verifiedOn ? styles.deviceValueOn : styles.deviceValueOff,
+      increasedContrast && (verifiedOn ? styles.deviceValueOnHighContrast : styles.deviceValueOffHighContrast),
+    ];
+  };
 
   const changeNavigationMode = (
     mode: "standard" | "accessibility"
@@ -665,7 +679,7 @@ export default function SettingsPage() {
               styles.settingsCardHighContrast,
           ]}
         >
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceSettingValue(deviceAccessibility.screenReaderEnabled)}`}>
+          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}`}>
             <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-19-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
@@ -679,19 +693,17 @@ export default function SettingsPage() {
             <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-20-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
-                styles.deviceValue,
-                deviceAccessibility.screenReaderEnabled ? styles.deviceValueOn : styles.deviceValueOff,
-                increasedContrast && (deviceAccessibility.screenReaderEnabled ? styles.deviceValueOnHighContrast : styles.deviceValueOffHighContrast),
+                ...deviceSettingStyles("screenReaderEnabled"),
                 { fontSize: 14 * fontSize },
               ]}
             >
-              {deviceSettingValue(deviceAccessibility.screenReaderEnabled)}
+              {deviceSettingValue("screenReaderEnabled")}
             </AccessibleText>
           </View>
 
           <Divider />
 
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce motion, ${deviceSettingValue(deviceAccessibility.reduceMotionEnabled)}`}>
+          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce motion, ${deviceSettingValue("reduceMotionEnabled")}`}>
             <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-21-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
@@ -705,13 +717,11 @@ export default function SettingsPage() {
             <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-22-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
-                styles.deviceValue,
-                deviceAccessibility.reduceMotionEnabled ? styles.deviceValueOn : styles.deviceValueOff,
-                increasedContrast && (deviceAccessibility.reduceMotionEnabled ? styles.deviceValueOnHighContrast : styles.deviceValueOffHighContrast),
+                ...deviceSettingStyles("reduceMotionEnabled"),
                 { fontSize: 14 * fontSize },
               ]}
             >
-              {deviceSettingValue(deviceAccessibility.reduceMotionEnabled)}
+              {deviceSettingValue("reduceMotionEnabled")}
             </AccessibleText>
           </View>
 
@@ -719,7 +729,7 @@ export default function SettingsPage() {
             <>
               <Divider />
 
-              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Bold text, ${deviceSettingValue(deviceAccessibility.boldTextEnabled)}`}>
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Bold text, ${deviceSettingValue("boldTextEnabled")}`}>
                 <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-23-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
@@ -733,19 +743,17 @@ export default function SettingsPage() {
                 <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-24-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
-                    styles.deviceValue,
-                    deviceAccessibility.boldTextEnabled ? styles.deviceValueOn : styles.deviceValueOff,
-                    increasedContrast && (deviceAccessibility.boldTextEnabled ? styles.deviceValueOnHighContrast : styles.deviceValueOffHighContrast),
+                    ...deviceSettingStyles("boldTextEnabled"),
                     { fontSize: 14 * fontSize },
                   ]}
                 >
-                  {deviceSettingValue(deviceAccessibility.boldTextEnabled)}
+                  {deviceSettingValue("boldTextEnabled")}
                 </AccessibleText>
               </View>
 
               <Divider />
 
-              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Increase contrast, ${deviceSettingValue(deviceAccessibility.darkerSystemColorsEnabled)}`}>
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Increase contrast, ${deviceSettingValue("darkerSystemColorsEnabled")}`}>
                 <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-25-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
@@ -759,13 +767,35 @@ export default function SettingsPage() {
                 <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-26-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
-                    styles.deviceValue,
-                    deviceAccessibility.darkerSystemColorsEnabled ? styles.deviceValueOn : styles.deviceValueOff,
-                    increasedContrast && (deviceAccessibility.darkerSystemColorsEnabled ? styles.deviceValueOnHighContrast : styles.deviceValueOffHighContrast),
+                    ...deviceSettingStyles("darkerSystemColorsEnabled"),
                     { fontSize: 14 * fontSize },
                   ]}
                 >
-                  {deviceSettingValue(deviceAccessibility.darkerSystemColorsEnabled)}
+                  {deviceSettingValue("darkerSystemColorsEnabled")}
+                </AccessibleText>
+              </View>
+
+              <Divider />
+
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce transparency, ${deviceSettingValue("reduceTransparencyEnabled")}`}>
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-27-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
+                  style={[
+                    styles.settingTitle,
+                    styles.deviceSettingTitle,
+                    { fontSize: 16 * fontSize },
+                  ]}
+                >
+                  Reduce transparency
+                </AccessibleText>
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-28-${fontScale}`}
+                  maxFontSizeMultiplier={2.5}
+                  style={[
+                    ...deviceSettingStyles("reduceTransparencyEnabled"),
+                    { fontSize: 14 * fontSize },
+                  ]}
+                >
+                  {deviceSettingValue("reduceTransparencyEnabled")}
                 </AccessibleText>
               </View>
 
@@ -776,11 +806,12 @@ export default function SettingsPage() {
             <>
               <Divider />
 
-              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`High text contrast, ${deviceSettingValue(deviceAccessibility.highTextContrastEnabled)}`}>
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`High text contrast, ${deviceSettingValue("highTextContrastEnabled")}`}>
                 <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-29-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
+                    styles.deviceSettingTitle,
                     { fontSize: 16 * fontSize },
                   ]}
                 >
@@ -789,13 +820,11 @@ export default function SettingsPage() {
                 <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-30-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
-                    styles.deviceValue,
-                    deviceAccessibility.highTextContrastEnabled ? styles.deviceValueOn : styles.deviceValueOff,
-                    increasedContrast && (deviceAccessibility.highTextContrastEnabled ? styles.deviceValueOnHighContrast : styles.deviceValueOffHighContrast),
+                    ...deviceSettingStyles("highTextContrastEnabled"),
                     { fontSize: 14 * fontSize },
                   ]}
                 >
-                  {deviceSettingValue(deviceAccessibility.highTextContrastEnabled)}
+                  {deviceSettingValue("highTextContrastEnabled")}
                 </AccessibleText>
               </View>
             </>
@@ -1004,6 +1033,8 @@ const styles = StyleSheet.create({
   },
   deviceSettingTitle: {
     flex: 1,
+    // Reserve readable label space; move the badge below when both cannot fit.
+    flexBasis: "50%",
     flexShrink: 1,
   },
   segmentedControl: {
@@ -1082,6 +1113,7 @@ const styles = StyleSheet.create({
   deviceSettingRow: {
     minHeight: 60,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 14,
@@ -1090,7 +1122,8 @@ const styles = StyleSheet.create({
   deviceValue: {
     fontSize: 14,
     fontWeight: "700",
-    flexShrink: 0,
+    flexShrink: 1,
+    maxWidth: "100%",
     overflow: "hidden",
     borderRadius: 8,
     paddingHorizontal: 12,

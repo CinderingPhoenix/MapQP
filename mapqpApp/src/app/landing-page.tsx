@@ -4,7 +4,7 @@ import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp }
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
@@ -15,6 +15,7 @@ export default function LandingPage() {
   useAuthGuard();
   const { setNavigationMode, setHasSelectedMode } = useSettings();
   const { fontScale, width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useDeviceAccessibility();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
@@ -111,17 +112,6 @@ export default function LandingPage() {
               accessibilityLabel="MapQP logo"
             />
             <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={[styles.settingsButton, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
-                onPress={() => router.push("/settings")}
-                activeOpacity={0.7}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Settings"
-                accessibilityHint="Opens the application settings"
-              >
-                <Ionicons name="settings-outline" size={28} color="#172033" />
-              </TouchableOpacity>
               <ExpoImage
                 source={require("../../assets/images/wpi-logo.png")}
                 style={styles.wpiLogo}
@@ -133,6 +123,18 @@ export default function LandingPage() {
               />
             </View>
           </View>
+
+          <TouchableOpacity
+            style={[styles.settingsButton, { top: insets.top + 130, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            onPress={() => router.push("/settings")}
+            activeOpacity={0.7}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            accessibilityHint="Opens the application settings"
+          >
+            <Ionicons name="settings-outline" size={28} color="#172033" />
+          </TouchableOpacity>
 
           <ScrollView
             key={`landing-scroll-${stackButtons ? "stacked" : "row"}-${fontScale.toFixed(2)}`}
@@ -364,7 +366,8 @@ const styles = StyleSheet.create({
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   settingsButton: {
-    position: "absolute", top: 130, right: 0,
+    // Positioned within the safe-area container, below the logo header.
+    position: "absolute",
     width: 50, height: 50, borderRadius: 25,
     backgroundColor: "rgba(255, 255, 255, 0.92)",
     justifyContent: "center", alignItems: "center", zIndex: 10,
