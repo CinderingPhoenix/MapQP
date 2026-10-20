@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   AccessibilityInfo,
+  AppState,
   Platform,
 } from "react-native";
 
@@ -14,6 +15,14 @@ export type DeviceAccessibilitySettings = {
   loaded: boolean;
 };
 
+type BooleanAccessibilityEvent =
+  | "screenReaderChanged"
+  | "reduceMotionChanged"
+  | "boldTextChanged"
+  | "darkerSystemColorsChanged"
+  | "reduceTransparencyChanged"
+  | "highTextContrastChanged";
+
 export function useDeviceAccessibility(): DeviceAccessibilitySettings {
   const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -24,89 +33,72 @@ export function useDeviceAccessibility(): DeviceAccessibilitySettings {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const loadAccessibilitySettings = async () => {
-      try {
-        const screenReader = await AccessibilityInfo.isScreenReaderEnabled();
-        const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled();
+    let active = true;
+    let refreshGeneration = 0;
 
-        setScreenReaderEnabled(screenReader);
-        setReduceMotionEnabled(reduceMotion);
+    // Subscribe before querying. A newer event or query invalidates an older
+    // asynchronous result, so startup reads cannot overwrite live changes.
+    const observeSetting = (
+      event: BooleanAccessibilityEvent,
+      query: () => Promise<boolean>,
+      setValue: (value: boolean) => void,
+    ) => {
+      let revision = 0;
+      const subscription = AccessibilityInfo.addEventListener(event, (value) => {
+        revision += 1;
+        if (active) setValue(value);
+      });
 
-        if (Platform.OS === "ios") {
-          const [boldText, darkerColors, reduceTransparency] =
-            await Promise.all([
-              AccessibilityInfo.isBoldTextEnabled(),
-              AccessibilityInfo.isDarkerSystemColorsEnabled(),
-              AccessibilityInfo.isReduceTransparencyEnabled(),
-            ]);
-
-          setBoldTextEnabled(boldText);
-          setDarkerSystemColorsEnabled(darkerColors);
-          setReduceTransparencyEnabled(reduceTransparency);
-        }
-
-        if (Platform.OS === "android") {
-          const highContrast =
-            await AccessibilityInfo.isHighTextContrastEnabled();
-
-          setHighTextContrastEnabled(highContrast);
-        }
-      } catch (error) {
-        console.warn(
-          "Unable to read device accessibility settings:",
-          error
-        );
-      } finally {
-        setLoaded(true);
-      }
+      return {
+        read: async () => {
+          const queryRevision = ++revision;
+          try {
+            const value = await query();
+            if (active && queryRevision === revision) setValue(value);
+          } catch (error) {
+            console.warn(`Unable to read device accessibility setting ${event}:`, error);
+          }
+        },
+        remove: () => subscription.remove(),
+      };
     };
 
-    void loadAccessibilitySettings();
+    const observers = [
+      observeSetting("screenReaderChanged", () => AccessibilityInfo.isScreenReaderEnabled(), setScreenReaderEnabled),
+      observeSetting("reduceMotionChanged", () => AccessibilityInfo.isReduceMotionEnabled(), setReduceMotionEnabled),
+    ];
 
-    const screenReaderSubscription =
-      AccessibilityInfo.addEventListener(
-        "screenReaderChanged",
-        setScreenReaderEnabled
+    if (Platform.OS === "ios") {
+      observers.push(
+        observeSetting("boldTextChanged", () => AccessibilityInfo.isBoldTextEnabled(), setBoldTextEnabled),
+        observeSetting("darkerSystemColorsChanged", () => AccessibilityInfo.isDarkerSystemColorsEnabled(), setDarkerSystemColorsEnabled),
+        observeSetting("reduceTransparencyChanged", () => AccessibilityInfo.isReduceTransparencyEnabled(), setReduceTransparencyEnabled),
       );
+    } else if (Platform.OS === "android") {
+      observers.push(
+        observeSetting("highTextContrastChanged", () => AccessibilityInfo.isHighTextContrastEnabled(), setHighTextContrastEnabled),
+      );
+    }
 
-    const reduceMotionSubscription =
-      AccessibilityInfo.addEventListener(
-        "reduceMotionChanged",
-        setReduceMotionEnabled
-      );
+    // Each read handles its own failure; one unavailable preference must not
+    // prevent screen-reader or Reduce Motion detection.
+    const refresh = async () => {
+      const generation = ++refreshGeneration;
+      await Promise.all(observers.map((observer) => observer.read()));
+      // A foreground refresh can supersede the startup read. Readiness belongs
+      // to the latest refresh, just as values belong to the latest query/event.
+      if (active && generation === refreshGeneration) setLoaded(true);
+    };
+    void refresh();
 
-    const darkerSystemColorsSubscription =
-      AccessibilityInfo.addEventListener(
-        "darkerSystemColorsChanged",
-        setDarkerSystemColorsEnabled
-      );
-
-    const boldTextSubscription =
-      AccessibilityInfo.addEventListener(
-        "boldTextChanged",
-        setBoldTextEnabled
-      );
-
-    
-    const reduceTransparencySubscription =
-      AccessibilityInfo.addEventListener(
-        "reduceTransparencyChanged",
-        setReduceTransparencyEnabled
-      );
-
-    const highTextContrastSubscription =
-      AccessibilityInfo.addEventListener(
-        "highTextContrastChanged",
-        setHighTextContrastEnabled
-      );
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void refresh();
+    });
 
     return () => {
-      screenReaderSubscription.remove();
-      reduceMotionSubscription.remove();
-      darkerSystemColorsSubscription.remove();
-      boldTextSubscription.remove();
-      reduceTransparencySubscription.remove();
-      highTextContrastSubscription.remove();
+      active = false;
+      appStateSubscription.remove();
+      observers.forEach((observer) => observer.remove());
     };
   }, []);
 

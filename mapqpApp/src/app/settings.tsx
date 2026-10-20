@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  type AccessibilityActionEvent,
   type TextProps,
   TouchableOpacity,
   View,
@@ -25,6 +26,21 @@ const KEYS_TO_DELETE = [
   "mapqp_temp_code_expires_at",
   "wpi_map_last_location",
 ];
+
+// Keep the component type stable so changing a preference updates existing
+// native text elements instead of unmounting and recreating every label.
+function AccessibleText({
+  boldTextEnabled,
+  style,
+  ...props
+}: TextProps & { boldTextEnabled: boolean }) {
+  return (
+    <Text
+      {...props}
+      style={[style, boldTextEnabled && styles.boldTextOverride]}
+    />
+  );
+}
 
 export default function SettingsPage() {
   useAuthGuard();
@@ -47,14 +63,8 @@ export default function SettingsPage() {
     deviceAccessibility.darkerSystemColorsEnabled ||
     deviceAccessibility.highTextContrastEnabled;
 
-  // Preserve the existing font sizes and accessibility props, while applying
-  // the device Bold Text preference to every label on this screen.
-  const AccessibleText = ({ style, ...props }: TextProps) => (
-    <Text
-      {...props}
-      style={[style, deviceAccessibility.boldTextEnabled && styles.boldTextOverride]}
-    />
-  );
+  const deviceSettingValue = (enabled: boolean) =>
+    deviceAccessibility.loaded ? (enabled ? "On" : "Off") : "Loading";
 
   const changeNavigationMode = (
     mode: "standard" | "accessibility"
@@ -91,7 +101,7 @@ export default function SettingsPage() {
     router.replace("/landing-page");
   };
 
-  const handleFontSizeAccessibilityAction = (event: any) => {
+  const handleFontSizeAccessibilityAction = (event: AccessibilityActionEvent) => {
     if (event.nativeEvent.actionName === "increment") {
       setFontSize(
         Math.min(1.8, Math.round((fontSize + 0.1) * 10) / 10)
@@ -163,10 +173,10 @@ export default function SettingsPage() {
           style={styles.backButton}
           onPress={handleBackFromSettings}
           accessibilityRole="button"
-          accessibilityLabel="Back to navigation"
-          accessibilityHint="Returns to navigation and applies the selected navigation mode"
+          accessibilityLabel={from ? "Back to navigation" : "Back"}
+          accessibilityHint={from ? "Returns to navigation and applies the selected navigation mode" : "Returns to the previous screen"}
         >
-          <AccessibleText
+          <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled}
             allowFontScaling={false}
             style={styles.backArrow}
           >
@@ -174,7 +184,8 @@ export default function SettingsPage() {
           </AccessibleText>
         </TouchableOpacity>
 
-        <AccessibleText key={`settings-text-1-${fontSize}-${fontScale}`}
+        <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-1-${fontScale}`}
+          accessibilityRole="header"
           maxFontSizeMultiplier={2.5}
           style={[
             styles.headerTitle,
@@ -192,7 +203,7 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Navigation Mode */}
-        <AccessibleText key={`settings-text-2-${fontSize}-${fontScale}`}
+        <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-2-${fontScale}`}
           maxFontSizeMultiplier={2.5}
           accessibilityRole="header"
           style={[
@@ -216,7 +227,7 @@ export default function SettingsPage() {
           ]}
         >
           <View style={styles.optionRow}>
-            <AccessibleText key={`settings-text-3-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-3-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
@@ -251,7 +262,7 @@ export default function SettingsPage() {
                   selected: navigationMode === "standard",
                 }}
               >
-                <AccessibleText key={`settings-text-4-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-4-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
@@ -283,7 +294,7 @@ export default function SettingsPage() {
                   selected: navigationMode === "accessibility",
                 }}
               >
-                <AccessibleText key={`settings-text-5-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-5-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
@@ -302,7 +313,7 @@ export default function SettingsPage() {
         </View>
 
         {/* Navigation Preferences */}
-        <AccessibleText key={`settings-text-6-${fontSize}-${fontScale}`}
+        <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-6-${fontScale}`}
           maxFontSizeMultiplier={2.5}
           accessibilityRole="header"
           style={[
@@ -326,7 +337,7 @@ export default function SettingsPage() {
           ]}
         >
           <View style={styles.optionRow}>
-            <AccessibleText key={`settings-text-7-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-7-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
@@ -361,7 +372,7 @@ export default function SettingsPage() {
                   selected: distanceUnits === "imperial",
                 }}
               >
-                <AccessibleText key={`settings-text-8-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-8-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
@@ -391,7 +402,7 @@ export default function SettingsPage() {
                   selected: distanceUnits === "metric",
                 }}
               >
-                <AccessibleText key={`settings-text-9-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-9-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
@@ -411,7 +422,7 @@ export default function SettingsPage() {
           <Divider />
 
           <View style={styles.optionRow}>
-            <AccessibleText key={`settings-text-10-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-10-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
@@ -446,7 +457,7 @@ export default function SettingsPage() {
                   selected: directionStyle === "natural",
                 }}
               >
-                <AccessibleText key={`settings-text-11-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-11-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
@@ -478,7 +489,7 @@ export default function SettingsPage() {
                   selected: directionStyle === "degrees",
                 }}
               >
-                <AccessibleText key={`settings-text-12-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-12-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.segmentText,
@@ -497,7 +508,7 @@ export default function SettingsPage() {
         </View>
 
         {/* Display */}
-        <AccessibleText key={`settings-text-13-${fontSize}-${fontScale}`}
+        <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-13-${fontScale}`}
           maxFontSizeMultiplier={2.5}
           accessibilityRole="header"
           style={[
@@ -521,7 +532,7 @@ export default function SettingsPage() {
           ]}
         >
           <View style={styles.sliderRow}>
-            <AccessibleText key={`settings-text-14-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-14-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
@@ -532,7 +543,7 @@ export default function SettingsPage() {
             </AccessibleText>
 
             <View style={styles.sliderContainer}>
-              <AccessibleText key={`settings-text-15-${fontSize}-${fontScale}`}
+              <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-15-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
                 accessible={false}
                 style={[
@@ -550,7 +561,9 @@ export default function SettingsPage() {
                 accessible
                 accessibilityRole="adjustable"
                 accessibilityLabel="Text size"
-                accessibilityHint="Swipe up or down to adjust text size"
+                accessibilityHint={Platform.OS === "ios"
+                  ? "Swipe up or down to adjust text size"
+                  : "Use the increase or decrease accessibility action to adjust text size"}
                 accessibilityValue={{
                   min: 80,
                   max: 180,
@@ -576,10 +589,11 @@ export default function SettingsPage() {
                   maximumTrackTintColor="#D1D5DB"
                   thumbTintColor="#6848A0"
                   accessible={false}
+                  importantForAccessibility="no-hide-descendants"
                 />
               </View>
 
-              <AccessibleText key={`settings-text-16-${fontSize}-${fontScale}`}
+              <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-16-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
                 accessible={false}
                 style={[
@@ -593,7 +607,7 @@ export default function SettingsPage() {
               </AccessibleText>
             </View>
 
-            <AccessibleText key={`settings-text-17-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-17-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.fontSizeValue,
@@ -608,7 +622,7 @@ export default function SettingsPage() {
         </View>
 
         {/* Device Accessibility */}
-        <AccessibleText key={`settings-text-18-${fontSize}-${fontScale}`}
+        <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-18-${fontScale}`}
           maxFontSizeMultiplier={2.5}
           accessibilityRole="header"
           style={[
@@ -623,7 +637,7 @@ export default function SettingsPage() {
           DEVICE ACCESSIBILITY
         </AccessibleText>
         <View
-          key={`device-description-${fontSize}-${fontScale}`}
+          key={`device-description-${fontScale}`}
           style={styles.deviceDescriptionContainer}
         >
           <Text
@@ -651,8 +665,8 @@ export default function SettingsPage() {
               styles.settingsCardHighContrast,
           ]}
         >
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceAccessibility.screenReaderEnabled ? "On" : "Off"}`}>
-            <AccessibleText key={`settings-text-19-${fontSize}-${fontScale}`}
+          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceSettingValue(deviceAccessibility.screenReaderEnabled)}`}>
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-19-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
@@ -662,7 +676,7 @@ export default function SettingsPage() {
             >
               Screen reader
             </AccessibleText>
-            <AccessibleText key={`settings-text-20-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-20-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.deviceValue,
@@ -671,16 +685,14 @@ export default function SettingsPage() {
                 { fontSize: 14 * fontSize },
               ]}
             >
-              {deviceAccessibility.screenReaderEnabled
-                ? "On"
-                : "Off"}
+              {deviceSettingValue(deviceAccessibility.screenReaderEnabled)}
             </AccessibleText>
           </View>
 
           <Divider />
 
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce motion, ${deviceAccessibility.reduceMotionEnabled ? "On" : "Off"}`}>
-            <AccessibleText key={`settings-text-21-${fontSize}-${fontScale}`}
+          <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Reduce motion, ${deviceSettingValue(deviceAccessibility.reduceMotionEnabled)}`}>
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-21-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.settingTitle,
@@ -690,7 +702,7 @@ export default function SettingsPage() {
             >
               Reduce motion
             </AccessibleText>
-            <AccessibleText key={`settings-text-22-${fontSize}-${fontScale}`}
+            <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-22-${fontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.deviceValue,
@@ -699,9 +711,7 @@ export default function SettingsPage() {
                 { fontSize: 14 * fontSize },
               ]}
             >
-              {deviceAccessibility.reduceMotionEnabled
-                ? "On"
-                : "Off"}
+              {deviceSettingValue(deviceAccessibility.reduceMotionEnabled)}
             </AccessibleText>
           </View>
 
@@ -709,8 +719,8 @@ export default function SettingsPage() {
             <>
               <Divider />
 
-              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Bold text, ${deviceAccessibility.boldTextEnabled ? "On" : "Off"}`}>
-                <AccessibleText key={`settings-text-23-${fontSize}-${fontScale}`}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Bold text, ${deviceSettingValue(deviceAccessibility.boldTextEnabled)}`}>
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-23-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
@@ -720,7 +730,7 @@ export default function SettingsPage() {
                 >
                   Bold text
                 </AccessibleText>
-                <AccessibleText key={`settings-text-24-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-24-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
@@ -729,16 +739,14 @@ export default function SettingsPage() {
                     { fontSize: 14 * fontSize },
                   ]}
                 >
-                  {deviceAccessibility.boldTextEnabled
-                    ? "On"
-                    : "Off"}
+                  {deviceSettingValue(deviceAccessibility.boldTextEnabled)}
                 </AccessibleText>
               </View>
 
               <Divider />
 
-              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Increase contrast, ${deviceAccessibility.darkerSystemColorsEnabled ? "On" : "Off"}`}>
-                <AccessibleText key={`settings-text-25-${fontSize}-${fontScale}`}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`Increase contrast, ${deviceSettingValue(deviceAccessibility.darkerSystemColorsEnabled)}`}>
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-25-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
@@ -748,7 +756,7 @@ export default function SettingsPage() {
                 >
                   Increase contrast
                 </AccessibleText>
-                <AccessibleText key={`settings-text-26-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-26-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
@@ -757,9 +765,7 @@ export default function SettingsPage() {
                     { fontSize: 14 * fontSize },
                   ]}
                 >
-                  {deviceAccessibility.darkerSystemColorsEnabled
-                    ? "On"
-                    : "Off"}
+                  {deviceSettingValue(deviceAccessibility.darkerSystemColorsEnabled)}
                 </AccessibleText>
               </View>
 
@@ -770,8 +776,8 @@ export default function SettingsPage() {
             <>
               <Divider />
 
-              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`High text contrast, ${deviceAccessibility.highTextContrastEnabled ? "On" : "Off"}`}>
-                <AccessibleText key={`settings-text-29-${fontSize}-${fontScale}`}
+              <View style={styles.deviceSettingRow} accessible accessibilityRole="text" accessibilityLabel={`High text contrast, ${deviceSettingValue(deviceAccessibility.highTextContrastEnabled)}`}>
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-29-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.settingTitle,
@@ -780,7 +786,7 @@ export default function SettingsPage() {
                 >
                   High text contrast
                 </AccessibleText>
-                <AccessibleText key={`settings-text-30-${fontSize}-${fontScale}`}
+                <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-30-${fontScale}`}
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.deviceValue,
@@ -789,9 +795,7 @@ export default function SettingsPage() {
                     { fontSize: 14 * fontSize },
                   ]}
                 >
-                  {deviceAccessibility.highTextContrastEnabled
-                    ? "On"
-                    : "Off"}
+                  {deviceSettingValue(deviceAccessibility.highTextContrastEnabled)}
                 </AccessibleText>
               </View>
             </>
@@ -805,7 +809,7 @@ export default function SettingsPage() {
           accessibilityLabel="Back to landing page"
           accessibilityHint="Leaves navigation and returns to the landing page"
         >
-          <AccessibleText key={`settings-text-31-${fontSize}-${fontScale}`}
+          <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-31-${fontScale}`}
             maxFontSizeMultiplier={2.5}
             style={[
               styles.landingButtonText,
@@ -823,7 +827,7 @@ export default function SettingsPage() {
           style={styles.deleteStorageButton}
           onPress={deleteLocalStorage}
         >
-          <AccessibleText key={`settings-text-32-${fontSize}-${fontScale}`}
+          <AccessibleText boldTextEnabled={deviceAccessibility.boldTextEnabled} key={`settings-text-32-${fontScale}`}
             style={[
               styles.deleteStorageText,
               { fontSize: 15 * fontSize },
