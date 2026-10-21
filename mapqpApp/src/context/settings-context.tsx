@@ -1,10 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 import {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 export type DistanceUnits = "imperial" | "metric";

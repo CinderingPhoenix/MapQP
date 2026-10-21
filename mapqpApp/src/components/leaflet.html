@@ -1,3 +1,4 @@
+
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -11,15 +12,18 @@
       height: 100%;
       background: #e0e0e0;
     }
+
     .leaflet-control-rotate,
     .leaflet-control-compass,
     .leaflet-bar.compass {
       display: none !important;
     }
+
     .leaflet-top.leaflet-right {
       top: 60px;
       right: 16px;
     }
+
     .settings-control {
       background: white;
       border-radius: 50% !important;
@@ -33,6 +37,7 @@
       align-items: center;
       justify-content: center;
     }
+
     .compass-control {
       background: white;
       border-radius: 50% !important;
@@ -47,6 +52,7 @@
       align-items: center;
       justify-content: center;
     }
+
     .compass-icon {
       display: inline-block;
       width: 32px;
@@ -54,15 +60,18 @@
       transition: transform 0.1s ease-out;
       will-change: transform;
     }
+
     .compass-control.accessibility-compass-control {
       width: 72px !important;
       height: 72px !important;
       line-height: 72px !important;
     }
+
     .accessibility-compass-control .compass-icon {
       width: 48px;
       height: 48px;
     }
+
     .mute-control {
       background: white;
       border-radius: 50% !important;
@@ -76,6 +85,16 @@
       align-items: center;
       justify-content: center;
       margin-top: 12px !important;
+    }
+
+    /* Destination uses a square shape, not color alone. */
+    .destination-marker-shape {
+      width: 20px;
+      height: 20px;
+      background: #1d5962;
+      border: 3px solid #fffdf8;
+      border-radius: 2px;
+      box-sizing: border-box;
     }
   </style>
 </head>
@@ -93,8 +112,8 @@
     var currentCompassAngle = null;
 
     /**
-     * Calculates the closest projected point on a line segment to an external coordinate point.
-     * Uses dot products and vector projection scaled by parameter t clamped between 0 and 1.
+     * Calculates the closest projected point on a line segment
+     * to an external coordinate point.
      */
     function getClosestPointOnSegment(p, a, b) {
       var cosLat = Math.cos(a[0] * Math.PI / 180);
@@ -103,26 +122,54 @@
       var bx = (b[1] - a[1]) * cosLat;
       var by = b[0] - a[0];
       var lenSq = bx * bx + by * by;
-      if (lenSq === 0) return { point: a, distanceSq: py * py + px * px, t: 0 };
-      var t = Math.max(0, Math.min(1, (px * bx + py * by) / lenSq));
+
+      if (lenSq === 0) {
+        return {
+          point: a,
+          distanceSq: py * py + px * px,
+          t: 0
+        };
+      }
+
+      var t = Math.max(
+        0,
+        Math.min(1, (px * bx + py * by) / lenSq)
+      );
+
       var closestLat = a[0] + t * by;
       var closestLng = a[1] + t * (b[1] - a[1]);
       var dx = (p[1] - closestLng) * cosLat;
       var dy = p[0] - closestLat;
-      return { point: [closestLat, closestLng], distanceSq: dx * dx + dy * dy, t: t };
+
+      return {
+        point: [closestLat, closestLng],
+        distanceSq: dx * dx + dy * dy,
+        t: t
+      };
     }
 
     /**
-     * Splits a route geometry polyline into traversed (gray) and remaining (teal) segments relative to the user's location.
+     * Splits route geometry into completed and remaining sections.
      */
     function splitRouteAtUser(userLat, userLng, geometry) {
-      if (!geometry || geometry.length < 2) return { traversed: [], remaining: geometry || [] };
+      if (!geometry || geometry.length < 2) {
+        return {
+          traversed: [],
+          remaining: geometry || []
+        };
+      }
+
       var bestSegmentIndex = 0;
       var minDistanceSq = Infinity;
       var snappedPoint = [userLat, userLng];
 
       for (var i = 0; i < geometry.length - 1; i++) {
-        var closest = getClosestPointOnSegment([userLat, userLng], geometry[i], geometry[i + 1]);
+        var closest = getClosestPointOnSegment(
+          [userLat, userLng],
+          geometry[i],
+          geometry[i + 1]
+        );
+
         if (closest.distanceSq < minDistanceSq) {
           minDistanceSq = closest.distanceSq;
           bestSegmentIndex = i;
@@ -132,37 +179,113 @@
 
       var traversed = geometry.slice(0, bestSegmentIndex + 1);
       traversed.push(snappedPoint);
-      var remaining = [snappedPoint].concat(geometry.slice(bestSegmentIndex + 1));
-      return { traversed: traversed, remaining: remaining };
+
+      var remaining = [snappedPoint].concat(
+        geometry.slice(bestSegmentIndex + 1)
+      );
+
+      return {
+        traversed: traversed,
+        remaining: remaining
+      };
     }
 
     /**
-     * Initializes route polylines and destination marker on the Leaflet map instance.
+     * Creates a dashed line for the completed route.
+     */
+    function createTraversedPolyline(geometry) {
+      return L.polyline(geometry, {
+        color: '#888888',
+        weight: 6,
+        opacity: 0.8,
+        dashArray: '6, 10',
+        lineCap: 'butt'
+      }).addTo(map);
+    }
+
+    /**
+     * Creates a solid line for the remaining route.
+     */
+    function createRemainingPolyline(geometry) {
+      return L.polyline(geometry, {
+        color: '#1d5962',
+        weight: 6,
+        opacity: 0.9
+      }).addTo(map);
+    }
+
+    /**
+     * Creates a square destination marker.
+     */
+    function createDestinationMarker(latitude, longitude) {
+      return L.marker([latitude, longitude], {
+        icon: L.divIcon({
+          className: 'destination-marker',
+          html: '<div class="destination-marker-shape"></div>',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        })
+      }).addTo(map);
+    }
+
+    /**
+     * Initializes route lines and destination marker.
      */
     function initRoute(rData, uLat, uLng) {
       if (!rData) return;
-      var split = splitRouteAtUser(uLat, uLng, rData.geometry);
-      traversedPolyline = L.polyline(split.traversed, { color: '#888888', weight: 6, opacity: 0.6 }).addTo(map);
-      remainingPolyline = L.polyline(split.remaining, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
-      destMarker = L.circleMarker([rData.destination.latitude, rData.destination.longitude], {
-        radius: 9, color: '#fffdf8', fillColor: '#1d5962', fillOpacity: 1, weight: 3
-      }).addTo(map);
-      map.fitBounds(remainingPolyline.getBounds(), { padding: [36, 36] });
+
+      var split = splitRouteAtUser(
+        uLat,
+        uLng,
+        rData.geometry
+      );
+
+      traversedPolyline = createTraversedPolyline(
+        split.traversed
+      );
+
+      remainingPolyline = createRemainingPolyline(
+        split.remaining
+      );
+
+      destMarker = createDestinationMarker(
+        rData.destination.latitude,
+        rData.destination.longitude
+      );
+
+      map.fitBounds(remainingPolyline.getBounds(), {
+        padding: [36, 36]
+      });
     }
 
     /**
-     * Bootstraps the Leaflet map container, tile layer, custom user location markers, custom controls (Compass & Mute), and event listeners.
+     * Initializes Leaflet and its map controls.
      */
-    window.initMap = function(centerLat, centerLng, userLat, userLng, accuracy, route, accessibilityMode) {
+    window.initMap = function(
+      centerLat,
+      centerLng,
+      userLat,
+      userLng,
+      accuracy,
+      route,
+      accessibilityMode
+    ) {
       if (map) return;
 
-      map = L.map('map', { 
-        zoomControl: false, rotate: true, touchRotate: true, shiftKeyRotate: true
+      map = L.map('map', {
+        zoomControl: false,
+        rotate: true,
+        touchRotate: true,
+        shiftKeyRotate: true
       }).setView([centerLat, centerLng], 16);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+
+      L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }
+      ).addTo(map);
 
       setTimeout(function() {
         if (map) {
@@ -171,170 +294,311 @@
       }, 250);
 
       marker = L.circleMarker([userLat, userLng], {
-        radius: 8, color: '#fffdf8', fillColor: '#e06b3c', fillOpacity: 1, weight: 3
+        radius: 8,
+        color: '#fffdf8',
+        fillColor: '#e06b3c',
+        fillOpacity: 1,
+        weight: 3
       }).addTo(map);
 
       circle = L.circle([userLat, userLng], {
-        radius: accuracy, color: '#e06b3c', fillColor: '#e06b3c', fillOpacity: 0.3
+        radius: accuracy,
+        color: '#e06b3c',
+        fillColor: '#e06b3c',
+        fillOpacity: 0.3
       }).addTo(map);
 
       routeData = route;
+
       if (routeData) {
         initRoute(routeData, userLat, userLng);
       }
 
+      // Settings control
       var SettingsControl = L.Control.extend({
-        options: { position: 'topleft' },
-        onAdd: function (map) {
-          var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control settings-control');
+        options: {
+          position: 'topleft'
+        },
+
+        onAdd: function(map) {
+          var container = L.DomUtil.create(
+            'button',
+            'leaflet-bar leaflet-control settings-control'
+          );
+
+          container.type = 'button';
+          container.setAttribute('aria-label', 'Settings');
 
           container.innerHTML =
             '<svg viewBox="0 0 24 24" width="28" height="28" fill="#333">' +
               '<path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.31-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.02-.24-.22-.41-.47-.41h-3.84c-.24 0-.44.17-.47.41L9.26 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.31-.09.65-.09.94s.03.63.08.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.31.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.03.24.23.41.47.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/>' +
             '</svg>';
 
-          L.DomEvent.on(container, 'click', function (e) {
+          L.DomEvent.on(container, 'click', function(e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
-            window.ReactNativeWebView.postMessage('OPEN_SETTINGS');
+
+            window.ReactNativeWebView.postMessage(
+              'OPEN_SETTINGS'
+            );
           });
 
           return container;
         }
       });
 
-      if (!accessibilityMode) map.addControl(new SettingsControl());
+      if (!accessibilityMode) {
+        map.addControl(new SettingsControl());
+      }
 
+      // Compass control
       var CompassControl = L.Control.extend({
-        options: { position: 'topright' },
-        onAdd: function (map) {
-          var compassClass = accessibilityMode ? 'leaflet-bar leaflet-control compass-control accessibility-compass-control' : 'leaflet-bar leaflet-control compass-control';
-          var container = L.DomUtil.create('div', compassClass);
+        options: {
+          position: 'topright'
+        },
+
+        onAdd: function(map) {
+          var compassClass = accessibilityMode
+            ? 'leaflet-bar leaflet-control compass-control accessibility-compass-control'
+            : 'leaflet-bar leaflet-control compass-control';
+
+          var container = L.DomUtil.create(
+            'button',
+            compassClass
+          );
+
+          container.type = 'button';
+          container.setAttribute('aria-label', 'Compass');
+          container.setAttribute('aria-pressed', 'false');
+
           var compassSize = accessibilityMode ? 48 : 32;
-          container.innerHTML = '<div id="compass-icon" class="compass-icon">' +
-            '<svg viewBox="0 0 24 24" width="' + compassSize + '" height="' + compassSize + '">' +
-              '<polygon points="12,2 15,12 12,10" fill="#e06b3c" />' +
-              '<polygon points="12,2 9,12 12,10" fill="#f09068" />' +
-              '<polygon points="12,22 15,12 12,14" fill="#1d5962" />' +
-              '<polygon points="12,22 9,12 12,14" fill="#2d7982" />' +
-            '</svg>' +
-          '</div>';
-          
-          L.DomEvent.on(container, 'click', function (e) {
+
+          container.innerHTML =
+            '<div id="compass-icon" class="compass-icon">' +
+              '<svg viewBox="0 0 24 24" width="' + compassSize + '" height="' + compassSize + '">' +
+                '<polygon points="12,2 15,12 12,10" fill="#e06b3c" />' +
+                '<polygon points="12,2 9,12 12,10" fill="#f09068" />' +
+                '<polygon points="12,22 15,12 12,14" fill="#1d5962" />' +
+                '<polygon points="12,22 9,12 12,14" fill="#2d7982" />' +
+              '</svg>' +
+            '</div>';
+
+          L.DomEvent.on(container, 'click', function(e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
+
             isHeadingFocused = !isHeadingFocused;
-            
+
+            container.setAttribute(
+              'aria-pressed',
+              isHeadingFocused ? 'true' : 'false'
+            );
+
             if (isHeadingFocused) {
-              container.style.backgroundColor = '#d3e3fd'; 
-              window.ReactNativeWebView.postMessage('HEADING_LOCKED');
-              map.setView(marker.getLatLng(), 32, { animate: true });
+              container.style.backgroundColor = '#d3e3fd';
+
+              window.ReactNativeWebView.postMessage(
+                'HEADING_LOCKED'
+              );
+
+              map.setView(marker.getLatLng(), 32, {
+                animate: true
+              });
             } else {
               container.style.backgroundColor = 'white';
-              window.ReactNativeWebView.postMessage('HEADING_UNLOCKED');
+
+              window.ReactNativeWebView.postMessage(
+                'HEADING_UNLOCKED'
+              );
+
               smoothRotateToZero();
             }
           });
 
           function updateCompassRotation() {
-            var rawBearing = map.getBearing ? map.getBearing() : 0;
-            var icon = document.getElementById('compass-icon');
+            var rawBearing = map.getBearing
+              ? map.getBearing()
+              : 0;
+
+            var icon = document.getElementById(
+              'compass-icon'
+            );
+
             if (!icon) return;
 
             if (currentCompassAngle === null) {
               currentCompassAngle = rawBearing;
             } else {
-              var diff = ((rawBearing - currentCompassAngle) % 360 + 540) % 360 - 180;
+              var diff = (
+                (rawBearing - currentCompassAngle) % 360 + 540
+              ) % 360 - 180;
+
               currentCompassAngle += diff;
             }
-            icon.style.transform = 'rotate(' + currentCompassAngle + 'deg)';
+
+            icon.style.transform =
+              'rotate(' + currentCompassAngle + 'deg)';
           }
 
           updateCompassRotation();
+
           map.on('rotate', updateCompassRotation);
 
           return container;
         }
       });
+
       map.addControl(new CompassControl());
 
-      // --- Mute Control ---
+      // Mute control
       var MuteControl = L.Control.extend({
-        options: { position: 'topright' },
-        onAdd: function (map) {
-          var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control mute-control');
+        options: {
+          position: 'topright'
+        },
+
+        onAdd: function(map) {
+          var container = L.DomUtil.create(
+            'button',
+            'leaflet-bar leaflet-control mute-control'
+          );
+
+          container.type = 'button';
+          container.setAttribute(
+            'aria-label',
+            'Mute navigation'
+          );
+          container.setAttribute('aria-pressed', 'false');
+
           var isMuted = false;
-          
-          var volHigh = '<svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
-          var volMute = '<svg viewBox="0 0 24 24" width="24" height="24" fill="#d9534f"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.11-.31 2.16-.8 3.1-1.42l2.63 2.63 1.27-1.27L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
+
+          var volHigh =
+            '<svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+
+          var volMute =
+            '<svg viewBox="0 0 24 24" width="24" height="24" fill="#d9534f"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.11-.31 2.16-.8 3.1-1.42l2.63 2.63 1.27-1.27L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
 
           container.innerHTML = volHigh;
 
-          L.DomEvent.on(container, 'click', function (e) {
+          L.DomEvent.on(container, 'click', function(e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
+
             isMuted = !isMuted;
-            container.innerHTML = isMuted ? volMute : volHigh;
-            window.ReactNativeWebView.postMessage('TOGGLE_MUTE');
+
+            container.innerHTML = isMuted
+              ? volMute
+              : volHigh;
+
+            container.setAttribute(
+              'aria-pressed',
+              isMuted ? 'true' : 'false'
+            );
+
+            container.setAttribute(
+              'aria-label',
+              isMuted ? 'Unmute navigation' : 'Mute navigation'
+            );
+
+            window.ReactNativeWebView.postMessage(
+              'TOGGLE_MUTE'
+            );
           });
 
           return container;
         }
       });
-      map.addControl(new MuteControl());
-      // --------------------------
 
+      map.addControl(new MuteControl());
+
+      // Detect manual map interaction
       map.on('dragstart rotatestart', function() {
         if (isHeadingFocused) {
           isHeadingFocused = false;
-          var compass = document.querySelector('.compass-control');
-          if (compass) compass.style.backgroundColor = 'white';
-          window.ReactNativeWebView.postMessage('HEADING_UNLOCKED');
+
+          var compass = document.querySelector(
+            '.compass-control'
+          );
+
+          if (compass) {
+            compass.style.backgroundColor = 'white';
+            compass.setAttribute('aria-pressed', 'false');
+          }
+
+          window.ReactNativeWebView.postMessage(
+            'HEADING_UNLOCKED'
+          );
         }
-        window.ReactNativeWebView.postMessage('USER_DRAGGED');
+
+        window.ReactNativeWebView.postMessage(
+          'USER_DRAGGED'
+        );
       });
 
       updateControlPositions(!!routeData);
     };
-    
+
     var currentTargetBearing = 0;
     var currentAnimatedBearing = null;
     var isAnimatingBearing = false;
 
     /**
-     * Updates the target heading angle for rotation animation when navigation heading lock is active.
+     * Updates the target heading angle.
      */
     window.setTargetHeading = function(rawDeg) {
-      if (rawDeg === null || rawDeg === undefined || isNaN(rawDeg)) return;
+      if (
+        rawDeg === null ||
+        rawDeg === undefined ||
+        isNaN(rawDeg)
+      ) {
+        return;
+      }
+
       if (!isHeadingFocused || !map) return;
 
       currentTargetBearing = -rawDeg;
-      
+
       if (!isAnimatingBearing) {
         if (currentAnimatedBearing === null) {
-          currentAnimatedBearing = map.getBearing ? map.getBearing() : 0;
+          currentAnimatedBearing = map.getBearing
+            ? map.getBearing()
+            : 0;
         }
+
         isAnimatingBearing = true;
         requestAnimationFrame(animateBearingStep);
       }
     };
 
     /**
-     * Sets the heading lock focus state and updates compass control button styles.
+     * Sets heading focus state.
      */
     window.setHeadingFocus = function(focused) {
       isHeadingFocused = focused;
-      var compass = document.querySelector('.compass-control');
+
+      var compass = document.querySelector(
+        '.compass-control'
+      );
+
       if (compass) {
-        compass.style.backgroundColor = focused ? '#d3e3fd' : 'white';
+        compass.style.backgroundColor = focused
+          ? '#d3e3fd'
+          : 'white';
+
+        compass.setAttribute(
+          'aria-pressed',
+          focused ? 'true' : 'false'
+        );
       }
+
       if (focused && marker && map) {
-        map.setView(marker.getLatLng(), 32, { animate: true });
+        map.setView(marker.getLatLng(), 32, {
+          animate: true
+        });
       }
     };
 
     /**
-     * Animates map bearing transitions smoothly step-by-step toward the target heading.
+     * Animates map rotation.
      */
     function animateBearingStep() {
       if (!isHeadingFocused || !map) {
@@ -342,8 +606,10 @@
         return;
       }
 
-      var diff = ((currentTargetBearing - currentAnimatedBearing) % 360 + 540) % 360 - 180;
-      
+      var diff = (
+        (currentTargetBearing - currentAnimatedBearing) % 360 + 540
+      ) % 360 - 180;
+
       if (Math.abs(diff) > 0.05) {
         currentAnimatedBearing += diff * 0.03;
         map.setBearing(currentAnimatedBearing);
@@ -356,24 +622,39 @@
     }
 
     /**
-     * Smoothly rotates the map back to zero orientation when heading focus is released.
+     * Smoothly resets rotation.
      */
     function smoothRotateToZero() {
-      var startBearing = map.getBearing ? map.getBearing() : 0;
-      var diffToZero = ((0 - startBearing) % 360 + 540) % 360 - 180;
-      var targetBearing = startBearing + diffToZero;
+      var startBearing = map.getBearing
+        ? map.getBearing()
+        : 0;
 
+      var diffToZero = (
+        (0 - startBearing) % 360 + 540
+      ) % 360 - 180;
+
+      var targetBearing = startBearing + diffToZero;
       var startTime = null;
       var duration = 300;
 
       function step(timestamp) {
-        if (!startTime) startTime = timestamp;
-        var progress = (timestamp - startTime) / duration;
-        if (progress > 1) progress = 1;
+        if (!startTime) {
+          startTime = timestamp;
+        }
 
-        var easeProgress = 1 - Math.pow(1 - progress, 3);
-        var stepBearing = startBearing + (targetBearing - startBearing) * easeProgress;
-        
+        var progress = (timestamp - startTime) / duration;
+
+        if (progress > 1) {
+          progress = 1;
+        }
+
+        var easeProgress =
+          1 - Math.pow(1 - progress, 3);
+
+        var stepBearing =
+          startBearing +
+          (targetBearing - startBearing) * easeProgress;
+
         map.setBearing(stepBearing);
         currentAnimatedBearing = stepBearing;
 
@@ -389,66 +670,133 @@
     }
 
     /**
-     * Updates user marker position, accuracy circle, and active route geometry on the Leaflet map.
+     * Updates user position and route geometry.
      */
-    window.updateMap = function(userLat, userLng, acc, newRoute) {
+    window.updateMap = function(
+      userLat,
+      userLng,
+      acc,
+      newRoute
+    ) {
       if (!map) return;
+
       var userLatLng = [userLat, userLng];
+
       marker.setLatLng(userLatLng);
       circle.setLatLng(userLatLng);
       circle.setRadius(acc);
 
       if (isHeadingFocused) {
-        map.setView(userLatLng, Math.max(map.getZoom(), 32), { animate: true });
+        map.setView(
+          userLatLng,
+          Math.max(map.getZoom(), 32),
+          { animate: true }
+        );
       }
 
       if (newRoute) {
         routeData = newRoute;
-        var split = splitRouteAtUser(userLat, userLng, newRoute.geometry);
 
-        if (traversedPolyline) map.removeLayer(traversedPolyline);
-        if (remainingPolyline) map.removeLayer(remainingPolyline);
-        if (destMarker) map.removeLayer(destMarker);
+        var split = splitRouteAtUser(
+          userLat,
+          userLng,
+          newRoute.geometry
+        );
 
-        traversedPolyline = L.polyline(split.traversed, { color: '#888888', weight: 6, opacity: 0.6 }).addTo(map);
-        remainingPolyline = L.polyline(split.remaining, { color: '#1d5962', weight: 6, opacity: 0.9 }).addTo(map);
+        if (traversedPolyline) {
+          map.removeLayer(traversedPolyline);
+        }
 
-        destMarker = L.circleMarker([newRoute.destination.latitude, newRoute.destination.longitude], {
-          radius: 9, color: '#fffdf8', fillColor: '#1d5962', fillOpacity: 1, weight: 3
-        }).addTo(map);
+        if (remainingPolyline) {
+          map.removeLayer(remainingPolyline);
+        }
+
+        if (destMarker) {
+          map.removeLayer(destMarker);
+        }
+
+        traversedPolyline = createTraversedPolyline(
+          split.traversed
+        );
+
+        remainingPolyline = createRemainingPolyline(
+          split.remaining
+        );
+
+        destMarker = createDestinationMarker(
+          newRoute.destination.latitude,
+          newRoute.destination.longitude
+        );
       } else {
         routeData = null;
-        if (traversedPolyline) { map.removeLayer(traversedPolyline); traversedPolyline = null; }
-        if (remainingPolyline) { map.removeLayer(remainingPolyline); remainingPolyline = null; }
-        if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+
+        if (traversedPolyline) {
+          map.removeLayer(traversedPolyline);
+          traversedPolyline = null;
+        }
+
+        if (remainingPolyline) {
+          map.removeLayer(remainingPolyline);
+          remainingPolyline = null;
+        }
+
+        if (destMarker) {
+          map.removeLayer(destMarker);
+          destMarker = null;
+        }
       }
 
       updateControlPositions(!!newRoute);
     };
 
     /**
-     * Pans the map view back to the current user location marker.
+     * Recenters the map on the user.
      */
     window.resetView = function() {
       if (map && marker) {
-        map.panTo(marker.getLatLng(), { animate: true });
+        map.panTo(marker.getLatLng(), {
+          animate: true
+        });
       }
     };
 
     /**
-     * Dynamically adjusts the vertical position of map control buttons depending on route banner visibility.
+     * Adjusts map control positions based on route state.
      */
+    var directionsExpanded = false;
+
     function updateControlPositions(hasRoute) {
-      var rightControlContainer = document.querySelector('.leaflet-top.leaflet-right');
-      var leftControlContainer = document.querySelector('.leaflet-top.leaflet-left');
+      var rightControlContainer = document.querySelector(
+        '.leaflet-top.leaflet-right'
+      );
+
+      var leftControlContainer = document.querySelector(
+        '.leaflet-top.leaflet-left'
+      );
+
+      var topPosition;
+
+      if (directionsExpanded) {
+        topPosition = '68%';
+      } else {
+        topPosition = hasRoute ? '150px' : '60px';
+      }
 
       if (rightControlContainer) {
-        rightControlContainer.style.top = hasRoute ? '150px' : '60px';
+        rightControlContainer.style.top = topPosition;
       }
 
       if (leftControlContainer) {
-        leftControlContainer.style.top = hasRoute ? '150px' : '60px';
+        leftControlContainer.style.top = topPosition;
       }
     }
+
+    window.updateDirectionsExpanded = function(
+      expanded,
+      hasRoute
+    ) {
+      directionsExpanded = expanded;
+      updateControlPositions(hasRoute);
+    };
   </script>
 </body>

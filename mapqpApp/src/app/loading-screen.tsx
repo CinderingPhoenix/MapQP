@@ -1,21 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  View,
-  Image,
-  StyleSheet,
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
+  Image,
   ImageSourcePropType,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import {
@@ -25,28 +25,24 @@ import {
   useAuthRequest,
 } from 'expo-auth-session';
 import type { DiscoveryDocument } from 'expo-auth-session';
-import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
+import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useKeyLockout } from '../hooks/use-key-lockout';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
 const TEMP_CODE_EXPIRES_AT_KEY = 'mapqp_temp_code_expires_at';
-
 // Strictly read environment variables without fallback address/port
 const SERVER_IP =
   process.env.EXPO_PUBLIC_SERVER_IP ??
   Constants.expoConfig?.extra?.SERVER_IP ??
   process.env.SERVER_IP;
-
 const PORT =
   process.env.EXPO_PUBLIC_PORT ??
   Constants.expoConfig?.extra?.PORT ??
   process.env.PORT;
-
 const IS_SERVER_CONFIGURED = Boolean(SERVER_IP && PORT);
 const API_BASE_URL = IS_SERVER_CONFIGURED ? `http://${SERVER_IP}:${PORT}` : null;
-
 const MICROSOFT_AUTHORITY = Constants.expoConfig?.extra?.AUTHORITY;
 const MICROSOFT_CLIENT_ID = Constants.expoConfig?.extra?.CLIENT_ID;
 const AUTH_CONFIGURATION_MISSING =
