@@ -7,7 +7,6 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Vibration } from "react-native";
 import { AccessibilityInfo, Platform, Vibration } from "react-native";
 import buildingData from "../data/wpi-buildings.json";
 import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
