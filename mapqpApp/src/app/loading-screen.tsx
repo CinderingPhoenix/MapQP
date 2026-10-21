@@ -40,7 +40,11 @@ const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
 const TEMP_CODE_EXPIRES_AT_KEY = 'mapqp_temp_code_expires_at';
 const ACCESS_TOKEN_KEY = 'mapqp_access_token';
 
-const extra = Constants.expoConfig?.extra as { SERVER_IP?: string; PORT?: string } | undefined;
+const extra = Constants.expoConfig?.extra as { 
+  SERVER_IP?: string; 
+  PORT?: string; 
+  PUBLIC_KEY?: string 
+} | undefined;
 const SERVER_IP = extra?.SERVER_IP ?? process.env.SERVER_IP;
 const PORT = extra?.PORT ?? process.env.PORT;
 
@@ -50,6 +54,59 @@ const MICROSOFT_AUTHORITY = Constants.expoConfig?.extra?.AUTHORITY;
 const MICROSOFT_CLIENT_ID = Constants.expoConfig?.extra?.CLIENT_ID;
 const AUTH_CONFIGURATION_MISSING = !MICROSOFT_AUTHORITY || !MICROSOFT_CLIENT_ID;
 const DISCOVERY_ISSUER = MICROSOFT_AUTHORITY ?? 'https://login.microsoftonline.com/common';
+
+let isServerOnline = true;
+
+// Hardened public key fetcher and local caching for cryptographic verification
+async function fetchAndCachePublicKey(): Promise<boolean> {
+  if (!API_BASE_URL) {
+    isServerOnline = false;
+    return false;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(`${API_BASE_URL}/auth/public-key`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.public_key) {
+        try {
+          const publicKeyFile = new File(Paths.document, 'public-key.pem');
+          if (!publicKeyFile.exists) {
+            publicKeyFile.create();
+          }
+          publicKeyFile.write(data.public_key);
+        } catch (fileErr) {
+          console.warn('Could not cache public key locally:', fileErr);
+        }
+        
+        isServerOnline = true;
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to fetch public key from server:', error);
+  }
+
+  try {
+    const publicKeyFile = new File(Paths.document, 'public-key.pem');
+    if (publicKeyFile.exists) {
+      isServerOnline = false;
+      return true; 
+    }
+  } catch (e) {
+    // ignore file read error
+  }
+
+  isServerOnline = false;
+  return false;
+}
 
 export interface MapQPProps {
   firstImage?: ImageSourcePropType;
@@ -85,12 +142,14 @@ export default function LoadingScreen({
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
-  const [debugStatus, setDebugStatus] = useState<string>('Initializing...');
+  const [debugStatus, setDebugStatus] = useState<string>(
+    `Target: ${API_BASE_URL ?? 'Not Configured'}`
+  );
 
   const loginAttemptedRef = useRef(false);
   const exchangeInProgressRef = useRef(false);
 
-  const discovery = useMemo<DiscoveryDocument | null>(() => {
+  const discovery = useMemo<DiscoveryDocument | null> (() => {
     if (AUTH_CONFIGURATION_MISSING) return null;
     const issuer = DISCOVERY_ISSUER.replace(/\/$/, '');
     return {
@@ -132,17 +191,16 @@ export default function LoadingScreen({
     }
   }, [hasSelectedMode, navigationMode, onFinish]);
 
-  // Sync map data dynamically, returns true if a download occurred
   const syncMapData = async (): Promise<boolean> => {
-    if (!API_BASE_URL) {
-      setDebugStatus('Sync skipped: API_BASE_URL not configured.');
+    if (!API_BASE_URL || !isServerOnline) {
+      setDebugStatus(`Target: ${API_BASE_URL} (Offline)`);
       return false;
     }
 
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       if (!accessToken) {
-        setDebugStatus('Sync skipped: No access token found in SecureStore.');
+        setDebugStatus(`Target: ${API_BASE_URL} (No Token)`);
         return false;
       }
 
@@ -159,7 +217,7 @@ export default function LoadingScreen({
         }
       }
 
-      setDebugStatus(`Calling server with v${currentVersion}...`);
+      setDebugStatus(`Connecting to ${API_BASE_URL} (v${currentVersion})...`);
       const res = await fetch(`${API_BASE_URL}/route-points?version=${currentVersion}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -169,15 +227,17 @@ export default function LoadingScreen({
       if (res.ok) {
         const data = await res.json();
         if (data.update_required && data.route_points) {
+          if (!routeFile.exists) routeFile.create();
           routeFile.write(JSON.stringify(data.route_points, null, 2));
 
           if (data.wpi_buildings) {
+            if (!buildingsFile.exists) buildingsFile.create();
             buildingsFile.write(JSON.stringify(data.wpi_buildings, null, 2));
           }
           setDebugStatus(`Updated successfully to v${data.current_version}!`);
           return true;
         } else {
-          setDebugStatus(`Server replied: Up to date (v${data.current_version}). No update needed.`);
+          setDebugStatus(`Up to date (v${data.current_version}).`);
         }
       } else {
         setDebugStatus(`Server error: HTTP ${res.status}`);
@@ -189,7 +249,6 @@ export default function LoadingScreen({
     return false;
   };
 
-  // Pre-load local map data, sync if needed, and graph
   const prepareAndContinue = useCallback(async () => {
     try {
       await syncMapData();
@@ -227,74 +286,39 @@ export default function LoadingScreen({
   const img1 = firstImage ?? require('../../assets/images/wpi-logo.png');
   const img2 = secondImage ?? require('../../assets/images/splash-icon.png');
 
-  // Verify stored sessions and dynamically sync map data on startup
   useEffect(() => {
     const loadSessionAndSync = async () => {
       try {
-        await syncMapData();
-
         const msSession = await SecureStore.getItemAsync(AUTH_STORAGE_KEY);
-        if (msSession) {
-          setIsAuthenticated(true);
-          
-          let accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-          if (!accessToken && API_BASE_URL) {
-            try {
-              const parsedMs = JSON.parse(msSession);
-              const sessionRes = await fetch(`${API_BASE_URL}/auth/microsoft-session`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: parsedMs.accessToken ?? 'wpi_user@wpi.edu' }),
-              });
-              if (sessionRes.ok) {
-                const sessionData = await sessionRes.json();
-                if (sessionData.access_token) {
-                  await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, sessionData.access_token);
-                }
-              }
-            } catch (e) {
-              console.error('Failed to restore backend session for MS user:', e);
-            }
-          }
+        const savedTempCode = await SecureStore.getItemAsync(TEMP_CODE_STORAGE_KEY);
+        const localAccessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
 
+        if (msSession || (savedTempCode && localAccessToken)) {
+          setIsAuthenticated(true);
+          setAuthLoaded(true);
+
+          const serverIsUp = await fetchAndCachePublicKey();
+          if (serverIsUp) {
+            await syncMapData();
+          } else {
+            setDebugStatus(`Target: ${API_BASE_URL} (Cached Session Mode)`);
+          }
+          return;
+        }
+
+        const serverIsUp = await fetchAndCachePublicKey();
+        if (!serverIsUp) {
+          setDebugStatus(`Target: ${API_BASE_URL} (Offline Mode)`);
+          setIsAuthenticated(false);
           setAuthLoaded(true);
           return;
         }
 
-        const savedTempCode = await SecureStore.getItemAsync(TEMP_CODE_STORAGE_KEY);
-        if (savedTempCode) {
-          if (!API_BASE_URL) {
-            setIsAuthenticated(false);
-          } else {
-            try {
-              const res = await fetch(`${API_BASE_URL}/auth/temp-login/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: savedTempCode }),
-              });
-
-              if (res.ok) {
-                const data = await res.json();
-                if (data.access_token) {
-                  await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token);
-                }
-                setIsAuthenticated(true);
-              } else {
-                await SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY);
-                await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-                setIsAuthenticated(false);
-              }
-            } catch (error) {
-              await SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY);
-              await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-              setIsAuthenticated(false);
-            }
-          }
-        } else {
-          setIsAuthenticated(false);
-        }
+        await syncMapData();
+        setIsAuthenticated(false);
       } catch (error) {
         console.error('Failed to load session and sync:', error);
+        setIsAuthenticated(false);
       } finally {
         setAuthLoaded(true);
       }
@@ -344,7 +368,7 @@ export default function LoadingScreen({
           JSON.stringify(tokenResponse)
         );
 
-        if (API_BASE_URL) {
+        if (API_BASE_URL && isServerOnline) {
           try {
             const sessionRes = await fetch(`${API_BASE_URL}/auth/microsoft-session`, {
               method: 'POST',
@@ -361,6 +385,9 @@ export default function LoadingScreen({
             console.error('Failed to obtain backend session token:', e);
           }
         }
+
+        // Reset failed attempt count upon successful Microsoft login
+        await registerSuccess();
 
         loginAttemptedRef.current = false;
         setIsAuthenticated(true);
@@ -379,13 +406,13 @@ export default function LoadingScreen({
     };
 
     void exchangeCode();
-  }, [prepareAndContinue, discovery, redirectUri, request, response]);
+  }, [prepareAndContinue, discovery, redirectUri, request, response, registerSuccess]);
 
   const handleCodeLogin = async () => {
     if (isLockedOut || verificationCode.length !== 6 || isVerifyingCode) return;
 
     if (!API_BASE_URL) {
-      Alert.alert('Server Configuration Missing', 'SERVER_IP and PORT are not defined in the .env file.');
+      Alert.alert('Server Offline', 'API_BASE_URL is not configured.');
       return;
     }
 
@@ -412,7 +439,9 @@ export default function LoadingScreen({
           ...(data.access_token ? [SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token)] : []),
         ]);
 
+        // Reset failed attempt count upon successful temporary code login
         await registerSuccess();
+
         setIsAuthenticated(true);
         setShowLogin(false);
         await prepareAndContinue();

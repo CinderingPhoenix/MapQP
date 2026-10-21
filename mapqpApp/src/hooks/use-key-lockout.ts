@@ -2,7 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import { useCallback, useEffect, useState } from "react";
 
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15-minute timeout
+const LOCKOUT_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hour timeout
 const ATTEMPTS_KEY = "auth_failed_attempts";
 const LOCKOUT_KEY = "auth_lockout_until";
 

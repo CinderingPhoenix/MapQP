@@ -50,7 +50,7 @@ export default function Home() {
     useCallback(() => {
       setTextRefresh((previous) => previous + 1);
       const currentScale = Dimensions.get("window").fontScale;
-      console.log("[MapQP Dynamic Type] screen focus", { fontScale, currentScale });
+      // console.log("[MapQP Dynamic Type] screen focus", { fontScale, currentScale });
     }, [fontScale])
   );
 
