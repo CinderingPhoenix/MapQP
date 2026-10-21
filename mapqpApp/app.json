@@ -45,6 +45,14 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       "expo-image",
       "expo-web-browser",
       [
@@ -67,8 +75,9 @@
     },
     "extra": {
       "router": {},
-      "SERVER_IP": "130.215.250.172",
+      "SERVER_IP": "10.0.2.2",
       "PORT": "8000",
+      "PUBLIC_KEY": "-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1/Ja1wzjo5S8YFIuWJzpe+3962m/Awk8bU0N6JLu2AL4l2j7VmCeTZ1VNL5mkhg6p2nUX3rL/TODGwYn/Ni6S06PjLgqcoCnGgk5QIkeWCwkRy2IGq7Gh5yzu2pl3f3EdIGv1Ztv4Rb2UwkvG/xZs7BNG4LVeVXcGpfpocNipUYk6rPMo1d2qOpaKyARHWIySLE+1LMIidqC8y001BuseT71uVgdCVszeaCX4ekAIi+EtnT9Z5PuQ7CoGUqP42COfFhqDe9jtVsnzhHETp7RWb1ypnGtg4In5+NMQwIRGHklI7q06B3u8dTjdhWzraici+EdQaZ9kq9pd8OUkTaF+wIDAQAB\\n-----END PUBLIC KEY-----",
       "AUTHORITY": "https://login.microsoftonline.com/589c76f5-ca15-41f9-884b-55ec15a0672a",
       "CLIENT_ID": "e3f4b793-f667-499a-9c43-908bb2dcab89",
       "eas": {
