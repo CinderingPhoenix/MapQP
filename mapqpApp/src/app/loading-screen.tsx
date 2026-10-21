@@ -1,21 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  View,
-  Image,
-  StyleSheet,
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
+  Image,
   ImageSourcePropType,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { File, Paths } from 'expo-file-system';
 import Constants from 'expo-constants';
@@ -30,7 +30,9 @@ import type { DiscoveryDocument } from 'expo-auth-session';
 import defaultRoutePoints from '../data/route-points.json';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
+import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useKeyLockout } from '../hooks/use-key-lockout';
+import { useDeviceAccessibility } from '../hooks/use-device-accessibility';
 
 import { initRoutingGraph } from '../utils/routing';
 import { parseBuildingData } from '../utils/map-logic';
@@ -47,7 +49,6 @@ const PORT = extra?.PORT ?? process.env.PORT;
 
 const IS_SERVER_CONFIGURED = Boolean(SERVER_IP && PORT);
 const API_BASE_URL = IS_SERVER_CONFIGURED ? `http://${SERVER_IP}:${PORT}` : null;
-
 const MICROSOFT_AUTHORITY = Constants.expoConfig?.extra?.AUTHORITY;
 const MICROSOFT_CLIENT_ID = Constants.expoConfig?.extra?.CLIENT_ID;
 const AUTH_CONFIGURATION_MISSING =
@@ -71,6 +72,7 @@ export default function LoadingScreen({
   showSpinner = true,
 }: MapQPProps) {
   useLocationWarmup();
+  const { reduceMotionEnabled, loaded: accessibilityLoaded } = useDeviceAccessibility();
   const { hasSelectedMode, navigationMode, settingsLoaded } = useSettings();
   const {
     isLockedOut,
@@ -80,8 +82,8 @@ export default function LoadingScreen({
     registerSuccess,
   } = useKeyLockout();
 
-  const pulseAnim = useRef(new Animated.Value(0.96)).current;
-  const opacityAnim = useRef(new Animated.Value(0.75)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
   const [authLoaded, setAuthLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -497,6 +499,13 @@ export default function LoadingScreen({
   };
 
   useEffect(() => {
+    if (!accessibilityLoaded || reduceMotionEnabled) {
+      pulseAnim.setValue(1);
+      opacityAnim.setValue(1);
+      return;
+    }
+
+    // Pulse animation loop
     const pulseLoop = Animated.loop(
       Animated.parallel([
         Animated.sequence([
@@ -512,6 +521,11 @@ export default function LoadingScreen({
 
     pulseLoop.start();
 
+    return () => pulseLoop.stop();
+  }, [accessibilityLoaded, reduceMotionEnabled, pulseAnim, opacityAnim]);
+
+  // Keep startup timing independent of changes to the motion preference.
+  useEffect(() => {
     if (!settingsLoaded || !authLoaded) {
       return () => { pulseLoop.stop(); };
     }
@@ -529,7 +543,6 @@ export default function LoadingScreen({
     }, duration);
 
     return () => {
-      pulseLoop.stop();
       clearTimeout(timer);
     };
   }, [
@@ -654,4 +667,137 @@ const styles = StyleSheet.create({
   codeButtonPressed: { opacity: 0.8 },
   codeButtonDisabled: { borderColor: '#B8B8B8', opacity: 0.55 },
   codeButtonText: { color: '#1464A5', fontSize: 15, fontWeight: '700' },
+});
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  centerWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  imageGroup: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    rowGap: 16,
+  },
+  squareImage: {
+    width: MAX_IMAGE_WIDTH,
+    height: MAX_IMAGE_WIDTH,
+    aspectRatio: 1,
+  },
+  spinnerWrapper: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  loginOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+  },
+  loginCard: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    padding: 24,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  loginTitle: {
+    color: '#1A1A1A',
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  loginMessage: {
+    color: '#4A4A4A',
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  loginButton: {
+    alignItems: 'center',
+    backgroundColor: '#1464A5',
+    borderRadius: 10,
+    marginTop: 22,
+    paddingVertical: 14,
+  },
+  loginButtonPressed: {
+    opacity: 0.8,
+  },
+  loginButtonDisabled: {
+    opacity: 0.5,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  orText: {
+    color: '#666666',
+    fontSize: 14,
+    marginVertical: 18,
+    textAlign: 'center',
+  },
+  codeInput: {
+    borderColor: '#B8B8B8',
+    borderRadius: 10,
+    borderWidth: 1,
+    color: '#1A1A1A',
+    fontSize: 18,
+    letterSpacing: 3,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    textAlign: 'center',
+  },
+  codeInputDisabled: {
+    backgroundColor: '#F3F3F3',
+    borderColor: '#D0D0D0',
+    color: '#A0A0A0',
+  },
+  lockoutText: {
+    color: '#D9534F',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  attemptsText: {
+    color: '#888888',
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  codeButton: {
+    alignItems: 'center',
+    borderColor: '#1464A5',
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingVertical: 12,
+  },
+  codeButtonPressed: {
+    opacity: 0.8,
+  },
+  codeButtonDisabled: {
+    borderColor: '#B8B8B8',
+    opacity: 0.55,
+  },
+  codeButtonText: {
+    color: '#1464A5',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

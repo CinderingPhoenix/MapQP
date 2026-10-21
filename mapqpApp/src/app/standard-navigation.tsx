@@ -1,12 +1,16 @@
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { router } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import { Animated, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
 import { useSettings } from "../context/settings-context";
+import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 import {
   Building,
   parseBuildingData,
@@ -27,6 +31,18 @@ import defaultBuildings from "../data/wpi-buildings.json";
 export default function Home() {
   useKeepAwake();
   useAuthGuard();
+  const { fontScale } = useWindowDimensions();
+  const [textRefresh, setTextRefresh] = useState(0);
+
+  // iOS can retain stale native text measurements after returning from Settings.
+  // Refresh only Text elements, not the map/navigation component state.
+  useFocusEffect(
+    useCallback(() => {
+      setTextRefresh((previous) => previous + 1);
+      const currentScale = Dimensions.get("window").fontScale;
+      console.log("[MapQP Dynamic Type] screen focus", { fontScale, currentScale });
+    }, [fontScale])
+  );
 
   // --- Dynamic Map Data State ---
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -93,6 +109,9 @@ export default function Home() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
   const { distanceUnits, directionStyle, fontSize } = useSettings();
+  const { reduceMotionEnabled, loaded: accessibilityLoaded, boldTextEnabled, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled } = useDeviceAccessibility();
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const emphasizedText = boldTextEnabled || highTextContrastEnabled;
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -107,6 +126,46 @@ export default function Home() {
     });
     return () => { showSub.remove(); hideSub.remove(); };
   }, [keyboardTranslateY]);
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+      const targetY = -(event.endCoordinates.height + 24);
+
+      if (reduceMotionEnabled) {
+        keyboardTranslateY.setValue(targetY);
+      } else {
+        Animated.timing(keyboardTranslateY, {
+          toValue: targetY,
+          duration: event.duration || 175,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      setKeyboardHeight(0);
+
+      if (reduceMotionEnabled) {
+        keyboardTranslateY.setValue(0);
+      } else {
+        Animated.timing(keyboardTranslateY, {
+          toValue: 0,
+          duration: event.duration || 200,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardTranslateY, reduceMotionEnabled]);
 
   if (!isMapDataLoaded) {
     return (
@@ -126,48 +185,63 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.container}>
       {route && (
-        <View style={[styles.topRouteSummary, directionsExpanded && styles.topRouteSummaryExpanded]}>
+        <View style={[styles.topRouteSummary, increasedContrast && { borderColor: "#1d5962", borderWidth: 2 }, reduceTransparencyEnabled && { backgroundColor: "#fff" }, directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed]}>
           {directionsExpanded ? (
             <View style={styles.expandedContainer}>
-              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={styles.expandedHeader}>
-                <Text style={[styles.boldText, { fontSize: 22 * fontSize },]}>Upcoming Directions</Text>
-                <Text style={[styles.collapseHint, { fontSize: 13 * fontSize }]}>Tap to collapse</Text>
+              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={styles.expandedHeader} accessible accessibilityRole="button" accessibilityLabel="Upcoming directions" accessibilityHint="Double tap to collapse the directions list">
+                <Text key={`nav-text-1-${fontSize}-${fontScale}-${textRefresh}`} maxFontSizeMultiplier={2.5} style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" },]}>Upcoming Directions</Text>
+                <Text key={`nav-text-2-${fontSize}-${fontScale}-${textRefresh}`} maxFontSizeMultiplier={2.5} style={[styles.collapseHint, { fontSize: 13 * fontSize, color: increasedContrast ? "#333" : "#888" }]}>Tap to collapse</Text>
               </TouchableOpacity>
-              <ScrollView style={styles.directionsList} nestedScrollEnabled keyboardShouldPersistTaps="always" showsVerticalScrollIndicator>
+              <ScrollView style={styles.directionsList} contentContainerStyle={styles.directionsListContent} nestedScrollEnabled keyboardShouldPersistTaps="always" showsVerticalScrollIndicator>
                 {upcomingSteps.map((step, index) => {
                   const distance = index === 0
                     ? getDistanceToStepPoint(route.geometry, currentRouteIndex, step.pointIndex, coordinates?.latitude, coordinates?.longitude)
                     : getSegmentDistance(route.geometry, upcomingSteps[index - 1].pointIndex, step.pointIndex);
-                  return <View key={`${step.pointIndex}-${index}`} style={styles.directionItem}><Text style={[styles.directionInstruction, { fontSize: 19 * fontSize }, ]}>{formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits)}</Text></View>;
+                  return <View key={`${step.pointIndex}-${index}`}style={[styles.directionItem, {borderBottomColor: increasedContrast ? "#aaa" : "#eee",},]}><Text key={`nav-text-3-${fontSize}-${fontScale}-${textRefresh}`} maxFontSizeMultiplier={2.5} style={[styles.directionInstruction, { fontSize: 19 * fontSize, fontWeight: emphasizedText ? "bold" : "500" }, ]}>{formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits)}</Text></View>;
                 })}
-                {upcomingSteps.length === 0 && <View style={styles.directionItem}><Text style={[styles.directionInstruction, { fontSize: 19 * fontSize }, ]}>You have arrived!</Text></View>}
+                {upcomingSteps.length === 0 && <View style={[styles.directionItem, {borderBottomColor: increasedContrast ? "#aaa" : "#eee"},]}><Text key={`nav-text-4-${fontSize}-${fontScale}-${textRefresh}`} maxFontSizeMultiplier={2.5} style={[styles.directionInstruction, { fontSize: 19 * fontSize, fontWeight: emphasizedText ? "bold" : "500" }, ]}>You have arrived!</Text></View>}
               </ScrollView>
-              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7}><Text style={[styles.subText, { marginTop: 10 }, { fontSize: 16 * fontSize }]}>{formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setDirectionsExpanded(false)} activeOpacity={0.7} style={{ minHeight: 48, justifyContent: "center" }}><Text key={`nav-text-5-${fontSize}-${fontScale}-${textRefresh}`} maxFontSizeMultiplier={2.5} style={[styles.subText, { marginTop: 10 }, { fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555", }]}>{formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left</Text></TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={{ flex: 1 }} onPress={() => setDirectionsExpanded(true)} activeOpacity={0.7}>
-              <Text style={[styles.boldText, { fontSize: 22 * fontSize }, ]}>{nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
-              <Text style={[styles.subText, { fontSize: 16 * fontSize }, ]}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
+            <TouchableOpacity
+              onPress={() => setDirectionsExpanded(true)}
+              style={{ minHeight: 48, justifyContent: "center" }}
+              activeOpacity={0.7}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}
+              accessibilityHint="Double tap to show all upcoming directions">
+              <Text key={`nav-text-6-${fontSize}-${fontScale}-${textRefresh}`} accessible={false} maxFontSizeMultiplier={2.5} style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }, ]}>{nextStep ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits) : "Follow route"}</Text>
+              <Text key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`} accessible={false} maxFontSizeMultiplier={2.5} style={[styles.subText, { fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555" }, ]}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
             </TouchableOpacity>
           )}
-          {routeLoadingProgress < 1 && <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>}
+          {routeLoadingProgress < 1 && (!accessibilityLoaded || reduceMotionEnabled
+            ? <Text maxFontSizeMultiplier={2.5} style={[styles.subText, { fontSize: 14 * fontSize, color: increasedContrast ? "#111" : "#555", fontWeight: emphasizedText ? "bold" : "normal" }]}>Route preview</Text>
+            : <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>)}
         </View>
       )}
 
       <View style={styles.mapCanvas} onStartShouldSetResponderCapture={() => { Keyboard.dismiss(); if (directionsExpanded) setDirectionsExpanded(false); return false; }}>
-        {error ? <View style={styles.loadingContainer}><Text style={{ fontSize: 16 * fontSize }}>{error}</Text></View> : <LocationMap
+        {error ? <View style={styles.loadingContainer}><Text key={`nav-text-8-${fontSize}-${fontScale}-${textRefresh}`} maxFontSizeMultiplier={2.5} style={{ fontSize: 16 * fontSize, color: increasedContrast ? "#111" : "#333", fontWeight: emphasizedText ? "bold" : "normal" }}>{error}</Text></View> : <LocationMap
           latitude={showRecenter ? mapCenter.latitude : (coordinates?.latitude ?? mapCenter.latitude)}
           longitude={showRecenter ? mapCenter.longitude : (coordinates?.longitude ?? mapCenter.longitude)}
           userLatitude={coordinates?.latitude}
           userLongitude={coordinates?.longitude}
           accuracy={coordinates?.accuracy ?? 0}
           route={route}
+          directionsExpanded={directionsExpanded}
           recenterSignal={recenterSignal}
           onUserDragged={() => setShowRecenter(true)}
           onPanBack={() => setShowRecenter(false)}
           onHeadingModeChange={() => setShowRecenter(false)}
           onToggleMute={toggleMute}
-          onOpenSettings={() => router.push("/settings")}
+          onOpenSettings={() =>
+            router.push({
+              pathname: "/settings",
+              params: { from: "standard-navigation" },
+            })
+          }
         />}
       </View>
 
@@ -185,18 +259,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   mapCanvas: { ...StyleSheet.absoluteFill, backgroundColor: "#e0e0e0" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  topRouteSummary: { position: "absolute", top: 56, left: 16, right: 16, zIndex: 20, backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderColor: "#e0e0e0", overflow: "hidden" },
-  topRouteSummaryExpanded: { height: 480 },
+  topRouteSummary: { position: "absolute", top: 56, left: 16, right: 16, zIndex: 20, backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderColor: "#e0e0e0", overflow: "visible" },
+  topRouteSummaryCollapsed: { maxHeight: 420 },
+  topRouteSummaryExpanded: { height: "65%" },
   progressBarBackground: { position: "absolute", bottom: 0, left: 0, right: 0, height: 4, backgroundColor: "transparent" },
   progressBarFill: { height: "100%", backgroundColor: "#1d5962" },
-  expandedContainer: { flex: 1, flexDirection: "column" },
-  expandedHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 8 },
+  expandedContainer: { flex: 1, flexDirection: "column", minHeight: 0 },
+  expandedHeader: { minHeight: 48, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4, paddingBottom: 8 },
   collapseHint: { fontSize: 13, color: "#888" },
-  directionsList: { flex: 1, marginTop: 4 },
+  directionsList: { flex: 1, minHeight: 0, marginTop: 4 },
+  directionsListContent: { flexGrow: 0, paddingBottom: 8 },
   directionItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
   directionInstruction: { fontSize: 19, fontWeight: "500", color: "#333" },
   plannerPanel: { position: "absolute", bottom: -16, left: 16, right: 16, zIndex: 10, backgroundColor: "#fff", borderTopLeftRadius: 12, borderTopRightRadius: 12, padding: 16, paddingBottom: 40, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderBottomWidth: 0, borderColor: "#e0e0e0" },
-  recenterButton: { position: "absolute", top: -56, right: 0, backgroundColor: "white", padding: 12, borderRadius: 8, elevation: 4, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 4, zIndex: 20 },
+  recenterButton: { minHeight: 48, minWidth: 48, alignItems: "center", justifyContent: "center", position: "absolute", top: -56, right: 0, backgroundColor: "white", padding: 12, borderRadius: 8, elevation: 4, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 4, zIndex: 20 },
   recenterText: { fontWeight: "bold", color: "#333" },
   subText: { fontSize: 16, color: "#555", marginTop: 4 },
   boldText: { fontSize: 22, fontWeight: "bold", color: "#1d5962" },
