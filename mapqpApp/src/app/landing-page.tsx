@@ -1,10 +1,10 @@
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useRef } from "react";
+import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp } from "expo-router";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
@@ -15,31 +15,65 @@ export default function LandingPage() {
   useAuthGuard();
   const { setNavigationMode, setHasSelectedMode } = useSettings();
   const { fontScale, width } = useWindowDimensions();
-  const { darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useDeviceAccessibility();
+  const insets = useSafeAreaInsets();
+  const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useDeviceAccessibility();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
   const largeText = fontScale > 1.25;
   const stackButtons = width < 340 || fontScale >= 1.65;
   const headingRef = useRef<Text>(null);
+  const [headingLaidOut, setHeadingLaidOut] = useState(false);
+  const initialFocusHandled = useRef(false);
+  const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
+  // The web stack has no native transition events. On iOS/Android, onAppear
+  // emits transitionEnd even when the transition has no animation.
+  const [transitionComplete, setTransitionComplete] = useState(Platform.OS === "web");
+  const transitionCompleteRef = useRef(Platform.OS === "web");
 
-  // Focus the page introduction after navigation settles, only with VoiceOver.
+  useLayoutEffect(() => {
+    const removeStart = navigation.addListener("transitionStart", () => {
+      transitionCompleteRef.current = false;
+      setTransitionComplete(false);
+    });
+    const removeEnd = navigation.addListener("transitionEnd", (event) => {
+      if (event.data.closing) return;
+      transitionCompleteRef.current = true;
+      setTransitionComplete(true);
+    });
+    const removeBlur = navigation.addListener("blur", () => {
+      // Leaving before initial focus is delivered must not defer it until a
+      // later return from Settings. The ref also blocks an already queued frame.
+      initialFocusHandled.current = true;
+      transitionCompleteRef.current = false;
+      setTransitionComplete(false);
+    });
+    return () => {
+      removeStart();
+      removeEnd();
+      removeBlur();
+    };
+  }, [navigation]);
+
+  // Offer the introduction once, after appearance, detection and layout.
+  // Returning from Settings or changing preferences must not steal focus again.
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      let focusTimer: ReturnType<typeof setTimeout> | undefined;
-      void AccessibilityInfo.isScreenReaderEnabled().then((enabled) => {
-        if (!active || !enabled) return;
-        focusTimer = setTimeout(() => {
-          if (!active) return;
-          const node = findNodeHandle(headingRef.current);
-          if (node != null) AccessibilityInfo.setAccessibilityFocus(node);
-        }, 650);
-      }).catch(() => {});
-      return () => {
-        active = false;
-        if (focusTimer) clearTimeout(focusTimer);
-      };
-    }, [])
+      // React Native Web has no sendAccessibilityEvent API. Leave browser
+      // focus alone; only the native screen readers receive an initial request.
+      if (Platform.OS !== "ios" && Platform.OS !== "android") return;
+      if (!accessibilityLoaded || !headingLaidOut || !transitionComplete || initialFocusHandled.current) return;
+      if (!screenReaderEnabled) {
+        initialFocusHandled.current = true;
+        return;
+      }
+
+      const frame = requestAnimationFrame(() => {
+        if (!transitionCompleteRef.current || initialFocusHandled.current || !headingRef.current) return;
+        initialFocusHandled.current = true;
+        AccessibilityInfo.sendAccessibilityEvent(headingRef.current, "focus");
+      });
+      return () => cancelAnimationFrame(frame);
+    }, [accessibilityLoaded, headingLaidOut, screenReaderEnabled, transitionComplete])
   );
 
   const openStandardNavigation = () => {
@@ -55,7 +89,7 @@ export default function LandingPage() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onTouchStart={() => { initialFocusHandled.current = true; }}>
       <View style={styles.mapBackground}>
         <ExpoImage
           source={require("../../assets/images/campus-map.png")}
@@ -78,17 +112,6 @@ export default function LandingPage() {
               accessibilityLabel="MapQP logo"
             />
             <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={[styles.settingsButton, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
-                onPress={() => router.push("/settings")}
-                activeOpacity={0.7}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Settings"
-                accessibilityHint="Opens the application settings"
-              >
-                <Ionicons name="settings-outline" size={28} color="#172033" />
-              </TouchableOpacity>
               <ExpoImage
                 source={require("../../assets/images/wpi-logo.png")}
                 style={styles.wpiLogo}
@@ -101,6 +124,18 @@ export default function LandingPage() {
             </View>
           </View>
 
+          <TouchableOpacity
+            style={[styles.settingsButton, { top: insets.top + 130, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            onPress={() => router.push("/settings")}
+            activeOpacity={0.7}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            accessibilityHint="Opens the application settings"
+          >
+            <Ionicons name="settings-outline" size={28} color="#172033" />
+          </TouchableOpacity>
+
           <ScrollView
             key={`landing-scroll-${stackButtons ? "stacked" : "row"}-${fontScale.toFixed(2)}`}
             style={styles.contentScroll}
@@ -112,6 +147,8 @@ export default function LandingPage() {
               <View style={[styles.presetLabel, increasedContrast && styles.presetLabelHighContrast]}>
                 <Text
                   ref={headingRef}
+                  onLayout={() => setHeadingLaidOut(true)}
+                  accessible
                   key={`landing-heading-${fontScale}`}
                   style={[styles.presetText, boldTextEnabled && styles.boldHeading, increasedContrast && styles.highContrastHeading]}
                   maxFontSizeMultiplier={3}
@@ -329,7 +366,8 @@ const styles = StyleSheet.create({
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   settingsButton: {
-    position: "absolute", top: 130, right: 0,
+    // Positioned within the safe-area container, below the logo header.
+    position: "absolute",
     width: 50, height: 50, borderRadius: 25,
     backgroundColor: "rgba(255, 255, 255, 0.92)",
     justifyContent: "center", alignItems: "center", zIndex: 10,

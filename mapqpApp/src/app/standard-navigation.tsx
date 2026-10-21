@@ -61,7 +61,7 @@ export default function Home() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
   const { distanceUnits, directionStyle, fontSize } = useSettings();
-  const { reduceMotionEnabled, boldTextEnabled, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled } = useDeviceAccessibility();
+  const { reduceMotionEnabled, loaded: accessibilityLoaded, boldTextEnabled, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled } = useDeviceAccessibility();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const emphasizedText = boldTextEnabled || highTextContrastEnabled;
 
@@ -141,7 +141,9 @@ export default function Home() {
               <Text key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`} accessible={false} maxFontSizeMultiplier={2.5} style={[styles.subText, { fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555" }, ]}>{formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}</Text>
             </TouchableOpacity>
           )}
-          {routeLoadingProgress < 1 && <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>}
+          {routeLoadingProgress < 1 && (!accessibilityLoaded || reduceMotionEnabled
+            ? <Text maxFontSizeMultiplier={2.5} style={[styles.subText, { fontSize: 14 * fontSize, color: increasedContrast ? "#111" : "#555", fontWeight: emphasizedText ? "bold" : "normal" }]}>Route preview</Text>
+            : <View style={styles.progressBarBackground}><View style={[styles.progressBarFill, { width: `${routeLoadingProgress * 100}%` }]} /></View>)}
         </View>
       )}
 

@@ -81,6 +81,7 @@ export default function Home() {
   const {
     screenReaderEnabled,
     reduceMotionEnabled,
+    loaded: accessibilityLoaded,
     boldTextEnabled,
     darkerSystemColorsEnabled,
     highTextContrastEnabled,
@@ -409,7 +410,11 @@ export default function Home() {
             </TouchableOpacity>
           )}
 
-          {routeLoadingProgress < 1 && (
+          {routeLoadingProgress < 1 && (!accessibilityLoaded || reduceMotionEnabled ? (
+            <Text maxFontSizeMultiplier={2.5} style={[styles.subText, { fontSize: 14 * fontSize, color: increasedContrast ? "#111" : "#555", fontWeight: emphasizedText ? "bold" : "normal" }]}>
+              Route preview
+            </Text>
+          ) : (
             <View style={styles.progressBarBackground}>
               <View
                 style={[
@@ -420,7 +425,7 @@ export default function Home() {
                 ]}
               />
             </View>
-          )}
+          ))}
         </View>
       )}
 
