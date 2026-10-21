@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: "#1d5962",
+    backgroundColor: "#D00000",
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   voiceControlListening: {
-    backgroundColor: "#ac2b37",
+    backgroundColor: "#801f29",
   },
   voiceControlLabel: {
     color: "#fff",
