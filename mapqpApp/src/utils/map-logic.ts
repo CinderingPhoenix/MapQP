@@ -547,16 +547,16 @@ export function useMapNavigation(buildings: Building[]) {
     if (previousPrompt?.direction === direction && now - previousPrompt.timestamp < 8_000) return;
 
     orientationPromptRef.current = { direction, timestamp: now };
-    const orientationMessage = direction === "around"
-      ? "Turn around to face the route"
-      : `Turn ${direction} to face the route`;
+    // const orientationMessage = direction === "around"
+    //   ? "Turn around to face the route"
+    //   : `Turn ${direction} to face the route`;
 
-    if (screenReaderEnabled) {
-      AccessibilityInfo.announceForAccessibility(orientationMessage);
-    } else {
-      Speech.stop();
-      Speech.speak(orientationMessage, { language: "en-US", rate: 1 });
-    }
+    // if (screenReaderEnabled) {
+    //   AccessibilityInfo.announceForAccessibility(orientationMessage);
+    // } else {
+    //   Speech.stop();
+    //   Speech.speak(orientationMessage, { language: "en-US", rate: 1 });
+    // }
   }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, screenReaderEnabled]);
 
   useEffect(() => {

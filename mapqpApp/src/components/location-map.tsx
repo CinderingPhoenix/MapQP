@@ -212,12 +212,12 @@ export default function LocationMap({
           const normalizedHeading =
             ((rawHeading % 360) + 360) % 360;
 
-          console.log("[MapQP Compass]", {
-            trueHeading: headingData.trueHeading,
-            magneticHeading: headingData.magHeading,
-            accuracy: headingData.accuracy,
-            selectedHeading: normalizedHeading,
-          });
+          // console.log("[MapQP Compass]", {
+          //   trueHeading: headingData.trueHeading,
+          //   magneticHeading: headingData.magHeading,
+          //   accuracy: headingData.accuracy,
+          //   selectedHeading: normalizedHeading,
+          // });
 
           webViewRef.current?.injectJavaScript(`
             if (window.setTargetHeading) {
