@@ -3,6 +3,10 @@ import { useCallback } from "react";
 
 import { router } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { File, Paths } from "expo-file-system";
 import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
@@ -25,7 +29,8 @@ import { useSettings } from "../context/settings-context";
 import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import {
-  WPI_BUILDINGS,
+  Building,
+  parseBuildingData,
   formatDirectionInstruction,
   formatDistance,
   formatDuration,
@@ -34,6 +39,11 @@ import {
   getSegmentDistance,
   useMapNavigation,
 } from "../utils/map-logic";
+import { initRoutingGraph } from "../utils/routing";
+import { useAuthGuard } from "../hooks/use-auth-guard";
+
+import defaultRoutePoints from "../data/route-points.json";
+import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
   useKeepAwake();
@@ -51,6 +61,46 @@ export default function Home() {
     }, [fontScale])
   );
 
+  // --- Dynamic Map Data State ---
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [isMapDataLoaded, setIsMapDataLoaded] = useState(false);
+  const [dataError, setDataError] = useState("");
+
+  useEffect(() => {
+    async function loadLocalMapData() {
+      try {
+        let routeData = defaultRoutePoints;
+        let buildingData = defaultBuildings;
+
+        const routeFile = new File(Paths.document, "route-points.json");
+        const buildingsFile = new File(Paths.document, "wpi-buildings.json");
+
+        if (routeFile.exists) {
+          const routeContent = await routeFile.text();
+          routeData = JSON.parse(routeContent);
+        }
+
+        if (buildingsFile.exists) {
+          const buildingContent = await buildingsFile.text();
+          buildingData = JSON.parse(buildingContent);
+        }
+
+        // Initialize the in-memory graph with local/cached data
+        initRoutingGraph(routeData, buildingData);
+        
+        // Parse and save the buildings to state
+        setBuildings(parseBuildingData(buildingData));
+        setIsMapDataLoaded(true);
+      } catch (err) {
+        setDataError(err instanceof Error ? err.message : "Error loading map data");
+        console.error("Map Data Load Error:", err);
+      }
+    }
+    
+    loadLocalMapData();
+  }, []);
+
+  // Pass dynamic buildings array to the hook
   const {
     coordinates,
     mapCenter,
@@ -70,7 +120,7 @@ export default function Home() {
     handleCancelRoute,
     handleRecenter,
     setShowRecenter,
-  } = useMapNavigation();
+  } = useMapNavigation(buildings);
 
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -78,6 +128,20 @@ export default function Home() {
 
   const { distanceUnits, directionStyle, fontSize } = useSettings();
 
+  if (!isMapDataLoaded) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        {dataError ? (
+          <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color="#1d5962" />
+            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: "#555" }}>Loading campus data...</Text>
+          </>
+        )}
+      </SafeAreaView>
+    );
+  }
   const {
     screenReaderEnabled,
     reduceMotionEnabled,
@@ -439,6 +503,10 @@ export default function Home() {
             setDirectionsExpanded(false);
           }
 
+      <View style={styles.plannerPanel}>
+        {showRecenter && <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}><Text style={[styles.recenterText, { fontSize: 14 * fontSize }]}>Recenter</Text></TouchableOpacity>}
+        <BuildingPicker buildings={buildings} value={destinationBuilding} onChange={handleDestinationChange} onCancel={handleCancelRoute} placeholder="Search WPI destinations..." accessibilityControls onOpenSettings={() => router.push("/settings")} />
+        {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
           return false;
         }}
       >
@@ -550,6 +618,26 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+  mapCanvas: { ...StyleSheet.absoluteFill, backgroundColor: "#e0e0e0" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  topRouteSummary: { position: "absolute", top: 56, left: 16, right: 16, zIndex: 20, backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderColor: "#e0e0e0", overflow: "hidden" },
+  topRouteSummaryExpanded: { height: 480 },
+  progressBarBackground: { position: "absolute", bottom: 0, left: 0, right: 0, height: 4, backgroundColor: "transparent" },
+  progressBarFill: { height: "100%", backgroundColor: "#1d5962" },
+  expandedContainer: { flex: 1, flexDirection: "column" },
+  expandedHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 8 },
+  collapseHint: { fontSize: 13, color: "#888" },
+  directionsList: { flex: 1, marginTop: 4 },
+  directionItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  directionInstruction: { fontSize: 19, fontWeight: "500", color: "#333" },
+  plannerPanel: { position: "absolute", bottom: -16, left: 16, right: 16, zIndex: 10, backgroundColor: "#fff", borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 34, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, borderWidth: 1, borderBottomWidth: 0, borderColor: "#e0e0e0" },
+  recenterButton: { position: "absolute", top: -56, right: 0, backgroundColor: "white", padding: 12, borderRadius: 8, elevation: 4, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 4, zIndex: 20 },
+  recenterText: { fontWeight: "bold", color: "#333" },
+  subText: { fontSize: 16, color: "#555", marginTop: 4 },
+  boldText: { fontSize: 22, fontWeight: "bold", color: "#1d5962" },
+  errorText: { color: "red", marginTop: 8 },
+});
   container: {
     flex: 1,
     backgroundColor: "#fff",

@@ -1,5 +1,7 @@
 
 import Slider from "@react-native-community/slider";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   Alert,
@@ -14,10 +16,12 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { File, Paths } from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useDeviceAccessibility, type DeviceAccessibilityPreference } from "../hooks/use-device-accessibility";
 import { useAuthGuard } from "../hooks/use-auth-guard";
+import defaultRoutePoints from "../data/route-points.json";
 
 
 const KEYS_TO_DELETE = [
@@ -58,6 +62,27 @@ export default function SettingsPage() {
     setFontSize,
   } = useSettings();
 
+  const [mapVersion, setMapVersion] = useState<string>(
+    defaultRoutePoints.version ? String(defaultRoutePoints.version) : "1.0"
+  );
+
+  useEffect(() => {
+    async function loadMapVersion() {
+      try {
+        const routeFile = new File(Paths.document, "route-points.json");
+        if (routeFile.exists) {
+          const content = await routeFile.text();
+          const parsed = JSON.parse(content);
+          if (parsed.version) {
+            setMapVersion(String(parsed.version));
+          }
+        }
+      } catch (err) {
+        console.error("Error reading local map version:", err);
+      }
+    }
+    void loadMapVersion();
+  }, []);
   const deviceAccessibility = useDeviceAccessibility();
   const increasedContrast =
     deviceAccessibility.darkerSystemColorsEnabled ||
@@ -831,6 +856,16 @@ export default function SettingsPage() {
           )}
         </View>
 
+        {/* About / Route Version Info */}
+        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>ABOUT</Text>
+
+        <View style={styles.settingsCard}>
+          <View style={styles.infoRow}>
+            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>Route Data Version</Text>
+            <Text style={[styles.infoValue, { fontSize: 15 * fontSize }]}>v{mapVersion}</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={styles.landingButton}
           onPress={returnToLandingPage}
@@ -875,6 +910,35 @@ function Divider() {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#F6F6F7" },
+  header: { height: 68, backgroundColor: "#AC2B37", flexDirection: "row", alignItems: "center", paddingHorizontal: 16 },
+  backButton: { width: 42, height: 42, justifyContent: "center", alignItems: "center" },
+  backArrow: { color: "#FFFFFF", fontSize: 38, lineHeight: 40 },
+  headerTitle: { flex: 1, color: "#FFFFFF", fontSize: 21, fontWeight: "800", textAlign: "center" },
+  headerSpacer: { width: 42 },
+  scrollContent: { paddingHorizontal: 18, paddingTop: 24, paddingBottom: 40 },
+  sectionLabel: { fontSize: 12, fontWeight: "800", color: "#7A7A7A", marginLeft: 6, marginBottom: 8, marginTop: 12, letterSpacing: 0.8 },
+  settingsCard: { backgroundColor: "#FFFFFF", borderRadius: 18, paddingHorizontal: 16, shadowColor: "#000000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 2 },
+  settingRow: { minHeight: 88, flexDirection: "row", alignItems: "center", paddingVertical: 14 },
+  optionRow: { paddingVertical: 16 },
+  infoRow: { paddingVertical: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  infoValue: { fontWeight: "600", color: "#6B7280" },
+  settingTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", marginBottom: 4 },
+  segmentedControl: { flexDirection: "row", backgroundColor: "#F1F2F4", borderRadius: 10, padding: 3, marginTop: 12 },
+  segmentButton: { flex: 1, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  segmentButtonSelected: { backgroundColor: "#AC2B37" },
+  segmentText: { fontSize: 13, fontWeight: "700", color: "#6B7280" },
+  segmentTextSelected: { color: "#FFFFFF" },
+  sliderRow: { paddingVertical: 18 },
+  sliderContainer: { flexDirection: "row", alignItems: "center", marginTop: 14 },
+  slider: { flex: 1, height: 40, marginHorizontal: 8 },
+  smallA: { fontSize: 14, fontWeight: "700", color: "#4B5563" },
+  largeA: { fontSize: 24, fontWeight: "700", color: "#4B5563" },
+  fontSizeValue: { fontSize: 12, fontWeight: "600", color: "#6B7280", textAlign: "center" },
+  divider: { height: 1, backgroundColor: "#ECEDEF" },
+  footerText: { textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 30 },
+  landingButton: { marginTop: 28, paddingVertical: 14, alignItems: "center" },
+  landingButtonText: { color: "#AC2B37", fontSize: 15, fontWeight: "700" },
   container: {
     flex: 1,
     backgroundColor: "#F3F5F8",

@@ -1,3 +1,5 @@
+// map-logic.ts
+
 import { useSettings } from "@/context/settings-context";
 import { useDeviceAccessibility } from "@/hooks/use-device-accessibility";
 import * as SecureStore from "expo-secure-store";
@@ -5,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Platform, Vibration } from "react-native";
 import { AccessibilityInfo, Platform, Vibration } from "react-native";
 import buildingData from "../data/wpi-buildings.json";
 import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
@@ -77,11 +80,14 @@ const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
-export const WPI_BUILDINGS: Building[] = buildingData.map((building) => ({
-  id: building.name.toLowerCase().replaceAll(" ", "-"),
-  name: building.name,
-  entrances: building.entrances,
-}));
+// ✅ Added helper to parse downloaded server JSON into your MapQP typed format
+export function parseBuildingData(rawData: any[]): Building[] {
+  return rawData.map((building) => ({
+    id: building.name.toLowerCase().replaceAll(" ", "-"),
+    name: building.name,
+    entrances: building.entrances,
+  }));
+}
 
 export function getSimilarityScore(str1: string, str2: string): number {
   const a = str1.toLowerCase().trim();
@@ -121,25 +127,13 @@ export function getBearing(lat1: number, lon1: number, lat2: number, lon2: numbe
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
-export function formatDistance(
-  meters: number,
-  units: "imperial" | "metric" = "metric"
-): string {
+export function formatDistance(meters: number, units: "imperial" | "metric" = "metric"): string {
   if (units === "imperial") {
     const feet = meters * 3.28084;
-
-    if (feet < 5280) {
-      return `${Math.round(feet)} ft`;
-    }
-
-    const miles = feet / 5280;
-    return `${miles.toFixed(1)} mi`;
+    if (feet < 5280) return `${Math.round(feet)} ft`;
+    return `${(feet / 5280).toFixed(1)} mi`;
   }
-
-  if (meters < 1000) {
-    return `${Math.round(meters)} m`;
-  }
-
+  if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
@@ -148,14 +142,8 @@ export function formatDuration(seconds: number): string {
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
-export function formatInstructionWithDistance(
-  instruction: string,
-  distMeters: number,
-  units: "imperial" | "metric" = "metric"
-): string {
-  return distMeters <= 5
-    ? `${instruction} now`
-    : `${instruction} in ${formatDistance(distMeters, units)}`;
+export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric"): string {
+  return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters, units)}`;
 }
 
 function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
@@ -171,35 +159,17 @@ function closestGeometryIndex(geometry: [number, number][], point: [number, numb
   return closestIndex;
 }
 
-export function formatDirectionInstruction(
-  step: DirectionStep,
-  style: "natural" | "degrees"
-): string {
-  if (
-    style === "natural" ||
-    step.turnDegrees === undefined ||
-    step.instruction === "Arrive at destination"
-  ) {
+export function formatDirectionInstruction(step: DirectionStep, style: "natural" | "degrees"): string {
+  if (style === "natural" || step.turnDegrees === undefined || step.instruction === "Arrive at destination") {
     return step.instruction;
   }
-
   const degrees = Math.round(Math.abs(step.turnDegrees));
-
-  if (degrees <= 15) {
-    return "Continue straight";
-  }
-
-  if (step.turnDegrees > 0) {
-    return `Turn right ${degrees}°`;
-  }
-
+  if (degrees <= 15) return "Continue straight";
+  if (step.turnDegrees > 0) return `Turn right ${degrees}°`;
   return `Turn left ${degrees}°`;
 }
 
-export function generateDirections(
-  geometry: [number, number][],
-  navigationPath: NavigationPoint[] = [],
-): DirectionStep[] {
+export function generateDirections(geometry: [number, number][], navigationPath: NavigationPoint[] = []): DirectionStep[] {
   const steps: DirectionStep[] = [];
   if (!geometry || geometry.length < 2 || navigationPath.length < 3) return steps;
 
@@ -308,16 +278,12 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
   return { ...incomingSample, latitude, longitude, accuracy: Math.max(2, Math.min(Math.sqrt(variance), 2)) };
 }
 
-function buildingPoint(building: Building, entranceIndex: number): Point {
-  const entrance = building.entrances[entranceIndex];
-  return { latitude: entrance.latitude, longitude: entrance.longitude, label: `${building.name} ${entrance.name}` };
-}
-
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
   return routes.reduce((fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest);
 }
 
-export function useMapNavigation() {
+// ✅ Added `buildings: Building[]` parameter here
+export function useMapNavigation(buildings: Building[]) {
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
   const spokenStagesRef = useRef<Record<number, StepSpeechStage>>({});
@@ -379,11 +345,15 @@ export function useMapNavigation() {
   const planRoute = useCallback(async (currentCoords?: Coordinates) => {
     const targetBuilding = destinationBuildingRef.current;
     setRouteError("");
-    const selectedBuilding = WPI_BUILDINGS.find((building) => building.id === targetBuilding);
+    
+    // ✅ Replaced hardcoded array with dynamic property
+    const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
     const activeCoords = currentCoords || coordinates;
+    
     if (!targetBuilding) return;
     if (!selectedBuilding) return setRouteError("Choose a WPI destination building.");
     if (!activeCoords) return setRouteError("Waiting for your current location before planning.");
+    
     setRouteLoading(true);
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
@@ -486,7 +456,6 @@ export function useMapNavigation() {
     return () => { isMounted = false; subscription?.remove(); };
   }, []);
 
-  // Keep an independent compass heading available for correcting a user's orientation.
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
