@@ -4,7 +4,6 @@ import { router } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import {
   Animated,
-  Dimensions,
   Keyboard,
   Platform,
   ScrollView,
@@ -45,16 +44,12 @@ export default function Home() {
   const { fontScale } = useWindowDimensions();
   const [textRefresh, setTextRefresh] = useState(0);
 
-  // iOS can retain stale native text measurements after returning from Settings.
   useFocusEffect(
     useCallback(() => {
       setTextRefresh((previous) => previous + 1);
-      const currentScale = Dimensions.get("window").fontScale;
-      // console.log("[MapQP Dynamic Type] screen focus", { fontScale, currentScale });
     }, [fontScale])
   );
 
-  // --- Dynamic Map Data State ---
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [isMapDataLoaded, setIsMapDataLoaded] = useState(false);
   const [dataError, setDataError] = useState("");
@@ -104,6 +99,7 @@ export default function Home() {
     upcomingSteps,
     nextStep,
     distToNextStepMeters,
+    currentHeading,
     toggleMute,
     handleDestinationChange,
     handleCancelRoute,
@@ -385,6 +381,7 @@ export default function Home() {
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
             recenterSignal={recenterSignal}

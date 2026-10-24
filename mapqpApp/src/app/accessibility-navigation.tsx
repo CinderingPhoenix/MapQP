@@ -105,6 +105,7 @@ export default function Home() {
     upcomingSteps,
     nextStep,
     distToNextStepMeters,
+    currentHeading,
     toggleMute,
     handleDestinationChange,
     handleCancelRoute,
@@ -402,6 +403,7 @@ export default function Home() {
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
             accessibilityMode

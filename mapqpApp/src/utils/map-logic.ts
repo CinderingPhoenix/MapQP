@@ -79,7 +79,6 @@ const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
-// ✅ Added helper to parse downloaded server JSON into your MapQP typed format
 export function parseBuildingData(rawData: any[]): Building[] {
   return rawData.map((building) => ({
     id: building.name.toLowerCase().replaceAll(" ", "-"),
@@ -278,10 +277,9 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
 }
 
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
-  return routes.reduce((fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest);
+  return routes.reduce((fastest, candidate) => (candidate.duration < fastest.duration ? candidate : fastest));
 }
 
-// ✅ Added `buildings: Building[]` parameter here
 export function useMapNavigation(buildings: Building[]) {
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
@@ -301,6 +299,14 @@ export function useMapNavigation(buildings: Building[]) {
   const [recenterSignal, setRecenterSignal] = useState(0);
   const [routeLoadingProgress, setRouteLoadingProgress] = useState(0);
   const [currentHeading, setCurrentHeading] = useState<number | null>(null);
+  
+  const [debugInfo, setDebugInfo] = useState<{
+    routeBearing: number;
+    activeHeading: number;
+    diff: number;
+    direction: string;
+  } | null>(null);
+
   const progressAnimationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
@@ -345,7 +351,6 @@ export function useMapNavigation(buildings: Building[]) {
     const targetBuilding = destinationBuildingRef.current;
     setRouteError("");
     
-    // ✅ Replaced hardcoded array with dynamic property
     const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
     const activeCoords = currentCoords || coordinates;
     
@@ -455,19 +460,17 @@ export function useMapNavigation(buildings: Building[]) {
     return () => { isMounted = false; subscription?.remove(); };
   }, []);
 
+  // ✅ Unconditional continuous heading watcher so it never freezes
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
-    if (!route) {
-      setCurrentHeading(null);
-      return;
-    }
-
     Location.watchHeadingAsync((headingData) => {
       if (!isMounted) return;
       const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
-      setCurrentHeading(heading % 360);
+      if (Number.isFinite(heading) && heading >= 0) {
+        setCurrentHeading(heading % 360);
+      }
     }).then((nextSubscription) => {
       if (isMounted) subscription = nextSubscription;
       else nextSubscription.remove();
@@ -479,7 +482,7 @@ export function useMapNavigation(buildings: Building[]) {
       isMounted = false;
       subscription?.remove();
     };
-  }, [route]);
+  }, []);
 
   useEffect(() => {
     if (!destinationBuilding || !coordinates) return;
@@ -506,6 +509,7 @@ export function useMapNavigation(buildings: Building[]) {
     Speech.stop();
     spokenStagesRef.current = {};
     orientationPromptRef.current = null;
+    setDebugInfo(null);
     if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
     setRouteLoadingProgress(0);
     setRoute(null);
@@ -524,9 +528,19 @@ export function useMapNavigation(buildings: Building[]) {
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   useEffect(() => {
-    if (!route || !coordinates || currentHeading === null || (!screenReaderEnabled && isAudioMuted) || isRouteCancelledRef.current) return;
+    if (!route || !coordinates || isRouteCancelledRef.current) {
+      setDebugInfo(null);
+      return;
+    }
 
-    const lookAheadIndex = Math.min(currentRouteIndex + 4, route.geometry.length - 1);
+    const activeHeading = currentHeading !== null ? currentHeading : coordinates.heading;
+
+    if (activeHeading === null || activeHeading === undefined) {
+      setDebugInfo(null);
+      return;
+    }
+
+    const lookAheadIndex = Math.min(currentRouteIndex + 1, route.geometry.length - 1);
     if (lookAheadIndex <= currentRouteIndex) return;
 
     const routeBearing = getBearing(
@@ -535,28 +549,47 @@ export function useMapNavigation(buildings: Building[]) {
       route.geometry[lookAheadIndex][0],
       route.geometry[lookAheadIndex][1],
     );
-    const headingDifference = ((routeBearing - currentHeading + 540) % 360) - 180;
-    const absoluteDifference = Math.abs(headingDifference);
-    if (absoluteDifference < 65) return;
+    
+    const diff = (routeBearing - activeHeading + 360) % 360;
 
-    const direction: OrientationPrompt["direction"] = absoluteDifference >= 135
-      ? "around"
-      : headingDifference > 0 ? "right" : "left";
+    let direction: "left" | "right" | "around" | "facing";
+    if (diff <= 15 || diff >= 345) {
+      direction = "facing";
+    } else if (diff >= 135 && diff <= 225) {
+      direction = "around";
+    } else if (diff < 180) {
+      direction = "right";
+    } else {
+      direction = "left";
+    }
+
+    setDebugInfo({
+      routeBearing: Math.round(routeBearing),
+      activeHeading: Math.round(activeHeading),
+      diff: Math.round(diff),
+      direction,
+    });
+
+    if (!screenReaderEnabled && isAudioMuted) return;
+    if (diff <= 15 || diff >= 345) return;
+
     const now = Date.now();
     const previousPrompt = orientationPromptRef.current;
-    if (previousPrompt?.direction === direction && now - previousPrompt.timestamp < 8_000) return;
+    
+    if (previousPrompt && now - previousPrompt.timestamp < 8_000) return;
 
-    orientationPromptRef.current = { direction, timestamp: now };
-    // const orientationMessage = direction === "around"
-    //   ? "Turn around to face the route"
-    //   : `Turn ${direction} to face the route`;
+    const promptDir = direction === "around" ? "around" : direction === "right" ? "right" : "left";
+    orientationPromptRef.current = { direction: promptDir, timestamp: now };
+    const orientationMessage = promptDir === "around"
+      ? "Turn around to face the route"
+      : `Turn ${promptDir} to face the route`;
 
-    // if (screenReaderEnabled) {
-    //   AccessibilityInfo.announceForAccessibility(orientationMessage);
-    // } else {
-    //   Speech.stop();
-    //   Speech.speak(orientationMessage, { language: "en-US", rate: 1 });
-    // }
+    if (screenReaderEnabled) {
+      AccessibilityInfo.announceForAccessibility(orientationMessage);
+    } else {
+      Speech.stop();
+      Speech.speak(orientationMessage, { language: "en-US", rate: 1 });
+    }
   }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, screenReaderEnabled]);
 
   useEffect(() => {
@@ -588,5 +621,28 @@ export function useMapNavigation(buildings: Building[]) {
     }
   }, [route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, screenReaderEnabled]);
 
-  return { coordinates, mapCenter, error, isAudioMuted, destinationBuilding, route, routeError, routeSteps, currentRouteIndex, showRecenter, recenterSignal, routeLoadingProgress, upcomingSteps, nextStep, distToNextStepMeters, toggleMute, handleDestinationChange, handleCancelRoute, handleRecenter, setShowRecenter };
+  return { 
+    coordinates, 
+    mapCenter, 
+    error, 
+    isAudioMuted, 
+    destinationBuilding, 
+    route, 
+    routeError, 
+    routeSteps, 
+    currentRouteIndex, 
+    showRecenter, 
+    recenterSignal, 
+    routeLoadingProgress, 
+    upcomingSteps, 
+    nextStep, 
+    distToNextStepMeters, 
+    debugInfo, 
+    currentHeading,
+    toggleMute, 
+    handleDestinationChange, 
+    handleCancelRoute, 
+    handleRecenter, 
+    setShowRecenter 
+  };
 }
