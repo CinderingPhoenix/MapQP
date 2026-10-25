@@ -8,8 +8,8 @@ import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Platform, Vibration } from "react-native";
-import buildingData from "../data/wpi-buildings.json";
 import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
+import { useFocusEffect } from "expo-router"; // ✅ Use Expo Router's hook instead
 
 export type Point = {
   latitude: number;
@@ -79,7 +79,6 @@ const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
-// ✅ Added helper to parse downloaded server JSON into your MapQP typed format
 export function parseBuildingData(rawData: any[]): Building[] {
   return rawData.map((building) => ({
     id: building.name.toLowerCase().replaceAll(" ", "-"),
@@ -278,11 +277,23 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
 }
 
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
-  return routes.reduce((fastest, candidate) => candidate.duration < fastest.duration ? candidate : fastest);
+  return routes.reduce((fastest, candidate) => (candidate.duration < fastest.duration ? candidate : fastest));
 }
 
-// ✅ Added `buildings: Building[]` parameter here
 export function useMapNavigation(buildings: Building[]) {
+  const [isFocused, setIsFocused] = useState(true);
+
+  // Track screen focus using Expo Router's useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+        Speech.stop(); // Stop speech immediately when losing focus
+      };
+    }, [])
+  );
+
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
   const spokenStagesRef = useRef<Record<number, StepSpeechStage>>({});
@@ -301,6 +312,7 @@ export function useMapNavigation(buildings: Building[]) {
   const [recenterSignal, setRecenterSignal] = useState(0);
   const [routeLoadingProgress, setRouteLoadingProgress] = useState(0);
   const [currentHeading, setCurrentHeading] = useState<number | null>(null);
+
   const progressAnimationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoRouteKeyRef = useRef("");
   const routeGeometryRef = useRef<[number, number][] | null>(null);
@@ -315,6 +327,36 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
   useEffect(() => { routeGeometryRef.current = route?.geometry ?? null; }, [route]);
+
+  const handleCancelRoute = useCallback(() => {
+    isRouteCancelledRef.current = true;
+    destinationBuildingRef.current = "";
+    autoRouteKeyRef.current = "";
+    routeGeometryRef.current = null;
+    isReroutingRef.current = false;
+    Speech.stop();
+    spokenStagesRef.current = {};
+    orientationPromptRef.current = null;
+    if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
+    setRouteLoadingProgress(0);
+    setRoute(null);
+    setDestinationBuilding("");
+    setRouteError("");
+    setRouteSteps([]);
+    setCurrentRouteIndex(0);
+  }, []);
+
+  const prevNavigationModeRef = useRef(navigationMode);
+  
+  // Automatically cancel route if navigation mode changes
+  useEffect(() => {
+    if (prevNavigationModeRef.current !== navigationMode) {
+      prevNavigationModeRef.current = navigationMode;
+      if (route) {
+        handleCancelRoute();
+      }
+    }
+  }, [navigationMode, route, handleCancelRoute]);
 
   useEffect(() => {
     SecureStore.getItemAsync(LAST_LOCATION_STORAGE_KEY).then((savedLocation) => {
@@ -345,7 +387,6 @@ export function useMapNavigation(buildings: Building[]) {
     const targetBuilding = destinationBuildingRef.current;
     setRouteError("");
     
-    // ✅ Replaced hardcoded array with dynamic property
     const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
     const activeCoords = currentCoords || coordinates;
     
@@ -388,7 +429,7 @@ export function useMapNavigation(buildings: Building[]) {
       setCurrentRouteIndex(0);
       startRoutePreviewCountdown();
       spokenStagesRef.current = {};
-      if (!isRouteCancelledRef.current) {
+      if (!isRouteCancelledRef.current && isFocused) {
         if (screenReaderEnabled) {
           AccessibilityInfo.announceForAccessibility(`Navigating to ${selectedBuilding.name}`);
         } else if (!isAudioMuted) {
@@ -410,6 +451,7 @@ export function useMapNavigation(buildings: Building[]) {
     navigationMode,
     screenReaderEnabled,
     startRoutePreviewCountdown,
+    isFocused,
   ]);
 
   const planRouteRef = useRef(planRoute);
@@ -459,15 +501,12 @@ export function useMapNavigation(buildings: Building[]) {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
-    if (!route) {
-      setCurrentHeading(null);
-      return;
-    }
-
     Location.watchHeadingAsync((headingData) => {
       if (!isMounted) return;
       const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
-      setCurrentHeading(heading % 360);
+      if (Number.isFinite(heading) && heading >= 0) {
+        setCurrentHeading(heading % 360);
+      }
     }).then((nextSubscription) => {
       if (isMounted) subscription = nextSubscription;
       else nextSubscription.remove();
@@ -479,7 +518,7 @@ export function useMapNavigation(buildings: Building[]) {
       isMounted = false;
       subscription?.remove();
     };
-  }, [route]);
+  }, []);
 
   useEffect(() => {
     if (!destinationBuilding || !coordinates) return;
@@ -497,24 +536,6 @@ export function useMapNavigation(buildings: Building[]) {
     if (buildingId) void planRoute();
   }, [planRoute]);
 
-  const handleCancelRoute = useCallback(() => {
-    isRouteCancelledRef.current = true;
-    destinationBuildingRef.current = "";
-    autoRouteKeyRef.current = "";
-    routeGeometryRef.current = null;
-    isReroutingRef.current = false;
-    Speech.stop();
-    spokenStagesRef.current = {};
-    orientationPromptRef.current = null;
-    if (progressAnimationRef.current) clearInterval(progressAnimationRef.current);
-    setRouteLoadingProgress(0);
-    setRoute(null);
-    setDestinationBuilding("");
-    setRouteError("");
-    setRouteSteps([]);
-    setCurrentRouteIndex(0);
-  }, []);
-
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);
   const nextStep = upcomingSteps[0] ?? null;
@@ -524,9 +545,21 @@ export function useMapNavigation(buildings: Building[]) {
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   useEffect(() => {
-    if (!route || !coordinates || currentHeading === null || (!screenReaderEnabled && isAudioMuted) || isRouteCancelledRef.current) return;
+    if (!isFocused || navigationMode !== "accessibility") {
+      return;
+    }
 
-    const lookAheadIndex = Math.min(currentRouteIndex + 4, route.geometry.length - 1);
+    if (!route || !coordinates || isRouteCancelledRef.current) {
+      return;
+    }
+
+    const activeHeading = currentHeading !== null ? currentHeading : coordinates.heading;
+
+    if (activeHeading === null || activeHeading === undefined) {
+      return;
+    }
+
+    const lookAheadIndex = Math.min(currentRouteIndex + 1, route.geometry.length - 1);
     if (lookAheadIndex <= currentRouteIndex) return;
 
     const routeBearing = getBearing(
@@ -535,36 +568,81 @@ export function useMapNavigation(buildings: Building[]) {
       route.geometry[lookAheadIndex][0],
       route.geometry[lookAheadIndex][1],
     );
-    const headingDifference = ((routeBearing - currentHeading + 540) % 360) - 180;
-    const absoluteDifference = Math.abs(headingDifference);
-    if (absoluteDifference < 65) return;
+    
+    const diff = (routeBearing - activeHeading + 360) % 360;
 
-    const direction: OrientationPrompt["direction"] = absoluteDifference >= 135
-      ? "around"
-      : headingDifference > 0 ? "right" : "left";
+    let direction: "left" | "right" | "around" | "facing";
+    if (diff <= 15 || diff >= 345) {
+      direction = "facing";
+    } else if (diff >= 135 && diff <= 225) {
+      direction = "around";
+    } else if (diff < 180) {
+      direction = "right";
+    } else {
+      direction = "left";
+    }
+
+    if (!screenReaderEnabled && isAudioMuted) return;
+    if (diff <= 15 || diff >= 345) return;
+
     const now = Date.now();
     const previousPrompt = orientationPromptRef.current;
-    if (previousPrompt?.direction === direction && now - previousPrompt.timestamp < 8_000) return;
+    
+    if (previousPrompt && now - previousPrompt.timestamp < 8_000) return;
 
-    orientationPromptRef.current = { direction, timestamp: now };
-    // const orientationMessage = direction === "around"
-    //   ? "Turn around to face the route"
-    //   : `Turn ${direction} to face the route`;
+    const promptDir = direction === "around" ? "around" : direction === "right" ? "right" : "left";
+    orientationPromptRef.current = { direction: promptDir, timestamp: now };
+    const orientationMessage = promptDir === "around"
+      ? "Turn around to face the route"
+      : `Turn ${promptDir} to face the route`;
 
-    // if (screenReaderEnabled) {
-    //   AccessibilityInfo.announceForAccessibility(orientationMessage);
-    // } else {
-    //   Speech.stop();
-    //   Speech.speak(orientationMessage, { language: "en-US", rate: 1 });
-    // }
-  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, screenReaderEnabled]);
+    if (screenReaderEnabled) {
+      AccessibilityInfo.announceForAccessibility(orientationMessage);
+    } else {
+      Speech.stop();
+      Speech.speak(orientationMessage, { language: "en-US", rate: 1 });
+    }
+  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, screenReaderEnabled, navigationMode, isFocused]);
 
+  // Repeat current step instructions every 9 seconds during accessibility navigation
   useEffect(() => {
-    if (!route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
+    if (!isFocused || navigationMode !== "accessibility" || !route || !nextStep || isRouteCancelledRef.current) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      if (!isFocused || isRouteCancelledRef.current || !nextStep) return;
+
+      const instruction = formatDirectionInstruction(nextStep, directionStyle);
+      const announcement = formatInstructionWithDistance(instruction, distToNextStepMeters, distanceUnits);
+
+      if (screenReaderEnabled) {
+        AccessibilityInfo.announceForAccessibility(announcement);
+      } else if (!isAudioMuted) {
+        Speech.stop();
+        Speech.speak(announcement, { language: "en-US", rate: 1 });
+      }
+    }, 9000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isFocused, navigationMode, route, nextStep, nextStepInstruction, distToNextStepMeters, distanceUnits, directionStyle, screenReaderEnabled, isAudioMuted]);
+  
+  useEffect(() => {
+    if (!isFocused || !route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
     const stages = spokenStagesRef.current[nextStep.pointIndex] ?? {};
     spokenStagesRef.current[nextStep.pointIndex] = stages;
+    
     const speakPrompt = (text: string) => {
-      if (Platform.OS !== "web") { try { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { Vibration.vibrate(150); } }
+      if (!isFocused) return;
+      if (Platform.OS !== "web") { 
+        try { 
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
+        } catch { 
+          Vibration.vibrate(150); 
+        } 
+      }
       if (isRouteCancelledRef.current) return;
       if (screenReaderEnabled) {
         AccessibilityInfo.announceForAccessibility(text);
@@ -574,6 +652,17 @@ export function useMapNavigation(buildings: Building[]) {
       Speech.stop();
       Speech.speak(text, { language: "en-US", rate: 1 });
     };
+
+    // Arrival announcement check
+    if (nextStep.instruction === "Arrive at destination") {
+      if (distToNextStepMeters <= 5 && !stages.turn) {
+        stages.turn = true;
+        const destinationName = route.destination?.label || "your destination";
+        speakPrompt(`You have arrived at ${destinationName}`);
+      }
+      return;
+    }
+
     if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) {
       stages.m25 = true;
       const distance = distanceUnits === "imperial" ? "80 feet" : "25 meters";
@@ -586,7 +675,29 @@ export function useMapNavigation(buildings: Building[]) {
       stages.turn = true;
       speakPrompt(`${nextStepInstruction} now`);
     }
-  }, [route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, screenReaderEnabled]);
+  }, [isFocused, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, screenReaderEnabled]);
 
-  return { coordinates, mapCenter, error, isAudioMuted, destinationBuilding, route, routeError, routeSteps, currentRouteIndex, showRecenter, recenterSignal, routeLoadingProgress, upcomingSteps, nextStep, distToNextStepMeters, toggleMute, handleDestinationChange, handleCancelRoute, handleRecenter, setShowRecenter };
+  return { 
+    coordinates, 
+    mapCenter, 
+    error, 
+    isAudioMuted, 
+    destinationBuilding, 
+    route, 
+    routeError, 
+    routeSteps, 
+    currentRouteIndex, 
+    showRecenter, 
+    recenterSignal, 
+    routeLoadingProgress, 
+    upcomingSteps, 
+    nextStep, 
+    distToNextStepMeters,
+    currentHeading,
+    toggleMute, 
+    handleDestinationChange, 
+    handleCancelRoute, 
+    handleRecenter, 
+    setShowRecenter 
+  };
 }

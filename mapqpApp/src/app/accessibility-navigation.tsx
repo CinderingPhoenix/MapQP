@@ -1,3 +1,5 @@
+// accessibility-navigation.tsx
+
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
@@ -46,19 +48,55 @@ export default function Home() {
   const { fontScale } = useWindowDimensions();
   const [textRefresh, setTextRefresh] = useState(0);
 
+  // --- Dynamic Map Data State & Hooks (Must be called unconditionally) ---
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [isMapDataLoaded, setIsMapDataLoaded] = useState(false);
+  const [dataError, setDataError] = useState("");
+
+  const [directionsExpanded, setDirectionsExpanded] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardTranslateY = useRef(new Animated.Value(0)).current;
+  const lastAnnouncedInstruction = useRef<string | null>(null);
+
+  const { distanceUnits, directionStyle, fontSize } = useSettings();
+  const accessibilityPreferences = useDeviceAccessibility();
+
+  const screenReaderEnabled = accessibilityPreferences?.screenReaderEnabled ?? false;
+  const reduceMotionEnabled = accessibilityPreferences?.reduceMotionEnabled ?? false;
+  const accessibilityLoaded = accessibilityPreferences?.loaded ?? false;
+  const boldTextEnabled = accessibilityPreferences?.boldTextEnabled ?? false;
+  const darkerSystemColorsEnabled = accessibilityPreferences?.darkerSystemColorsEnabled ?? false;
+  const highTextContrastEnabled = accessibilityPreferences?.highTextContrastEnabled ?? false;
+  const reduceTransparencyEnabled = accessibilityPreferences?.reduceTransparencyEnabled ?? false;
+
+  const {
+    coordinates,
+    mapCenter,
+    error,
+    destinationBuilding,
+    route,
+    routeError,
+    currentRouteIndex,
+    showRecenter,
+    recenterSignal,
+    routeLoadingProgress,
+    upcomingSteps,
+    nextStep,
+    distToNextStepMeters,
+    currentHeading,
+    toggleMute,
+    handleDestinationChange,
+    handleCancelRoute,
+    handleRecenter,
+    setShowRecenter,
+  } = useMapNavigation(buildings);
+
   // iOS can retain stale native text measurements after returning from Settings.
   useFocusEffect(
     useCallback(() => {
       setTextRefresh((previous) => previous + 1);
-      const currentScale = Dimensions.get("window").fontScale;
-      // console.log("[MapQP Dynamic Type] screen focus", { fontScale, currentScale });
     }, [fontScale])
   );
-
-  // --- Dynamic Map Data State ---
-  const [buildings, setBuildings] = useState<Building[]>([]);
-  const [isMapDataLoaded, setIsMapDataLoaded] = useState(false);
-  const [dataError, setDataError] = useState("");
 
   useEffect(() => {
     async function loadLocalMapData() {
@@ -90,62 +128,6 @@ export default function Home() {
     
     loadLocalMapData();
   }, []);
-
-  const {
-    coordinates,
-    mapCenter,
-    error,
-    destinationBuilding,
-    route,
-    routeError,
-    currentRouteIndex,
-    showRecenter,
-    recenterSignal,
-    routeLoadingProgress,
-    upcomingSteps,
-    nextStep,
-    distToNextStepMeters,
-    toggleMute,
-    handleDestinationChange,
-    handleCancelRoute,
-    handleRecenter,
-    setShowRecenter,
-  } = useMapNavigation(buildings);
-
-  const [directionsExpanded, setDirectionsExpanded] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const keyboardTranslateY = useRef(new Animated.Value(0)).current;
-
-  const { distanceUnits, directionStyle, fontSize } = useSettings();
-
-  if (!isMapDataLoaded) {
-    return (
-      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
-        {dataError ? (
-          <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
-        ) : (
-          <>
-            <ActivityIndicator size="large" color="#1d5962" />
-            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: "#555" }}>Loading campus data...</Text>
-          </>
-        )}
-      </SafeAreaView>
-    );
-  }
-
-  const {
-    screenReaderEnabled,
-    reduceMotionEnabled,
-    loaded: accessibilityLoaded,
-    boldTextEnabled,
-    darkerSystemColorsEnabled,
-    highTextContrastEnabled,
-    reduceTransparencyEnabled,
-  } = useDeviceAccessibility();
-
-  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
-  const emphasizedText = boldTextEnabled || highTextContrastEnabled;
-  const lastAnnouncedInstruction = useRef<string | null>(null);
 
   useEffect(() => {
     if (!screenReaderEnabled || !route || !nextStep) {
@@ -202,6 +184,25 @@ export default function Home() {
       hideSub.remove();
     };
   }, [keyboardTranslateY, reduceMotionEnabled]);
+
+  // Conditional loading checks must happen AFTER all hooks are defined
+  if (!isMapDataLoaded || !accessibilityLoaded) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        {dataError ? (
+          <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color="#1d5962" />
+            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: "#555" }}>Loading accessibility options...</Text>
+          </>
+        )}
+      </SafeAreaView>
+    );
+  }
+
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const emphasizedText = boldTextEnabled || highTextContrastEnabled;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -402,6 +403,7 @@ export default function Home() {
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
             accessibilityMode

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import {
   ActivityIndicator,
@@ -284,7 +284,7 @@ export default function LoadingScreen({
   continueToAppRef.current = prepareAndContinue;
 
   const img1 = firstImage ?? require('../../assets/images/wpi-logo.png');
-  const img2 = secondImage ?? require('../../assets/images/splash-icon.png');
+  const img2 = secondImage ?? require('../../assets/images/mapqp-logo.png');
 
   useEffect(() => {
     const loadSessionAndSync = async () => {

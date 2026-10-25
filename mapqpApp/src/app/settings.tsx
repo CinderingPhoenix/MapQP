@@ -1,6 +1,6 @@
 import Slider from "@react-native-community/slider";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Platform,
@@ -14,12 +14,14 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as Speech from "expo-speech";
 import { File, Paths } from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/settings-context";
 import { useDeviceAccessibility, type DeviceAccessibilityPreference } from "../hooks/use-device-accessibility";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import defaultRoutePoints from "../data/route-points.json";
+import { useFocusEffect } from "expo-router";
 
 const KEYS_TO_DELETE = [
   "mapqp_microsoft_session",
@@ -46,6 +48,12 @@ function AccessibleText({
 export default function SettingsPage() {
   useAuthGuard();
   const { fontScale } = useWindowDimensions();
+
+  useFocusEffect(
+    useCallback(() => {
+      Speech.stop();
+    }, [])
+  );
 
   const {
     navigationMode,
@@ -108,12 +116,14 @@ export default function SettingsPage() {
   };
 
   const changeNavigationMode = (mode: "standard" | "accessibility") => {
+    Speech.stop();
     setNavigationMode(mode);
   };
 
   const { from } = useLocalSearchParams<{ from?: string }>();
 
   const handleBackFromSettings = () => {
+    Speech.stop();
     const originalMode =
       from === "standard-navigation"
         ? "standard"
@@ -134,6 +144,7 @@ export default function SettingsPage() {
   };
 
   const returnToLandingPage = () => {
+    Speech.stop();
     setHasSelectedMode(false);
     router.replace("/landing-page");
   };
@@ -160,6 +171,7 @@ export default function SettingsPage() {
           onPress: () => {
             void (async () => {
               try {
+                Speech.stop();
                 await Promise.all(
                   KEYS_TO_DELETE.map((key) => SecureStore.deleteItemAsync(key))
                 );
