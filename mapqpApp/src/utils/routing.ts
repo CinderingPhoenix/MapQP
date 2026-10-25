@@ -1,5 +1,3 @@
-// routing.ts
-
 // --- Types ---
 
 export type RoutePoint = {
