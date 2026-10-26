@@ -17,6 +17,7 @@ import {
   View,
   ActivityIndicator,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";
@@ -129,6 +130,27 @@ export default function Home() {
     loadLocalMapData();
   }, []);
 
+  // Voice Command Listener for Accessibility (e.g. Screen Reader announcements/commands or custom accessibility triggers)
+  useEffect(() => {
+    if (!route) return;
+
+    // Listen to accessibility announcements or external voice command integrations if applicable
+    const subscription = AccessibilityInfo.addEventListener(
+      'announcementFinished',
+      (announcement) => {
+        const spokenText = announcement?.announcement?.toLowerCase() || '';
+        if (spokenText.includes('cancel route') || spokenText.includes('stop navigation')) {
+          handleCancelRoute();
+          AccessibilityInfo.announceForAccessibility('Route cancelled via voice command.');
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [route, handleCancelRoute]);
+
   useEffect(() => {
     if (!screenReaderEnabled || !route || !nextStep) {
       return;
@@ -215,34 +237,94 @@ export default function Home() {
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
           ]}
         >
-          {directionsExpanded ? (
+          {/* Header Row containing Route Info and a dedicated Cancel Button */}
+          <View style={styles.routeHeaderRow}>
+            <View style={{ flex: 1 }}>
+              {directionsExpanded ? (
+                <TouchableOpacity
+                  onPress={() => setDirectionsExpanded(false)}
+                  activeOpacity={0.7}
+                  style={styles.expandedHeader}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Upcoming directions"
+                  accessibilityHint="Double tap to collapse the directions list"
+                >
+                  <Text
+                    key={`nav-text-1-${fontSize}-${fontScale}-${textRefresh}`}
+                    maxFontSizeMultiplier={2.5}
+                    style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
+                  >
+                    Upcoming Directions
+                  </Text>
+                  <Text
+                    key={`nav-text-2-${fontSize}-${fontScale}-${textRefresh}`}
+                    maxFontSizeMultiplier={2.5}
+                    style={[styles.collapseHint, { fontSize: 13 * fontSize, color: darkerSystemColorsEnabled ? "#333" : "#888" }]}
+                  >
+                    Tap to collapse
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => setDirectionsExpanded(true)}
+                  style={{ minHeight: 48, justifyContent: "center" }}
+                  activeOpacity={0.7}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    nextStep
+                      ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
+                      : "Follow route"
+                  }
+                  accessibilityHint="Double tap to show all upcoming directions"
+                >
+                  <Text
+                    key={`nav-text-6-${fontSize}-${fontScale}-${textRefresh}`}
+                    accessible={false}
+                    maxFontSizeMultiplier={2.5}
+                    style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
+                  >
+                    {nextStep
+                      ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
+                      : "Follow route"}
+                  </Text>
+                  <Text
+                    key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`}
+                    accessible={false}
+                    maxFontSizeMultiplier={2.5}
+                    style={[
+                      styles.subText,
+                      {
+                        fontSize: 16 * fontSize,
+                        fontWeight: boldTextEnabled ? "600" : "normal",
+                        color: darkerSystemColorsEnabled ? "#222" : "#555",
+                      },
+                    ]}
+                  >
+                    {formatDistance(route.distance, distanceUnits)}
+                    {" total • "}
+                    {formatDuration(route.duration)}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Dedicated Cancel Route Button */}
+            <TouchableOpacity
+              style={[styles.cancelRouteButton, increasedContrast && { borderColor: "#d9534f", borderWidth: 2 }]}
+              onPress={handleCancelRoute}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Cancel route"
+              accessibilityHint="Double tap to stop navigation and cancel the current route"
+            >
+              <Text style={[styles.cancelRouteButtonText, { fontSize: 14 * fontSize }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+
+          {directionsExpanded && (
             <View style={styles.expandedContainer}>
-              <TouchableOpacity
-                onPress={() => setDirectionsExpanded(false)}
-                activeOpacity={0.7}
-                style={styles.expandedHeader}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Upcoming directions"
-                accessibilityHint="Double tap to collapse the directions list"
-              >
-                <Text
-                  key={`nav-text-1-${fontSize}-${fontScale}-${textRefresh}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
-                >
-                  Upcoming Directions
-                </Text>
-
-                <Text
-                  key={`nav-text-2-${fontSize}-${fontScale}-${textRefresh}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[styles.collapseHint, { fontSize: 13 * fontSize, color: darkerSystemColorsEnabled ? "#333" : "#888" }]}
-                >
-                  Tap to collapse
-                </Text>
-              </TouchableOpacity>
-
               <ScrollView
                 style={styles.directionsList}
                 contentContainerStyle={styles.directionsListContent}
@@ -311,49 +393,6 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => setDirectionsExpanded(true)}
-              style={{ minHeight: 48, justifyContent: "center" }}
-              activeOpacity={0.7}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={
-                nextStep
-                  ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
-                  : "Follow route"
-              }
-              accessibilityHint="Double tap to show all upcoming directions"
-            >
-              <Text
-                key={`nav-text-6-${fontSize}-${fontScale}-${textRefresh}`}
-                accessible={false}
-                maxFontSizeMultiplier={2.5}
-                style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
-              >
-                {nextStep
-                  ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
-                  : "Follow route"}
-              </Text>
-
-              <Text
-                key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`}
-                accessible={false}
-                maxFontSizeMultiplier={2.5}
-                style={[
-                  styles.subText,
-                  {
-                    fontSize: 16 * fontSize,
-                    fontWeight: boldTextEnabled ? "600" : "normal",
-                    color: darkerSystemColorsEnabled ? "#222" : "#555",
-                  },
-                ]}
-              >
-                {formatDistance(route.distance, distanceUnits)}
-                {" total • "}
-                {formatDuration(route.duration)}
-              </Text>
-            </TouchableOpacity>
           )}
 
           {routeLoadingProgress < 1 &&
@@ -522,6 +561,26 @@ const styles = StyleSheet.create({
   topRouteSummaryExpanded: {
     height: "65%",
   },
+  routeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cancelRouteButton: {
+    backgroundColor: "#d9534f",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginLeft: 12,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelRouteButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
   progressBarBackground: {
     position: "absolute",
     bottom: 0,
@@ -538,6 +597,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     minHeight: 0,
+    marginTop: 8,
   },
   expandedHeader: {
     minHeight: 48,
