@@ -8,7 +8,7 @@
     "scheme": "mapqpapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition for finding WPI buildings.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone for voice search.",
