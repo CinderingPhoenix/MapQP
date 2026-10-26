@@ -1,8 +1,8 @@
 import { Asset } from "expo-asset";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { WebView } from "react-native-webview";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import WebView, { type WebViewMessageEvent } from "react-native-webview";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 
 type LocationMapProps = {
   latitude: number;
@@ -43,7 +43,25 @@ export default function LocationMap({
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [mapUri, setMapUri] = useState<string>("");
 
-  const { screenReaderEnabled, reduceMotionEnabled, loaded: accessibilityLoaded } = useDeviceAccessibility();
+  const {
+    reduceMotionEnabled,
+    boldTextEnabled,
+    darkerSystemColorsEnabled,
+    highTextContrastEnabled,
+    reduceTransparencyEnabled,
+    loaded: accessibilityLoaded,
+  } = useAccessibilityPreferences();
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const visualPreferencesScript = `
+    if (window.setVisualAccessibility) {
+      window.setVisualAccessibility(${boldTextEnabled}, ${increasedContrast}, ${reduceTransparencyEnabled});
+    }
+    true;
+  `;
+
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(visualPreferencesScript);
+  }, [visualPreferencesScript]);
 
   useEffect(() => {
     webViewRef.current?.injectJavaScript(`
@@ -86,6 +104,7 @@ export default function LocationMap({
   }, [directionsExpanded]);
 
   const handleLoadEnd = () => {
+    webViewRef.current?.injectJavaScript(visualPreferencesScript);
     webViewRef.current?.injectJavaScript(`
       if (window.setReduceMotion) {
         window.setReduceMotion(${!accessibilityLoaded || reduceMotionEnabled});
@@ -232,7 +251,7 @@ export default function LocationMap({
         allowUniversalAccessFromFileURLs={true}
         allowFileAccessFromFileURLs={true}
         onLoadEnd={handleLoadEnd}
-        onMessage={(event) => {
+        onMessage={(event: WebViewMessageEvent) => {
           const data = event.nativeEvent.data;
           if (data === "USER_DRAGGED") {
             hasUserPannedAwayRef.current = true;

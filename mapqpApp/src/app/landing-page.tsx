@@ -11,7 +11,7 @@ import * as SecureStore from "expo-secure-store";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { TutorialModal } from "../components/tutorial-modal";
 
 const TUTORIAL_SHOWN_KEY = "mapqp_tutorial_shown_once";
@@ -22,12 +22,12 @@ export default function LandingPage() {
   const { setNavigationMode, setHasSelectedMode } = useSettings();
   const { fontScale, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useDeviceAccessibility();
+  const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
   const largeText = fontScale > 1.25;
   const stackButtons = width < 340 || fontScale >= 1.65;
-  const headingRef = useRef<Text>(null);
+  const headingRef = useRef<React.ElementRef<typeof Text>>(null);
   const [headingLaidOut, setHeadingLaidOut] = useState(false);
   const initialFocusHandled = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
@@ -312,7 +312,9 @@ const styles = StyleSheet.create({
   presetArea: { paddingHorizontal: 18, paddingBottom: 26, paddingTop: 30 },
   presetLabel: {
     transform: [{ translateY: 10 }],
-    alignSelf: "center",
+    alignSelf: "stretch",
+    width: "100%",
+    minWidth: 0,
     backgroundColor: "#F1F5F9",
     borderLeftWidth: 5,
     borderLeftColor: "#475569",
@@ -338,7 +340,10 @@ const styles = StyleSheet.create({
   boldHeading: { fontWeight: "900" },
   boldDescription: { fontWeight: "800" },
   highContrastHeading: { color: "#000000" },
-  presetText: { fontSize: 22, fontWeight: "800", color: "#172033", textAlign: "center" },
+  presetText: {
+    fontSize: 22, fontWeight: "800", color: "#172033", textAlign: "center",
+    width: "100%", paddingVertical: 2,
+  },
   buttonRow: { flexDirection: "row", gap: 14, alignItems: "stretch" },
   buttonRowStacked: { flexDirection: "column" },
   buttonWrapper: {
