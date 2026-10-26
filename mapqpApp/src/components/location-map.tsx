@@ -1,10 +1,6 @@
-import { useAssets } from "expo-asset";
-import { File } from "expo-file-system";
+import { Asset } from "expo-asset";
 import { useEffect, useRef, useState } from "react";
-import {
-  StyleSheet,
-  View,
-} from "react-native";
+import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
 
@@ -45,7 +41,7 @@ export default function LocationMap({
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
-  const [htmlContent, setHtmlContent] = useState<string>("");
+  const [mapUri, setMapUri] = useState<string>("");
 
   const { screenReaderEnabled, reduceMotionEnabled, loaded: accessibilityLoaded } = useDeviceAccessibility();
 
@@ -61,17 +57,33 @@ export default function LocationMap({
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
 
-  const [assets] = useAssets([require("./leaflet.html")]);
-
+  // Robust asset loader ensuring the file is downloaded locally before passing URI to WebView
   useEffect(() => {
-    if (assets && assets[0]?.localUri) {
-      const file = new File(assets[0].localUri);
-      file
-        .text()
-        .then((content) => setHtmlContent(content))
-        .catch((error) => console.error("Failed to load Leaflet HTML:", error));
+    async function loadMapAsset() {
+      try {
+        const asset = Asset.fromModule(require("./leaflet.html"));
+        if (!asset.downloaded) {
+          await asset.downloadAsync();
+        }
+        if (asset.localUri) {
+          setMapUri(asset.localUri);
+        }
+      } catch (error) {
+        console.error("Failed to load Leaflet asset URI:", error);
+      }
     }
-  }, [assets]);
+    loadMapAsset();
+  }, []);
+
+  // Force Leaflet map resize and re-render tiles when directions expanded/collapsed state changes
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
+      if (window.map) {
+        window.map.invalidateSize();
+      }
+      true;
+    `);
+  }, [directionsExpanded]);
 
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(`
@@ -89,6 +101,11 @@ export default function LocationMap({
           ${accessibilityMode}
         );
       }
+      setTimeout(function() {
+        if (window.map) {
+          window.map.invalidateSize();
+        }
+      }, 300);
       true;
     `);
   };
@@ -105,7 +122,6 @@ export default function LocationMap({
         (pt: [number, number]) => [pt[0], pt[1]]
       );
 
-      // 1. Reset map bearing to North (0) and fit bounds to show full route overview
       webViewRef.current?.injectJavaScript(`
         if (window.map) {
           if (window.smoothRotateToZero) {
@@ -123,11 +139,11 @@ export default function LocationMap({
             maxZoom: 16,
             animate: !window.reduceMotionEnabled
           });
+          window.map.invalidateSize();
         }
         true;
       `);
 
-      // 2. After 4 seconds matching routeLoadingProgress, lock heading focus and zoom on user
       const timeoutId = setTimeout(() => {
         hasUserPannedAwayRef.current = false;
 
@@ -148,7 +164,9 @@ export default function LocationMap({
               ${JSON.stringify(route)}
             );
           }
-
+          if (window.map) {
+            window.map.invalidateSize();
+          }
           true;
         `);
       }, 4000);
@@ -161,7 +179,6 @@ export default function LocationMap({
 
   const hasUserPannedAwayRef = useRef(false);
 
-  // Pass active heading to map rotation when locked
   useEffect(() => {
     if (!isHeadingFocused || heading === null || heading === undefined) return;
     webViewRef.current?.injectJavaScript(`
@@ -172,14 +189,14 @@ export default function LocationMap({
     `);
   }, [heading, isHeadingFocused]);
 
-  /**
-   * Recenter the map when requested.
-   */
   useEffect(() => {
     if (recenterSignal !== undefined && recenterSignal > 0) {
       webViewRef.current?.injectJavaScript(`
         if (window.resetView) {
           window.resetView();
+        }
+        if (window.map) {
+          window.map.invalidateSize();
         }
         true;
       `);
@@ -200,7 +217,7 @@ export default function LocationMap({
     `);
   }, [currentMarkerLat, currentMarkerLng, accuracy, route]);
 
-  if (!htmlContent) {
+  if (!mapUri) {
     return <View style={styles.container} />;
   }
 
@@ -209,8 +226,11 @@ export default function LocationMap({
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
-        source={{ html: htmlContent, baseUrl: "https://localhost" }}
+        source={{ uri: mapUri }}
         style={styles.map}
+        allowFileAccess={true}
+        allowUniversalAccessFromFileURLs={true}
+        allowFileAccessFromFileURLs={true}
         onLoadEnd={handleLoadEnd}
         onMessage={(event) => {
           const data = event.nativeEvent.data;

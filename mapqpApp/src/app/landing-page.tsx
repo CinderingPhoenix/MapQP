@@ -1,14 +1,20 @@
+// landing-page.tsx
+
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp } from "expo-router";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import * as SecureStore from "expo-secure-store";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { TutorialModal } from "../components/tutorial-modal";
+
+const TUTORIAL_SHOWN_KEY = "mapqp_tutorial_shown_once";
 
 export default function LandingPage() {
   useLocationWarmup();
@@ -25,6 +31,34 @@ export default function LandingPage() {
   const [headingLaidOut, setHeadingLaidOut] = useState(false);
   const initialFocusHandled = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
+
+  // Tutorial modal state
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Check if tutorial has been shown before using SecureStore
+  useEffect(() => {
+    async function checkFirstLaunch() {
+      try {
+        const hasShown = await SecureStore.getItemAsync(TUTORIAL_SHOWN_KEY);
+        if (hasShown !== "true") {
+          setShowTutorial(true);
+        }
+      } catch (error) {
+        console.error("Failed to check tutorial status", error);
+      }
+    }
+    checkFirstLaunch();
+  }, []);
+
+  const handleDismissTutorial = async () => {
+    try {
+      await SecureStore.setItemAsync(TUTORIAL_SHOWN_KEY, "true");
+    } catch (error) {
+      console.error("Failed to save tutorial status", error);
+    }
+    setShowTutorial(false);
+  };
+
   // The web stack has no native transition events. On iOS/Android, onAppear
   // emits transitionEnd even when the transition has no animation.
   const [transitionComplete, setTransitionComplete] = useState(Platform.OS === "web");
@@ -41,8 +75,6 @@ export default function LandingPage() {
       setTransitionComplete(true);
     });
     const removeBlur = navigation.addListener("blur", () => {
-      // Leaving before initial focus is delivered must not defer it until a
-      // later return from Settings. The ref also blocks an already queued frame.
       initialFocusHandled.current = true;
       transitionCompleteRef.current = false;
       setTransitionComplete(false);
@@ -54,12 +86,8 @@ export default function LandingPage() {
     };
   }, [navigation]);
 
-  // Offer the introduction once, after appearance, detection and layout.
-  // Returning from Settings or changing preferences must not steal focus again.
   useFocusEffect(
     useCallback(() => {
-      // React Native Web has no sendAccessibilityEvent API. Leave browser
-      // focus alone; only the native screen readers receive an initial request.
       if (Platform.OS !== "ios" && Platform.OS !== "android") return;
       if (!accessibilityLoaded || !headingLaidOut || !transitionComplete || initialFocusHandled.current) return;
       if (!screenReaderEnabled) {
@@ -124,6 +152,7 @@ export default function LandingPage() {
             </View>
           </View>
 
+          {/* Settings Button */}
           <TouchableOpacity
             style={[styles.settingsButton, { top: insets.top + 130, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
             onPress={() => router.push("/settings")}
@@ -134,6 +163,19 @@ export default function LandingPage() {
             accessibilityHint="Opens the application settings"
           >
             <Ionicons name="settings-outline" size={28} color="#172033" />
+          </TouchableOpacity>
+
+          {/* Reopen Tutorial Button */}
+          <TouchableOpacity
+            style={[styles.tutorialButton, { top: insets.top + 195, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            onPress={() => setShowTutorial(true)}
+            activeOpacity={0.7}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Tutorial"
+            accessibilityHint="Reopens the app tutorial"
+          >
+            <Ionicons name="help-circle-outline" size={28} color="#172033" />
           </TouchableOpacity>
 
           <ScrollView
@@ -240,6 +282,9 @@ export default function LandingPage() {
           </ScrollView>
         </SafeAreaView>
       </View>
+
+      {/* First-time Tutorial Modal Component */}
+      <TutorialModal visible={showTutorial} onClose={handleDismissTutorial} />
     </View>
   );
 }
@@ -366,7 +411,14 @@ const styles = StyleSheet.create({
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   settingsButton: {
-    // Positioned within the safe-area container, below the logo header.
+    position: "absolute",
+    width: 50, height: 50, borderRadius: 25,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    justifyContent: "center", alignItems: "center", zIndex: 10,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2, shadowRadius: 5, elevation: 5,
+  },
+  tutorialButton: {
     position: "absolute",
     width: 50, height: 50, borderRadius: 25,
     backgroundColor: "rgba(255, 255, 255, 0.92)",
