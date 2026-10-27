@@ -18,7 +18,7 @@ function RootNavigator() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: reduceMotionEnabled ? "none" : "default",
+        animation: reduceMotionEnabled ? "none" : undefined,
       }}
     >
       <Stack.Screen name="index" />

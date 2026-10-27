@@ -29,6 +29,7 @@ export type Building = {
     latitude: number;
     longitude: number;
     name: string;
+    floor?: number;
     accessibility: boolean;
   }[];
 };
@@ -80,17 +81,43 @@ const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
 export function parseBuildingData(rawBuildings: any[]): Building[] {
-  return rawBuildings.map(([name, entrances]) => ({
-    id: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-    name,
-    entrances: entrances.map(([latitude, longitude, name, floor, accessibility]: any) => ({
-      latitude,
-      longitude,
+  if (!Array.isArray(rawBuildings)) {
+    console.error("Expected an array for rawBuildings, but received:", typeof rawBuildings);
+    return [];
+  }
+
+  return rawBuildings.map((building) => {
+    const name = building.name || (Array.isArray(building) ? building[0] : "");
+    const rawEntrances = building.entrances || (Array.isArray(building) ? building[1] : []);
+
+    const entrances = (Array.isArray(rawEntrances) ? rawEntrances : []).map((entrance: any) => {
+      if (Array.isArray(entrance)) {
+        // Tuple format support: [latitude, longitude, name, floor, accessibility]
+        return {
+          latitude: entrance[0],
+          longitude: entrance[1],
+          name: entrance[2],
+          floor: entrance[3],
+          accessibility: entrance[4],
+        };
+      } else {
+        // Object format support from wpi-buildings.json
+        return {
+          latitude: entrance.latitude,
+          longitude: entrance.longitude,
+          name: entrance.name || "Main Entrance",
+          floor: entrance.floor,
+          accessibility: !!entrance.accessibility,
+        };
+      }
+    });
+
+    return {
+      id: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       name,
-      floor,
-      accessibility,
-    })),
-  }));
+      entrances,
+    };
+  });
 }
 
 export function getSimilarityScore(str1: string, str2: string): number {
@@ -289,13 +316,12 @@ function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
 export function useMapNavigation(buildings: Building[]) {
   const [isFocused, setIsFocused] = useState(true);
 
-  // Track screen focus using Expo Router's useFocusEffect
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
       return () => {
         setIsFocused(false);
-        Speech.stop(); // Stop speech immediately when losing focus
+        Speech.stop();
       };
     }, [])
   );
@@ -354,7 +380,6 @@ export function useMapNavigation(buildings: Building[]) {
 
   const prevNavigationModeRef = useRef(navigationMode);
   
-  // Automatically cancel route if navigation mode changes
   useEffect(() => {
     if (prevNavigationModeRef.current !== navigationMode) {
       prevNavigationModeRef.current = navigationMode;
@@ -458,6 +483,7 @@ export function useMapNavigation(buildings: Building[]) {
     screenReaderEnabled,
     startRoutePreviewCountdown,
     isFocused,
+    buildings,
   ]);
 
   const planRouteRef = useRef(planRoute);
@@ -610,7 +636,6 @@ export function useMapNavigation(buildings: Building[]) {
     }
   }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, screenReaderEnabled, navigationMode, isFocused]);
 
-  // Repeat current step instructions every 9 seconds during accessibility navigation
   useEffect(() => {
     if (!isFocused || navigationMode !== "accessibility" || !route || !nextStep || isRouteCancelledRef.current) {
       return;
@@ -659,7 +684,6 @@ export function useMapNavigation(buildings: Building[]) {
       Speech.speak(text, { language: "en-US", rate: 1 });
     };
 
-    // Arrival announcement check
     if (nextStep.instruction === "Arrive at destination") {
       if (distToNextStepMeters <= 5 && !stages.turn) {
         stages.turn = true;
