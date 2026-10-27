@@ -1,4 +1,3 @@
-
 import { Stack } from "expo-router";
 import { SettingsProvider, useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
@@ -44,12 +43,15 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function MainLayout() {
   useSessionMonitor();
+  return <RootNavigator />;
+}
 
+export default function RootLayout() {
   return (
     <SettingsProvider>
-      <RootNavigator />
+      <MainLayout />
     </SettingsProvider>
   );
 }

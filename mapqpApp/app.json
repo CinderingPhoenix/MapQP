@@ -4,11 +4,11 @@
     "slug": "mapqpApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/mapqp-logo.png",
     "scheme": "mapqpapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/mapqp-logo.png",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition for finding WPI buildings.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone for voice search.",
@@ -17,10 +17,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/mapqp-logo.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/images/mapqp-logo.png"
       },
       "config": {},
       "predictiveBackGestureEnabled": false,
@@ -33,7 +32,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/mapqp-logo.png"
     },
     "plugins": [
       "expo-router",

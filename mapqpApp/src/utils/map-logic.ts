@@ -79,11 +79,17 @@ const OFF_ROUTE_THRESHOLD_METERS = 15;
 const CAMPUS_CENTER = { latitude: 42.2744, longitude: -71.8075 };
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
-export function parseBuildingData(rawData: any[]): Building[] {
-  return rawData.map((building) => ({
-    id: building.name.toLowerCase().replaceAll(" ", "-"),
-    name: building.name,
-    entrances: building.entrances,
+export function parseBuildingData(rawBuildings: any[]): Building[] {
+  return rawBuildings.map(([name, entrances]) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    name,
+    entrances: entrances.map(([latitude, longitude, name, floor, accessibility]: any) => ({
+      latitude,
+      longitude,
+      name,
+      floor,
+      accessibility,
+    })),
   }));
 }
 
