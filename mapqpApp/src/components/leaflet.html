@@ -258,10 +258,13 @@
     }
 
     /**
-     * Creates a square destination marker.
+     * Creates a visual destination indicator, not an actionable map control.
      */
     function createDestinationMarker(latitude, longitude) {
-      return L.marker([latitude, longitude], {
+      var destinationMarker = L.marker([latitude, longitude], {
+        keyboard: false,
+        interactive: false,
+        autoPanOnFocus: false,
         icon: L.divIcon({
           className: 'destination-marker',
           html: '<div class="destination-marker-shape"></div>',
@@ -269,6 +272,10 @@
           iconAnchor: [10, 10]
         })
       }).addTo(map);
+      // keyboard:false prevents Leaflet's button role/tabindex. aria-hidden also
+      // excludes the decorative div from VoiceOver's touch/virtual navigation.
+      destinationMarker.getElement().setAttribute('aria-hidden', 'true');
+      return destinationMarker;
     }
 
     /**
@@ -783,10 +790,6 @@
           map.removeLayer(remainingPolyline);
         }
 
-        if (destMarker) {
-          map.removeLayer(destMarker);
-        }
-
         traversedPolyline = createTraversedPolyline(
           split.traversed
         );
@@ -795,10 +798,22 @@
           split.remaining
         );
 
-        destMarker = createDestinationMarker(
-          newRoute.destination.latitude,
-          newRoute.destination.longitude
-        );
+        // GPS updates must not replace a DOM element in the accessibility tree.
+        if (destMarker) {
+          var destination = destMarker.getLatLng();
+          if (destination.lat !== newRoute.destination.latitude ||
+              destination.lng !== newRoute.destination.longitude) {
+            destMarker.setLatLng([
+              newRoute.destination.latitude,
+              newRoute.destination.longitude
+            ]);
+          }
+        } else {
+          destMarker = createDestinationMarker(
+            newRoute.destination.latitude,
+            newRoute.destination.longitude
+          );
+        }
       } else {
         routeData = null;
 

@@ -6,6 +6,7 @@ import {
   Alert,
   Keyboard,
   Modal,
+  Platform,
   useWindowDimensions,
   ScrollView,
   StyleSheet,
@@ -103,6 +104,16 @@ export default React.memo(function BuildingPicker({
 
   const blurTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingModalSelection = useRef<string | null>(null);
+
+  const handleSelectorDismiss = useCallback(() => {
+    // iOS keeps Modal content mounted during dismissal. Reset only after the
+    // native transition is finished, without changing its outgoing title/list.
+    setShowSavedOnly(false);
+    const buildingId = pendingModalSelection.current;
+    pendingModalSelection.current = null;
+    if (buildingId !== null) onChange(buildingId);
+  }, [onChange]);
 
   const recentBuildings = recentSearchIds
     .map((id) => buildings.find((building) => building.id === id))
@@ -162,15 +173,23 @@ export default React.memo(function BuildingPicker({
       }
 
       Keyboard.dismiss();
-      onChange(building.id);
+      // iOS restores the modal launcher's accessibility focus at dismissal.
+      // Start navigation afterward instead of racing the modal's focus restoration.
+      const waitForModalDismissal = Platform.OS === "ios" && isBuildingSelectorOpen;
+      if (waitForModalDismissal) {
+        pendingModalSelection.current = building.id;
+      } else {
+        pendingModalSelection.current = null;
+        onChange(building.id);
+      }
       setQuery(building.name);
       void saveRecentSearch(building.id);
       setIsOpen(false);
-      setShowSavedOnly(false);
+      if (!waitForModalDismissal) setShowSavedOnly(false);
       setIsBuildingSelectorOpen(false);
       setIsInputFocused(false);
     },
-    [onChange, saveRecentSearch]
+    [onChange, saveRecentSearch, isBuildingSelectorOpen]
   );
 
   // Speech recognition
@@ -261,6 +280,7 @@ export default React.memo(function BuildingPicker({
 
   useEffect(
     () => () => {
+      pendingModalSelection.current = null;
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
@@ -827,6 +847,7 @@ export default React.memo(function BuildingPicker({
       {/* Building selection modal */}
       <Modal
         visible={isBuildingSelectorOpen}
+        onDismiss={handleSelectorDismiss}
         animationType={
           reduceMotionEnabled ? "none" : "slide"
         }
@@ -855,7 +876,7 @@ export default React.memo(function BuildingPicker({
               accessibilityLabel="Close building selector"
               onPress={() => {
                 setIsBuildingSelectorOpen(false);
-                setShowSavedOnly(false);
+                if (Platform.OS !== "ios") setShowSavedOnly(false);
               }}
               hitSlop={{
                 top: 10,
