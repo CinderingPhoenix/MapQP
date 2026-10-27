@@ -1,6 +1,6 @@
 // tutorial-modal.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle } from "react-native";
 
 interface HighlightItem {
@@ -119,6 +119,14 @@ interface TutorialModalProps {
 
 export function TutorialModal({ visible, onClose }: TutorialModalProps) {
   const [currentPage, setCurrentPage] = useState(0);
+
+  // Reset to page 0 every time the modal is opened
+  useEffect(() => {
+    if (visible) {
+      setCurrentPage(0);
+    }
+  }, [visible]);
+
   const current = tutorialPages[currentPage];
 
   const handleNext = () => {
@@ -127,6 +135,12 @@ export function TutorialModal({ visible, onClose }: TutorialModalProps) {
     } else {
       setCurrentPage(0);
       onClose();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -191,11 +205,18 @@ export function TutorialModal({ visible, onClose }: TutorialModalProps) {
               ))}
             </View>
 
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext} accessible accessibilityRole="button">
-              <Text style={styles.nextButtonText}>
-                {currentPage === tutorialPages.length - 1 ? "Get Started" : "Next"}
-              </Text>
-            </TouchableOpacity>
+            <View key={`buttons-${currentPage}`} style={styles.buttonRow}>
+              {currentPage > 0 && (
+                <TouchableOpacity style={styles.backButton} onPress={handleBack} accessible accessibilityRole="button" accessibilityLabel="Previous slide">
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Get Started" : "Next slide"}>
+                <Text style={styles.nextButtonText}>
+                  {currentPage === tutorialPages.length - 1 ? "Get Started" : "Next"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -339,12 +360,44 @@ const styles = StyleSheet.create({
     backgroundColor: "#AC2B37",
     width: 20,
   },
-  nextButton: {
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  backButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  nextButtonFull: {
     width: "100%",
     backgroundColor: "#AC2B37",
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#AC2B37",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  nextButtonHalf: {
+    flex: 1,
+    backgroundColor: "#AC2B37",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#AC2B37",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
