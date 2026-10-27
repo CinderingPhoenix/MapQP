@@ -25,7 +25,7 @@ import { File, Paths } from "expo-file-system";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
 import { useSettings } from "../context/settings-context";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import {
   Building,
@@ -60,7 +60,7 @@ export default function Home() {
   const lastAnnouncedInstruction = useRef<string | null>(null);
 
   const { distanceUnits, directionStyle, fontSize } = useSettings();
-  const accessibilityPreferences = useDeviceAccessibility();
+  const accessibilityPreferences = useAccessibilityPreferences();
 
   const screenReaderEnabled = accessibilityPreferences?.screenReaderEnabled ?? false;
   const reduceMotionEnabled = accessibilityPreferences?.reduceMotionEnabled ?? false;
@@ -224,7 +224,7 @@ export default function Home() {
   }
 
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
-  const emphasizedText = boldTextEnabled || highTextContrastEnabled;
+  const emphasizedText = accessibilityPreferences.emphasizedTextEnabled;
 
   return (
     <SafeAreaView style={styles.container}>
