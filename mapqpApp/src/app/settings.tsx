@@ -130,23 +130,9 @@ export default function SettingsPage() {
 
   const handleBackFromSettings = () => {
     Speech.stop();
-    const originalMode =
-      from === "standard-navigation"
-        ? "standard"
-        : from === "accessibility-navigation"
-        ? "accessibility"
-        : null;
-
-    if (!originalMode || navigationMode === originalMode) {
-      router.back();
-      return;
-    }
-
-    router.replace(
-      navigationMode === "standard"
-        ? "/standard-navigation"
-        : "/accessibility-navigation"
-    );
+    // The root coordinator applies the selected mode after this pop completes,
+    // using the same path as iOS swipe-back and Android hardware back.
+    router.back();
   };
 
   const returnToLandingPage = () => {
