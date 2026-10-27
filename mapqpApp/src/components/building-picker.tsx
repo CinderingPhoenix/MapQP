@@ -17,7 +17,7 @@ import {
 
 import { Building, getSimilarityScore } from "../utils/map-logic";
 import { useSettings } from "../context/settings-context";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 
 let ExpoSpeechRecognitionModule: any = null;
 let useSpeechRecognitionEvent: (
@@ -57,14 +57,17 @@ export default React.memo(function BuildingPicker({
   accessibilityControls = false,
   onOpenSettings,
 }: BuildingPickerProps) {
-  const { fontSize } = useSettings();
+  const { fontSize, deviceAccessibility } = useSettings();
   const {
     reduceMotionEnabled,
     boldTextEnabled,
     darkerSystemColorsEnabled,
     highTextContrastEnabled,
-  } = useDeviceAccessibility();
+  } = useAccessibilityPreferences();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  // iOS Bold Text can render wider glyphs than React Native measures for wrapping.
+  // Break the known affected labels explicitly only when device Bold Text is on.
+  const deviceBoldTextEnabled = deviceAccessibility.boldTextEnabled;
   const accessibleText = {
     fontWeight: boldTextEnabled ? ("700" as const) : undefined,
     color: increasedContrast ? "#111" : undefined,
@@ -715,9 +718,10 @@ export default React.memo(function BuildingPicker({
             style={[
               styles.buildingSelectorText,
               { fontSize: 15 * fontSize },
+              accessibleAccentText,
             ]}
           >
-            Choose a building
+            {deviceBoldTextEnabled ? "Choose a\nbuilding" : "Choose a building"}
           </Text>
         </TouchableOpacity>
       )}
@@ -777,11 +781,11 @@ export default React.memo(function BuildingPicker({
                     accessibleText,
                     ]}
                   >
-                    Recent Searches
+                    {deviceBoldTextEnabled ? "Recent\nSearches" : "Recent Searches"}
                   </Text>
 
                   <TouchableOpacity
-                    style={{ minHeight: 48, minWidth: 48, alignItems: "center", justifyContent: "center" }}
+                    style={styles.clearRecentButton}
                     accessibilityRole="button"
                     accessibilityLabel="Clear recent searches"
                     onPress={() =>
@@ -793,7 +797,6 @@ export default React.memo(function BuildingPicker({
                       style={[
                         styles.clearRecentText,
                         { fontSize: 12 * fontSize },
-                        accessibleText,
                         accessibleText,
                       ]}
                     >
@@ -890,7 +893,7 @@ export default React.memo(function BuildingPicker({
                   accessibleText,
                 ]}
               >
-                All Locations
+                {deviceBoldTextEnabled ? "All\nLocations" : "All Locations"}
               </Text>
             </TouchableOpacity>
 
@@ -949,7 +952,6 @@ export default React.memo(function BuildingPicker({
                       styles.emptyStateText,
                       { fontSize: 15 * fontSize },
                       accessibleText,
-                  accessibleText,
                     ]}
                   >
                     No saved locations found.
@@ -995,15 +997,20 @@ const styles = StyleSheet.create({
     borderColor: "#d9dddf",
   },
   accessibilityControlLabel: {
+    width: "100%",
+    maxWidth: "100%",
+    textAlign: "center",
     color: "#333",
     fontWeight: "600",
     marginTop: 4,
   },
   voiceControl: {
     width: 82,
-    height: 82,
+    minHeight: 82,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     borderRadius: 41,
-    backgroundColor: "#1d5962",
+    backgroundColor: "#D00000",
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
@@ -1013,9 +1020,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   voiceControlListening: {
-    backgroundColor: "#ac2b37",
+    backgroundColor: "#801f29",
   },
   voiceControlLabel: {
+    width: "100%",
+    maxWidth: "100%",
+    textAlign: "center",
     color: "#fff",
     fontWeight: "700",
     marginTop: 1,
@@ -1070,6 +1080,9 @@ const styles = StyleSheet.create({
   },
   dropdownHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 8,
+    rowGap: 4,
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 12,
@@ -1079,6 +1092,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   dropdownHeaderText: {
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: "100%",
     fontSize: 12,
     fontWeight: "bold",
     color: "#666",
@@ -1102,6 +1118,7 @@ const styles = StyleSheet.create({
   },
   buildingSelectorButton: {
     minHeight: 48,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     marginTop: 8,
     borderWidth: 1,
@@ -1114,11 +1131,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#f4fafb",
   },
   buildingSelectorText: {
+    // Shrink only when needed, reserving the icon, gap and button padding.
+    // Without flexGrow, short labels and the icon remain centered together.
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: "100%",
+    textAlign: "center",
     color: "#1d5962",
     fontSize: 15,
     fontWeight: "600",
   },
+  clearRecentButton: {
+    minHeight: 48,
+    minWidth: 48,
+    maxWidth: "100%",
+    flexShrink: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   clearRecentText: {
+    maxWidth: "100%",
+    textAlign: "center",
     fontSize: 12,
     color: "#d9534f",
     fontWeight: "600",
@@ -1163,6 +1196,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyStateText: {
+    maxWidth: "100%",
+    textAlign: "center",
     color: "#777",
     fontStyle: "italic",
   },
@@ -1195,13 +1230,17 @@ const styles = StyleSheet.create({
   },
   modalTabs: {
     flexDirection: "row",
+    // Stretch both tabs to the taller label so their bottom borders align.
+    alignItems: "stretch",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e5e5",
     backgroundColor: "#f9f9f9",
   },
   modalTab: {
     flex: 1,
+    minWidth: 0,
     minHeight: 48,
+    paddingHorizontal: 8,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -1214,6 +1253,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   modalTabText: {
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: "100%",
+    textAlign: "center",
     color: "#666",
     fontWeight: "600",
   },

@@ -103,6 +103,15 @@
       border-radius: 2px;
       box-sizing: border-box;
     }
+
+    /* Only style application-owned controls/overlays, never the tile imagery. */
+    .bold-text .leaflet-control-attribution { font-weight: 700; }
+    .increase-contrast .settings-control,
+    .increase-contrast .compass-control,
+    .increase-contrast .mute-control { border: 2px solid #111; }
+    .increase-contrast .leaflet-control-attribution,
+    .increase-contrast .leaflet-control-attribution a { color: #111; background: #fff; }
+    .reduce-transparency .leaflet-control-attribution { background: #fff; }
   </style>
 </head>
 <body>
@@ -119,6 +128,12 @@
     var currentCompassAngle = null;
     // Remain still until React Native supplies the device preference.
     window.reduceMotionEnabled = true;
+
+    window.setVisualAccessibility = function(bold, contrast, opaque) {
+      document.documentElement.classList.toggle('bold-text', !!bold);
+      document.documentElement.classList.toggle('increase-contrast', !!contrast);
+      document.documentElement.classList.toggle('reduce-transparency', !!opaque);
+    };
 
     window.setReduceMotion = function(enabled) {
       window.reduceMotionEnabled = !!enabled;
