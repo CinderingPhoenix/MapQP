@@ -91,7 +91,15 @@
   },
   {
     "name": "East Hall",
-    "entrances": []
+    "entrances": [
+      {
+        "latitude": 42.27395,
+        "longitude": -71.805214,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
   },
   {
     "name": "Fuller Laboratories",
@@ -218,6 +226,13 @@
         "name": "Fuller Salisbury Street Entrance",
         "floor": 1,
         "accessibility": false
+      },
+      {
+        "latitude": 42.274956,
+        "longitude": -71.806017,
+        "name": "Fuller Labs Entrance",
+        "floor": 2,
+        "accessibility": true
       }
     ]
   },
@@ -287,7 +302,43 @@
   },
   {
     "name": "Salisbury Laboratories",
-    "entrances": []
+    "entrances": [
+      {
+        "latitude": 42.274801,
+        "longitude": -71.806813,
+        "name": "Fuller Labs Entrance",
+        "floor": 0,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.2748,
+        "longitude": -71.807182,
+        "name": "Atwater Entrance",
+        "floor": 0,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274727,
+        "longitude": -71.807367,
+        "name": "Olin Hall Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.274513,
+        "longitude": -71.80723,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": false
+      },
+      {
+        "latitude": 42.27452,
+        "longitude": -71.806867,
+        "name": "Gordon Library Entrance",
+        "floor": 1,
+        "accessibility": false
+      }
+    ]
   },
   {
     "name": "Sanford Riley Hall",
@@ -343,6 +394,13 @@
         "name": "Floor 2 Side Entrance",
         "floor": 2,
         "accessibility": true
+      },
+      {
+        "latitude": 42.273881,
+        "longitude": -71.806192,
+        "name": "North Boyton Lot Entrance",
+        "floor": 1,
+        "accessibility": true
       }
     ]
   },
@@ -352,6 +410,115 @@
       {
         "latitude": 42.274221,
         "longitude": -71.80704,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Founders Hall",
+    "entrances": [
+      {
+        "latitude": 42.27331,
+        "longitude": -71.805276,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Messenger Hall",
+    "entrances": [
+      {
+        "latitude": 42.274532,
+        "longitude": -71.809114,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Harrington Auditorium",
+    "entrances": [
+      {
+        "latitude": 42.27424,
+        "longitude": -71.809735,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274277,
+        "longitude": -71.809484,
+        "name": "Quad Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274313,
+        "longitude": -71.809337,
+        "name": "Innovation Studio Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274331,
+        "longitude": -71.809961,
+        "name": "Rec Center Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274644,
+        "longitude": -71.809414,
+        "name": "Back Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274691,
+        "longitude": -71.809823,
+        "name": "Back Loading Entrance",
+        "floor": 0,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.274552,
+        "longitude": -71.810101,
+        "name": "Rec Center Stairs Entrance",
+        "floor": 0,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Faraday Hall",
+    "entrances": [
+      {
+        "latitude": 42.275028,
+        "longitude": -71.801611,
+        "name": "Main Entrance",
+        "floor": 1,
+        "accessibility": true
+      },
+      {
+        "latitude": 42.275202,
+        "longitude": -71.800786,
+        "name": "Back Entrance",
+        "floor": 1,
+        "accessibility": true
+      }
+    ]
+  },
+  {
+    "name": "Rec Center",
+    "entrances": [
+      {
+        "latitude": 42.274254,
+        "longitude": -71.810096,
         "name": "Main Entrance",
         "floor": 1,
         "accessibility": true
