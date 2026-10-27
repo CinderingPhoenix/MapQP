@@ -32,7 +32,7 @@ import defaultBuildings from '../data/wpi-buildings.json';
 import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
 import { useKeyLockout } from '../hooks/use-key-lockout';
-import { useDeviceAccessibility } from '../hooks/use-device-accessibility';
+import { useAccessibilityPreferences } from '../hooks/use-accessibility-preferences';
 import { initRoutingGraph } from '../utils/routing';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
@@ -124,7 +124,7 @@ export default function LoadingScreen({
   showSpinner = true,
 }: MapQPProps) {
   useLocationWarmup();
-  const { reduceMotionEnabled, loaded: accessibilityLoaded } = useDeviceAccessibility();
+  const { reduceMotionEnabled, loaded: accessibilityLoaded } = useAccessibilityPreferences();
   const { hasSelectedMode, navigationMode, settingsLoaded } = useSettings();
   const {
     isLockedOut,

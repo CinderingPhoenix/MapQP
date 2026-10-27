@@ -36,7 +36,8 @@ export type GraphEdge = {
   accessible: boolean;
 };
 
-export type WalkwayConnectionItem = string | { to: string; accessible?: boolean };
+// Updated to support tuple-based connections [toNodeId, accessible]
+export type WalkwayConnectionItem = string | [string, boolean];
 
 // --- Constants & Graph Initialization ---
 
@@ -51,24 +52,30 @@ let campusNodesById = new Map<string, GraphNode>();
 let graphEdges = new Map<string, GraphEdge[]>();
 
 export function initRoutingGraph(
-  routePointsData: { nodes: GraphNode[]; connections: Record<string, WalkwayConnectionItem[]> },
-  buildingData: any[]
+  routePointsData: { nodes: [string, number, number][]; connections: Record<string, WalkwayConnectionItem[]> },
+  buildingData: [string, [number, number, string, number, boolean][]][]
 ) {
   // Clear existing state for fresh over-the-air updates
   routeCache.clear();
   graphEdges.clear();
   campusNodesById.clear();
 
-  walkwayNodes = routePointsData.nodes;
+  // Map tuple nodes [id, latitude, longitude] to GraphNode objects
+  walkwayNodes = routePointsData.nodes.map(([id, latitude, longitude]) => ({
+    id,
+    latitude,
+    longitude,
+  }));
   walkwayConnections = routePointsData.connections;
 
+  // Map tuple building entrances [latitude, longitude, name, floor, accessibility]
   campusNodes = [
     ...walkwayNodes,
-    ...buildingData.flatMap((building) =>
-      building.entrances.map((entrance: any, index: number) => ({
-        id: `${building.name}-entrance-${index}`,
-        latitude: entrance.latitude,
-        longitude: entrance.longitude,
+    ...buildingData.flatMap(([buildingName, entrances]) =>
+      entrances.map(([latitude, longitude], index: number) => ({
+        id: `${buildingName}-entrance-${index}`,
+        latitude,
+        longitude,
       }))
     ),
   ];
@@ -76,9 +83,9 @@ export function initRoutingGraph(
   campusNodesById = new Map(campusNodes.map((node) => [node.id, node]));
   
   const accessibleEntranceIds = new Set(
-    buildingData.flatMap((building) =>
-      building.entrances.flatMap((entrance: any, index: number) =>
-        entrance.accessibility ? [`${building.name}-entrance-${index}`] : []
+    buildingData.flatMap(([buildingName, entrances]) =>
+      entrances.flatMap(([, , , , accessibility], index: number) =>
+        accessibility ? [`${buildingName}-entrance-${index}`] : []
       )
     )
   );
@@ -99,7 +106,9 @@ export function initRoutingGraph(
     }
 
     for (const item of toIds) {
-      const toId = typeof item === "string" ? item : item.to;
+      const toId = typeof item === "string" ? item : item[0];
+      const isAccessible = typeof item === "string" ? true : item[1];
+
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
         // Fallback: automatically register missing target nodes to prevent crashes
@@ -111,7 +120,7 @@ export function initRoutingGraph(
       connectWalkwayNodes(
         fromNode,
         toNode,
-        typeof item === "string" || item.accessible !== false
+        isAccessible
       );
     }
   }
@@ -164,7 +173,7 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
       if (!fromNode) return [];
       return toIds
         .map((item) => {
-          const toId = typeof item === "string" ? item : item.to;
+          const toId = typeof item === "string" ? item : item[0];
           const toNode = campusNodesById.get(toId);
           if (!toNode) return null;
           return [

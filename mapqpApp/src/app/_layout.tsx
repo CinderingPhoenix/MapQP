@@ -1,7 +1,6 @@
-
 import { Stack } from "expo-router";
 import { SettingsProvider, useSettings } from "../context/settings-context";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useSessionMonitor } from "../hooks/use-session-monitor";
 
 function RootNavigator() {
@@ -9,7 +8,7 @@ function RootNavigator() {
   const {
     reduceMotionEnabled,
     loaded: accessibilityLoaded,
-  } = useDeviceAccessibility();
+  } = useAccessibilityPreferences();
 
   if (!settingsLoaded || !accessibilityLoaded) {
     return null;
@@ -44,12 +43,15 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function MainLayout() {
   useSessionMonitor();
+  return <RootNavigator />;
+}
 
+export default function RootLayout() {
   return (
     <SettingsProvider>
-      <RootNavigator />
+      <MainLayout />
     </SettingsProvider>
   );
 }

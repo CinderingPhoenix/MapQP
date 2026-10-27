@@ -20,7 +20,7 @@ import { File, Paths } from "expo-file-system";
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
 import { useSettings } from "../context/settings-context";
-import { useDeviceAccessibility } from "../hooks/use-device-accessibility";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import {
   Building,
@@ -115,14 +115,14 @@ export default function Home() {
   const {
     reduceMotionEnabled,
     loaded: accessibilityLoaded,
-    boldTextEnabled,
+    emphasizedTextEnabled,
     darkerSystemColorsEnabled,
     highTextContrastEnabled,
     reduceTransparencyEnabled,
-  } = useDeviceAccessibility();
+  } = useAccessibilityPreferences();
 
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
-  const emphasizedText = boldTextEnabled || highTextContrastEnabled;
+  const emphasizedText = emphasizedTextEnabled;
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
