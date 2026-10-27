@@ -45,6 +45,7 @@ function RootNavigator() {
       />
 
       <Stack.Screen name="settings" />
+      <Stack.Screen name="report-bug" />
     </Stack>
   );
 }

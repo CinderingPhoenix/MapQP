@@ -753,6 +753,21 @@ export default function SettingsPage() {
           })}
         </View>
 
+        <TouchableOpacity
+          style={[styles.landingButton, increasedContrast && styles.settingsCardHighContrast]}
+          onPress={() => router.push("/report-bug")}
+          accessibilityRole="button"
+          accessibilityLabel="Report a Bug"
+          accessibilityHint="Opens the bug reporting form. Submitting reports is not yet available."
+        >
+          <AccessibleText
+            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+            style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
+          >
+            Report a Bug
+          </AccessibleText>
+        </TouchableOpacity>
+
         {/* About / Route Version Info */}
         <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>
           ABOUT
