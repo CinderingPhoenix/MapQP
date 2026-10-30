@@ -7,8 +7,8 @@ import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Vibration } from "react-native";
-import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
-import { useFocusEffect } from "expo-router"; // ✅ Use Expo Router's hook instead
+import { getRoutingPreferences, NavigationPoint, routeBetween, WalkingRoute } from "./routing";
+import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
 
@@ -438,9 +438,9 @@ export function useMapNavigation(buildings: Building[]) {
     setRouteLoading(true);
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const accessibleOnly = navigationMode === "accessibility";
+      const preferences = getRoutingPreferences();
       const entrances = selectedBuilding.entrances.filter(
-        (entrance) => !accessibleOnly || entrance.accessibility
+        (entrance) => !preferences.avoidStairs || entrance.accessibility
       );
       if (entrances.length === 0) {
         throw new Error("This building has no accessible entrance.");
@@ -453,7 +453,7 @@ export function useMapNavigation(buildings: Building[]) {
         };
         try {
           return {
-            ...(await routeBetween(origin, destination, { accessibleOnly })),
+            ...(await routeBetween(origin, destination, preferences)),
             origin,
             destination,
           };
@@ -507,7 +507,6 @@ export function useMapNavigation(buildings: Building[]) {
   }, [
     coordinates,
     buildings,
-    navigationMode,
     navigationSpeech,
     distanceUnits,
     directionStyle,

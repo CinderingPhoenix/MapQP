@@ -1,3 +1,16 @@
+// Temporary preferences for testing; replace with settings values when wired up.
+const avoidStairs = false;
+const avoidIndoorRoutes = false;
+
+export type RoutingPreferences = {
+  avoidStairs: boolean;
+  avoidIndoorRoutes: boolean;
+};
+
+export function getRoutingPreferences(): RoutingPreferences {
+  return { avoidStairs, avoidIndoorRoutes };
+}
+
 // --- Types ---
 
 export type RoutePoint = {
@@ -34,10 +47,13 @@ export type GraphEdge = {
   nodeId: string;
   distance: number;
   accessible: boolean;
+  indoor: boolean;
 };
 
-// Updated to support tuple-based connections [toNodeId, accessible]
-export type WalkwayConnectionItem = string | [string, boolean];
+// Legacy strings are accessible outdoor paths. The optional third tuple value
+// marks an indoor path: [toNodeId, accessible, indoor]. The accessibility flag
+// is the existing dataset proxy for stair-free paths and entrances.
+export type WalkwayConnectionItem = string | [string, boolean, boolean?];
 
 export type BuildingEntranceObject = {
   latitude: number;
@@ -136,6 +152,7 @@ export function initRoutingGraph(
     for (const item of toIds) {
       const toId = typeof item === "string" ? item : item[0];
       const isAccessible = typeof item === "string" ? true : item[1];
+      const isIndoor = typeof item === "string" ? false : item[2] ?? false;
 
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
@@ -148,7 +165,8 @@ export function initRoutingGraph(
       connectWalkwayNodes(
         fromNode,
         toNode,
-        isAccessible
+        isAccessible,
+        isIndoor
       );
     }
   }
@@ -170,6 +188,7 @@ export function initRoutingGraph(
             nodeId: node.id,
             distance: edge.distance,
             accessible: edge.accessible,
+            indoor: edge.indoor,
           },
         ]);
       }
@@ -217,23 +236,24 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
 export async function routeBetween(
   origin: RoutePoint,
   destination: RoutePoint,
-  options: { accessibleOnly?: boolean } = {},
+  options: Partial<RoutingPreferences> = {},
 ): Promise<WalkingRoute> {
   if (campusNodes.length === 0) throw new Error("Routing graph is not initialized.");
   
-  const accessibleOnly = options.accessibleOnly ?? false;
+  const preferences = { ...getRoutingPreferences(), ...options };
   const cacheKey = [
     origin.longitude,
     origin.latitude,
     destination.longitude,
     destination.latitude,
-    accessibleOnly ? "accessible" : "standard",
+    preferences.avoidStairs,
+    preferences.avoidIndoorRoutes,
   ].join(",");
 
   const cachedRoute = routeCache.get(cacheKey);
   if (cachedRoute) return cachedRoute;
 
-  const route = findLocalWalkingRoute(origin, destination, accessibleOnly);
+  const route = findLocalWalkingRoute(origin, destination, preferences);
   routeCache.set(cacheKey, route);
   return route;
 }
@@ -243,7 +263,7 @@ export async function routeBetween(
 function findLocalWalkingRoute(
   origin: RoutePoint,
   destination: RoutePoint,
-  accessibleOnly: boolean,
+  preferences: RoutingPreferences,
 ): WalkingRoute {
   const startId = "__origin";
   const destinationId = "__destination";
@@ -255,13 +275,13 @@ function findLocalWalkingRoute(
   ];
 
   const edges = new Map(graphEdges);
-  edges.set(startId, nearestEdges(origin, accessibleOnly));
+  edges.set(startId, nearestEdges(origin, preferences));
   edges.set(destinationId, []);
 
-  for (const edge of nearestEdges(destination, accessibleOnly)) {
+  for (const edge of nearestEdges(destination, preferences)) {
     edges.set(edge.nodeId, [
       ...(edges.get(edge.nodeId) ?? []),
-      { nodeId: destinationId, distance: edge.distance, accessible: true },
+      { ...edge, nodeId: destinationId },
     ]);
   }
 
@@ -281,7 +301,7 @@ function findLocalWalkingRoute(
     if (current === destinationId) break;
 
     for (const edge of edges.get(current) ?? []) {
-      if (accessibleOnly && !edge.accessible) continue;
+      if (!isEdgeAllowed(edge, preferences)) continue;
       const nextDistance = (distances.get(current) ?? 0) + edge.distance;
       if (nextDistance < (distances.get(edge.nodeId) ?? Number.POSITIVE_INFINITY)) {
         distances.set(edge.nodeId, nextDistance);
@@ -311,7 +331,7 @@ function findLocalWalkingRoute(
   const navigationPath = path.map((nodeId) => ({
     coordinate: nodes.find((candidate) => candidate.id === nodeId)!,
     connectionCount: (edges.get(nodeId) ?? []).filter(
-      (edge) => !accessibleOnly || edge.accessible
+      (edge) => isEdgeAllowed(edge, preferences)
     ).length,
   })).map(({ coordinate, connectionCount }) => ({
     coordinate: [coordinate.latitude, coordinate.longitude] as [number, number],
@@ -353,7 +373,15 @@ function smoothPolyline(points: [number, number][], iterations = 2, tension = 0.
 
 // --- Math & Distance Calculations ---
 
-function nearestEdges(point: Pick<RoutePoint, "latitude" | "longitude">, accessibleOnly = false): GraphEdge[] {
+function isEdgeAllowed(edge: GraphEdge, preferences: RoutingPreferences): boolean {
+  return (!preferences.avoidStairs || edge.accessible) &&
+    (!preferences.avoidIndoorRoutes || !edge.indoor);
+}
+
+function nearestEdges(
+  point: Pick<RoutePoint, "latitude" | "longitude">,
+  preferences: RoutingPreferences = { avoidStairs: false, avoidIndoorRoutes: false },
+): GraphEdge[] {
   let bestEdges: GraphEdge[] = [];
   let minDistanceToSegment = Number.POSITIVE_INFINITY;
   const seenEdges = new Set<string>();
@@ -366,7 +394,7 @@ function nearestEdges(point: Pick<RoutePoint, "latitude" | "longitude">, accessi
       const toId = neighbor.nodeId;
       const toNode = campusNodesById.get(toId);
       if (!toNode) continue;
-      if (accessibleOnly && !neighbor.accessible) continue;
+      if (!isEdgeAllowed(neighbor, preferences)) continue;
 
       const edgeKey = [fromId, toId].sort().join("::");
       if (seenEdges.has(edgeKey)) continue;
@@ -386,11 +414,13 @@ function nearestEdges(point: Pick<RoutePoint, "latitude" | "longitude">, accessi
             nodeId: fromNode.id,
             distance: distToSegment + distToFrom,
             accessible: neighbor.accessible,
+            indoor: neighbor.indoor,
           },
           {
             nodeId: toNode.id,
             distance: distToSegment + distToTo,
             accessible: neighbor.accessible,
+            indoor: neighbor.indoor,
           },
         ];
       }
@@ -420,10 +450,10 @@ function projectPointToSegment(pLat: number, pLng: number, a: GraphNode, b: Grap
   return { distToSegment, distToFrom, distToTo };
 }
 
-function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean) {
+function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean, indoor: boolean) {
   const distance = distanceBetween(first.latitude, first.longitude, second.latitude, second.longitude);
-  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible });
-  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible });
+  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible, indoor });
+  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible, indoor });
 }
 
 function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
@@ -431,6 +461,7 @@ function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
   const existingEdge = edges.find((candidate) => candidate.nodeId === edge.nodeId);
   if (existingEdge) {
     existingEdge.accessible = existingEdge.accessible && edge.accessible;
+    existingEdge.indoor = existingEdge.indoor || edge.indoor;
     return;
   }
   graphEdges.set(nodeId, [...edges, edge]);
