@@ -1,14 +1,16 @@
 // Temporary preferences for testing; replace with settings values when wired up.
 const avoidStairs = false;
 const avoidIndoorRoutes = false;
+const avoidInaccessibleCrosswalks = false;
 
 export type RoutingPreferences = {
   avoidStairs: boolean;
   avoidIndoorRoutes: boolean;
+  avoidInaccessibleCrosswalks: boolean;
 };
 
 export function getRoutingPreferences(): RoutingPreferences {
-  return { avoidStairs, avoidIndoorRoutes };
+  return { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
 }
 
 // --- Types ---
@@ -48,12 +50,21 @@ export type GraphEdge = {
   distance: number;
   accessible: boolean;
   indoor: boolean;
+  roadCrossing: boolean;
+  audibleSignal: boolean;
 };
 
-// Legacy strings are accessible outdoor paths. The optional third tuple value
-// marks an indoor path: [toNodeId, accessible, indoor]. The accessibility flag
-// is the existing dataset proxy for stair-free paths and entrances.
-export type WalkwayConnectionItem = string | [string, boolean, boolean?];
+// Legacy strings are accessible outdoor paths with no crossing metadata.
+// Mark every road-crossing edge so the audible-signal preference can filter it.
+// Example: ["crosswalk-end", true, false, true, true] has an audible walk signal.
+// The accessibility flag remains the dataset proxy for stair-free paths.
+export type WalkwayConnectionItem = string | [
+  nodeId: string,
+  accessible: boolean,
+  indoor?: boolean,
+  roadCrossing?: boolean,
+  audibleSignal?: boolean,
+];
 
 export type BuildingEntranceObject = {
   latitude: number;
@@ -153,6 +164,8 @@ export function initRoutingGraph(
       const toId = typeof item === "string" ? item : item[0];
       const isAccessible = typeof item === "string" ? true : item[1];
       const isIndoor = typeof item === "string" ? false : item[2] ?? false;
+      const roadCrossing = typeof item === "string" ? false : item[3] ?? false;
+      const audibleSignal = typeof item === "string" ? false : item[4] ?? false;
 
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
@@ -166,7 +179,9 @@ export function initRoutingGraph(
         fromNode,
         toNode,
         isAccessible,
-        isIndoor
+        isIndoor,
+        roadCrossing,
+        audibleSignal
       );
     }
   }
@@ -189,6 +204,8 @@ export function initRoutingGraph(
             distance: edge.distance,
             accessible: edge.accessible,
             indoor: edge.indoor,
+            roadCrossing: edge.roadCrossing,
+            audibleSignal: edge.audibleSignal,
           },
         ]);
       }
@@ -248,6 +265,7 @@ export async function routeBetween(
     destination.latitude,
     preferences.avoidStairs,
     preferences.avoidIndoorRoutes,
+    preferences.avoidInaccessibleCrosswalks,
   ].join(",");
 
   const cachedRoute = routeCache.get(cacheKey);
@@ -375,12 +393,13 @@ function smoothPolyline(points: [number, number][], iterations = 2, tension = 0.
 
 function isEdgeAllowed(edge: GraphEdge, preferences: RoutingPreferences): boolean {
   return (!preferences.avoidStairs || edge.accessible) &&
-    (!preferences.avoidIndoorRoutes || !edge.indoor);
+    (!preferences.avoidIndoorRoutes || !edge.indoor) &&
+    (!preferences.avoidInaccessibleCrosswalks || !edge.roadCrossing || edge.audibleSignal);
 }
 
 function nearestEdges(
   point: Pick<RoutePoint, "latitude" | "longitude">,
-  preferences: RoutingPreferences = { avoidStairs: false, avoidIndoorRoutes: false },
+  preferences: RoutingPreferences = { avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false },
 ): GraphEdge[] {
   let bestEdges: GraphEdge[] = [];
   let minDistanceToSegment = Number.POSITIVE_INFINITY;
@@ -415,12 +434,16 @@ function nearestEdges(
             distance: distToSegment + distToFrom,
             accessible: neighbor.accessible,
             indoor: neighbor.indoor,
+            roadCrossing: neighbor.roadCrossing,
+            audibleSignal: neighbor.audibleSignal,
           },
           {
             nodeId: toNode.id,
             distance: distToSegment + distToTo,
             accessible: neighbor.accessible,
             indoor: neighbor.indoor,
+            roadCrossing: neighbor.roadCrossing,
+            audibleSignal: neighbor.audibleSignal,
           },
         ];
       }
@@ -450,10 +473,10 @@ function projectPointToSegment(pLat: number, pLng: number, a: GraphNode, b: Grap
   return { distToSegment, distToFrom, distToTo };
 }
 
-function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean, indoor: boolean) {
+function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean, indoor: boolean, roadCrossing: boolean, audibleSignal: boolean) {
   const distance = distanceBetween(first.latitude, first.longitude, second.latitude, second.longitude);
-  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible, indoor });
-  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible, indoor });
+  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible, indoor, roadCrossing, audibleSignal });
+  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible, indoor, roadCrossing, audibleSignal });
 }
 
 function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
@@ -462,6 +485,9 @@ function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
   if (existingEdge) {
     existingEdge.accessible = existingEdge.accessible && edge.accessible;
     existingEdge.indoor = existingEdge.indoor || edge.indoor;
+    // A label on either direction applies to the bidirectional crossing.
+    existingEdge.roadCrossing = existingEdge.roadCrossing || edge.roadCrossing;
+    existingEdge.audibleSignal = existingEdge.audibleSignal || edge.audibleSignal;
     return;
   }
   graphEdges.set(nodeId, [...edges, edge]);
