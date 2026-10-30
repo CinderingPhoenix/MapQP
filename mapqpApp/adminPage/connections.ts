@@ -35,3 +35,23 @@ export function updateConnectionFlag(connections: Connections, from: string, to:
   }
   return result;
 }
+export function toggleInternalConnection(connections: Connections, from: string, to: string, entranceIds: ReadonlySet<string>): Connections {
+  if (from === to || !entranceIds.has(from) || !entranceIds.has(to)) {
+    throw new Error("Internal connections require two different building entrances.");
+  }
+  const existing = [
+    connections[from]?.find(item => detail(item).to === to),
+    connections[to]?.find(item => detail(item).to === from),
+  ].filter((item): item is string | ConnectionDetail => item !== undefined).map(detail);
+  const indoor = !existing.some(item => item.indoor);
+  const accessible = existing.every(item => item.accessible !== false);
+  const result = { ...connections };
+  for (const [a, b] of [[from, to], [to, from]]) {
+    const list = connections[a] ?? [];
+    const next = { to: b, accessible, indoor, roadCrossing: false };
+    result[a] = list.some(item => detail(item).to === b)
+      ? list.map(item => detail(item).to === b ? next : item)
+      : [...list, next];
+  }
+  return result;
+}

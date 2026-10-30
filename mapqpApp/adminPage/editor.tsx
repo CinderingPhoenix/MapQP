@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { useEffect, useState } from "react";
 import { useRef } from "react";
-import { normalizeConnections, serializeConnections, updateConnectionFlag } from "./connections";
+import { normalizeConnections, serializeConnections, updateConnectionFlag, toggleInternalConnection } from "./connections";
 import routePointsData from "../src/data/route-points.json";
 import buildingData from "../src/data/wpi-buildings.json";
 
@@ -37,7 +37,7 @@ export type EditorMapProps = {
   nodes: GraphNode[];
   connections: Connections;
   buildings: Building[];
-  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility" | "crosswalk" | "add-entrance";
+  mode: "add" | "connect" | "disconnect" | "delete" | "accessibility" | "crosswalk" | "internal" | "add-entrance";
   selectedNodeId: string | null;
   onMapClick: (lat: number, lng: number) => void;
   onNodeClick: (id: string) => void;
@@ -55,7 +55,7 @@ export default function Editor() {
   const [connections, setConnections] = useState<Connections>(normalizeConnections(routePointsData.connections));
   const [buildings, setBuildings] = useState<Building[]>(buildingData as Building[]);
 
-  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility" | "crosswalk" | "add-entrance">("add");
+  const [mode, setMode] = useState<"add" | "connect" | "disconnect" | "delete" | "accessibility" | "crosswalk" | "internal" | "add-entrance">("add");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const [selectedBuilding, setSelectedBuilding] = useState<string>(buildingData[0]?.name || "");
@@ -239,7 +239,35 @@ export default function Editor() {
   };
 
 
+  const entranceIds = new Set(buildings.flatMap(building =>
+    building.entrances.map((_, index) => `${building.name}-entrance-${index}`)
+  ));
+
+  const handleInternalConnection = (from: string, to: string) => {
+    try {
+      const next = toggleInternalConnection(connections, from, to, entranceIds);
+      setConnections(next);
+      setError("");
+      saveToDisk(nodes, next);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to update internal connection");
+    }
+  };
+
   const handleNodeClick = (nodeId: string) => {
+    if (mode === "internal") {
+      if (!entranceIds.has(nodeId)) {
+        setError("Internal connections require two building entrances. Select an entrance marker.");
+        return;
+      }
+      setError("");
+      if (!selectedNodeId) setSelectedNodeId(nodeId);
+      else {
+        if (selectedNodeId !== nodeId) handleInternalConnection(selectedNodeId, nodeId);
+        setSelectedNodeId(null);
+      }
+      return;
+    }
     if (selectedNodeId === nodeId && (mode === "add" || mode === "add-entrance")) {
       setSelectedNodeId(null);
       return;
@@ -364,7 +392,9 @@ export default function Editor() {
   };
 
   const handleConnectionClick = (fromId: string, toId: string) => {
-    if (mode === "disconnect") {
+    if (mode === "internal") {
+      handleInternalConnection(fromId, toId);
+    } else if (mode === "disconnect") {
       removeConnection(fromId, toId);
     } else if (mode === "accessibility") {
       toggleAccessibility(fromId, toId);
@@ -373,7 +403,7 @@ export default function Editor() {
     }
   };
 
-  const activeConnectionList: { from: string; to: string; accessible: boolean; roadCrossing: boolean }[] = [];
+  const activeConnectionList: { from: string; to: string; accessible: boolean; roadCrossing: boolean; indoor: boolean }[] = [];
   const seen = new Set<string>();
 
   Object.entries(connections).forEach(([from, toArray]) => {
@@ -385,7 +415,7 @@ export default function Editor() {
       const key = [from, to].sort().join("::");
       if (!seen.has(key)) {
         seen.add(key);
-        activeConnectionList.push({ from, to, accessible, roadCrossing: typeof item !== "string" && !!item.roadCrossing });
+        activeConnectionList.push({ from, to, accessible, roadCrossing: typeof item !== "string" && !!item.roadCrossing, indoor: typeof item !== "string" && !!item.indoor });
       }
     });
   });
@@ -438,6 +468,9 @@ export default function Editor() {
               onClick={() => { setMode("connect"); setSelectedNodeId(null); }}
             >
               Connect
+            </button>
+            <button aria-pressed={mode === "internal"} onClick={() => { setMode("internal"); setSelectedNodeId(null); setError(""); }}>
+              Internal Connection
             </button>
             <button
               style={{ fontWeight: mode === "accessibility" ? "bold" : "normal", color: "#8e44ad" }}
@@ -633,6 +666,7 @@ export default function Editor() {
             {mode === "accessibility" && (!selectedNodeId ? "Click first node of a connection." : `Selected "${selectedNodeId}". Click target node or line to toggle accessibility.`)}
             {mode === "disconnect" && (!selectedNodeId ? "Click two connected nodes or click line directly." : `Selected "${selectedNodeId}". Click connected node to remove.`)}
             {mode === "crosswalk" && "Click a connection to mark or unmark it as a crosswalk. Blue lines are inaccessible crosswalks; green lines are accessible crosswalks."}
+            {mode === "internal" && "Select two entrance markers to create an internal connection. Click an entrance-to-entrance line to toggle its internal label. Internal connections are shown in cyan."}
             {mode === "delete" && "Click a node on the map to delete it immediately."}
           </p>
 
@@ -641,10 +675,11 @@ export default function Editor() {
           <div>
             <h4 style={{ margin: "0 0 0.5rem 0" }}>Active Connections ({activeConnectionList.length})</h4>
             <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              {activeConnectionList.map(({ from, to, accessible, roadCrossing }) => (
+              {activeConnectionList.map(({ from, to, accessible, roadCrossing, indoor }) => (
                 <div key={`${from}::${to}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", background: "#f5f5f5", padding: "0.25rem 0.5rem", borderRadius: "3px" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                     {from} â†” {to}
+                    {indoor && <span style={{ color: "#0e7490", fontWeight: "bold" }}>Internal</span>}
                     {!accessible && <span style={{ color: "#c0392b", fontSize: "0.7rem", fontWeight: "bold", background: "#fadbd8", padding: "1px 4px", borderRadius: "3px" }}>Stairs</span>}
                   </span>
                   <div style={{ display: "flex", gap: "0.5rem" }}>

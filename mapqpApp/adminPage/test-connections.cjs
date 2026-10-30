@@ -54,3 +54,22 @@ test('campus JSON saves named fields with unchanged targets and flag values', ()
 test('newly connected nodes also save named flags', () => {
   assert.deepEqual(plain(serializeConnections({ first: ['second'] })), { first: [connection('second')] });
 });
+test('internal connections require two real distinct entrances and save bidirectionally', () => {
+  const ids = new Set(['Building-entrance-0', 'Building-entrance-1']);
+  const toggle = context.exports.toggleInternalConnection;
+  assert.throws(() => toggle({}, 'Building-entrance-0', 'walkway', ids), /two different building entrances/);
+  assert.throws(() => toggle({}, 'Building-entrance-0', 'Building-entrance-0', ids), /two different building entrances/);
+  const created = toggle({}, 'Building-entrance-0', 'Building-entrance-1', ids);
+  const saved = plain(serializeConnections(created));
+  assert.deepEqual(saved['Building-entrance-0'], [connection('Building-entrance-1', true, true)]);
+  assert.deepEqual(saved['Building-entrance-1'], [connection('Building-entrance-0', true, true)]);
+  const removed = toggle(created, 'Building-entrance-1', 'Building-entrance-0', ids);
+  assert.equal(removed['Building-entrance-0'][0].indoor, false);
+});
+test('labeling an existing internal connection preserves stair restrictions', () => {
+  const ids = new Set(['a', 'b']);
+  const result = context.exports.toggleInternalConnection({ a: [{to:'b', accessible:false}] }, 'a', 'b', ids);
+  assert.equal(result.a[0].accessible, false);
+  assert.equal(result.b[0].accessible, false);
+  assert.equal(result.a[0].indoor, true);
+});

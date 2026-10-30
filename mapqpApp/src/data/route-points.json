@@ -10099,6 +10099,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "Fuller Laboratories-entrance-1",
+        "accessible": true,
+        "indoor": true,
+        "roadCrossing": false
       }
     ],
     "Kaven Hall-entrance-1": [
@@ -10114,6 +10120,12 @@
         "to": "node_0dv9bei",
         "accessible": true,
         "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "Fuller Laboratories-entrance-0",
+        "accessible": true,
+        "indoor": true,
         "roadCrossing": false
       }
     ],
@@ -10334,6 +10346,12 @@
         "to": "node_sta2qxp",
         "accessible": true,
         "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "Innovation Studios-entrance-1",
+        "accessible": true,
+        "indoor": true,
         "roadCrossing": false
       }
     ],
@@ -10577,6 +10595,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "Innovation Studios-entrance-0",
+        "accessible": true,
+        "indoor": true,
+        "roadCrossing": false
       }
     ],
     "Higgins Laboratories-entrance-0": [
@@ -10601,6 +10625,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "Unity Hall-entrance-1",
+        "accessible": true,
+        "indoor": true,
+        "roadCrossing": false
       }
     ],
     "Unity Hall-entrance-1": [
@@ -10608,6 +10638,12 @@
         "to": "node_1illzq6",
         "accessible": true,
         "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "Unity Hall-entrance-0",
+        "accessible": true,
+        "indoor": true,
         "roadCrossing": false
       }
     ],

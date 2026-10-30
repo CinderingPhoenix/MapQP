@@ -23,7 +23,7 @@ export default function EditorMap({
   onConnectionClick,
   onNodeDragEnd,
 }: EditorMapProps) {
-  const lines: { key: string; fromId: string; toId: string; accessible: boolean; roadCrossing: boolean; positions: [[number, number], [number, number]] }[] = [];
+  const lines: { key: string; fromId: string; toId: string; accessible: boolean; roadCrossing: boolean; indoor: boolean; positions: [[number, number], [number, number]] }[] = [];
   const seenEdges = new Set<string>();
 
   const allNodes: { id: string; latitude: number; longitude: number }[] = [...nodes];
@@ -43,7 +43,7 @@ export default function EditorMap({
 
   const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
 
-  const isLineClickable = mode === "disconnect" || mode === "delete" || mode === "accessibility" || mode === "crosswalk";
+  const isLineClickable = mode === "disconnect" || mode === "delete" || mode === "accessibility" || mode === "crosswalk" || mode === "internal";
 
   Object.entries(connections).forEach(([fromId, toIds]) => {
     const fromNode = nodeMap.get(fromId);
@@ -63,6 +63,7 @@ export default function EditorMap({
           fromId,
           toId,
           accessible,
+          indoor: typeof item !== "string" && !!item.indoor,
           roadCrossing: typeof item !== "string" && !!item.roadCrossing,
           positions: [
             [fromNode.latitude, fromNode.longitude],
@@ -91,7 +92,7 @@ export default function EditorMap({
       <MapEventCatcher onMapClick={onMapClick} />
 
       {lines.map((line) => {
-        const lineColor = line.roadCrossing ? (line.accessible ? "#15803d" : "#2563eb") : line.accessible ? "#d46b3f" : "#8e44ad";
+        const lineColor = line.indoor ? "#0891b2" : line.roadCrossing ? (line.accessible ? "#15803d" : "#2563eb") : line.accessible ? "#d46b3f" : "#8e44ad";
 
         return (
           <React.Fragment key={line.key}>
@@ -127,6 +128,7 @@ export default function EditorMap({
                 },
               }}
             >
+              {line.indoor && <Tooltip direction="center">Internal connection</Tooltip>}
               {line.roadCrossing && <Tooltip direction="center">{line.accessible ? "Accessible crosswalk" : "Crosswalk"}</Tooltip>}
               {!line.accessible && !line.roadCrossing && (
                 <Tooltip permanent={false} direction="center">
