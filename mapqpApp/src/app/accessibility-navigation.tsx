@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import {
-  AccessibilityInfo,
   Animated,
   Dimensions,
   Keyboard,
@@ -24,6 +23,7 @@ import { File, Paths } from "expo-file-system";
 
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
+import CurrentNavigationSummary from "../components/current-navigation-summary";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useAuthGuard } from "../hooks/use-auth-guard";
@@ -57,7 +57,6 @@ export default function Home() {
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
-  const lastAnnouncedInstruction = useRef<string | null>(null);
 
   const { distanceUnits, directionStyle, fontSize } = useSettings();
   const accessibilityPreferences = useAccessibilityPreferences();
@@ -76,6 +75,7 @@ export default function Home() {
     error,
     destinationBuilding,
     route,
+    routeDestinationBuilding,
     routeError,
     currentRouteIndex,
     showRecenter,
@@ -129,44 +129,6 @@ export default function Home() {
     
     loadLocalMapData();
   }, []);
-
-  // Voice Command Listener for Accessibility (e.g. Screen Reader announcements/commands or custom accessibility triggers)
-  useEffect(() => {
-    if (!route) return;
-
-    // Listen to accessibility announcements or external voice command integrations if applicable
-    const subscription = AccessibilityInfo.addEventListener(
-      'announcementFinished',
-      (announcement) => {
-        const spokenText = announcement?.announcement?.toLowerCase() || '';
-        if (spokenText.includes('cancel route') || spokenText.includes('stop navigation')) {
-          handleCancelRoute();
-          AccessibilityInfo.announceForAccessibility('Route cancelled via voice command.');
-        }
-      }
-    );
-
-    return () => {
-      subscription.remove();
-    };
-  }, [route, handleCancelRoute]);
-
-  useEffect(() => {
-    if (!screenReaderEnabled || !route || !nextStep) {
-      return;
-    }
-
-    const instruction = formatDirectionInstruction(nextStep, directionStyle);
-    const stepKey = `${nextStep.pointIndex}-${instruction}`;
-
-    if (lastAnnouncedInstruction.current === stepKey) {
-      return;
-    }
-
-    lastAnnouncedInstruction.current = stepKey;
-    const announcement = formatInstructionWithDistance(instruction, distToNextStepMeters, distanceUnits);
-    AccessibilityInfo.announceForAccessibility(announcement);
-  }, [screenReaderEnabled, route, nextStep, directionStyle, distanceUnits, distToNextStepMeters]);
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -240,74 +202,46 @@ export default function Home() {
           {/* Header Row containing Route Info and a dedicated Cancel Button */}
           <View style={styles.routeHeaderRow}>
             <View style={{ flex: 1 }}>
-              {directionsExpanded ? (
-                <TouchableOpacity
-                  onPress={() => setDirectionsExpanded(false)}
-                  activeOpacity={0.7}
-                  style={styles.expandedHeader}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel="Upcoming directions"
-                  accessibilityHint="Double tap to collapse the directions list"
+              <CurrentNavigationSummary
+                destinationKey={routeDestinationBuilding}
+                destinationName={buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination"}
+                screenReaderEnabled={screenReaderEnabled}
+                expanded={directionsExpanded}
+                onToggleDirections={() => setDirectionsExpanded((previous) => !previous)}
+                instruction={
+                  nextStep
+                    ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
+                    : "Follow route"
+                }
+              >
+                <Text
+                  key={`nav-text-6-${fontSize}-${fontScale}-${textRefresh}`}
+                  accessible={false}
+                  maxFontSizeMultiplier={2.5}
+                  style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
                 >
-                  <Text
-                    key={`nav-text-1-${fontSize}-${fontScale}-${textRefresh}`}
-                    maxFontSizeMultiplier={2.5}
-                    style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
-                  >
-                    Upcoming Directions
-                  </Text>
-                  <Text
-                    key={`nav-text-2-${fontSize}-${fontScale}-${textRefresh}`}
-                    maxFontSizeMultiplier={2.5}
-                    style={[styles.collapseHint, { fontSize: 13 * fontSize, color: darkerSystemColorsEnabled ? "#333" : "#888" }]}
-                  >
-                    Tap to collapse
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => setDirectionsExpanded(true)}
-                  style={{ minHeight: 48, justifyContent: "center" }}
-                  activeOpacity={0.7}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    nextStep
-                      ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
-                      : "Follow route"
-                  }
-                  accessibilityHint="Double tap to show all upcoming directions"
+                  {nextStep
+                    ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
+                    : "Follow route"}
+                </Text>
+                <Text
+                  key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`}
+                  accessible={false}
+                  maxFontSizeMultiplier={2.5}
+                  style={[
+                    styles.subText,
+                    {
+                      fontSize: 16 * fontSize,
+                      fontWeight: boldTextEnabled ? "600" : "normal",
+                      color: darkerSystemColorsEnabled ? "#222" : "#555",
+                    },
+                  ]}
                 >
-                  <Text
-                    key={`nav-text-6-${fontSize}-${fontScale}-${textRefresh}`}
-                    accessible={false}
-                    maxFontSizeMultiplier={2.5}
-                    style={[styles.boldText, { fontSize: 22 * fontSize, fontWeight: "bold" }]}
-                  >
-                    {nextStep
-                      ? formatInstructionWithDistance(formatDirectionInstruction(nextStep, directionStyle), distToNextStepMeters, distanceUnits)
-                      : "Follow route"}
-                  </Text>
-                  <Text
-                    key={`nav-text-7-${fontSize}-${fontScale}-${textRefresh}`}
-                    accessible={false}
-                    maxFontSizeMultiplier={2.5}
-                    style={[
-                      styles.subText,
-                      {
-                        fontSize: 16 * fontSize,
-                        fontWeight: boldTextEnabled ? "600" : "normal",
-                        color: darkerSystemColorsEnabled ? "#222" : "#555",
-                      },
-                    ]}
-                  >
-                    {formatDistance(route.distance, distanceUnits)}
-                    {" total • "}
-                    {formatDuration(route.duration)}
-                  </Text>
-                </TouchableOpacity>
-              )}
+                  {formatDistance(route.distance, distanceUnits)}
+                  {" total • "}
+                  {formatDuration(route.duration)}
+                </Text>
+              </CurrentNavigationSummary>
             </View>
 
             {/* Dedicated Cancel Route Button */}
@@ -325,6 +259,9 @@ export default function Home() {
 
           {directionsExpanded && (
             <View style={styles.expandedContainer}>
+              <Text accessibilityRole="header" maxFontSizeMultiplier={2.5} style={[styles.boldText, { fontSize: 22 * fontSize }]}>
+                Upcoming Directions
+              </Text>
               <ScrollView
                 style={styles.directionsList}
                 contentContainerStyle={styles.directionsListContent}
@@ -598,19 +535,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     minHeight: 0,
     marginTop: 8,
-  },
-  expandedHeader: {
-    minHeight: 48,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 4,
-    paddingBottom: 8,
-  },
-  collapseHint: {
-    fontSize: 13,
-    color: "#888",
   },
   directionsList: {
     flex: 1,

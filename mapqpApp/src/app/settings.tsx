@@ -130,23 +130,9 @@ export default function SettingsPage() {
 
   const handleBackFromSettings = () => {
     Speech.stop();
-    const originalMode =
-      from === "standard-navigation"
-        ? "standard"
-        : from === "accessibility-navigation"
-        ? "accessibility"
-        : null;
-
-    if (!originalMode || navigationMode === originalMode) {
-      router.back();
-      return;
-    }
-
-    router.replace(
-      navigationMode === "standard"
-        ? "/standard-navigation"
-        : "/accessibility-navigation"
-    );
+    // The root coordinator applies the selected mode after this pop completes,
+    // using the same path as iOS swipe-back and Android hardware back.
+    router.back();
   };
 
   const returnToLandingPage = () => {
@@ -766,6 +752,21 @@ export default function SettingsPage() {
             );
           })}
         </View>
+
+        <TouchableOpacity
+          style={[styles.landingButton, increasedContrast && styles.settingsCardHighContrast]}
+          onPress={() => router.push("/report-bug")}
+          accessibilityRole="button"
+          accessibilityLabel="Report a Bug"
+          accessibilityHint="Opens the bug reporting form. Submitting reports is not yet available."
+        >
+          <AccessibleText
+            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+            style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
+          >
+            Report a Bug
+          </AccessibleText>
+        </TouchableOpacity>
 
         {/* About / Route Version Info */}
         <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>
