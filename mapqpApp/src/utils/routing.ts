@@ -51,7 +51,6 @@ export type GraphEdge = {
   accessible: boolean;
   indoor: boolean;
   roadCrossing: boolean;
-  audibleSignal: boolean;
 };
 
 // Named flags make connection data readable without knowing tuple positions.
@@ -61,26 +60,24 @@ export type WalkwayConnection = {
   accessible?: boolean;
   indoor?: boolean;
   roadCrossing?: boolean;
-  audibleSignal?: boolean;
 };
 export type WalkwayConnectionItem = WalkwayConnection | string | [
   nodeId: string,
   accessible: boolean,
   indoor?: boolean,
   roadCrossing?: boolean,
-  audibleSignal?: boolean,
 ];
 
 export function normalizeWalkwayConnection(item: WalkwayConnectionItem) {
   if (typeof item === "string") {
-    return { to: item, accessible: true, indoor: false, roadCrossing: false, audibleSignal: false };
+    return { to: item, accessible: true, indoor: false, roadCrossing: false };
   }
   if (Array.isArray(item)) {
     return { to: item[0], accessible: item[1] !== false, indoor: item[2] ?? false,
-      roadCrossing: item[3] ?? false, audibleSignal: item[4] ?? false };
+      roadCrossing: item[3] ?? false };
   }
   return { to: item.to, accessible: item.accessible ?? true, indoor: item.indoor ?? false,
-    roadCrossing: item.roadCrossing ?? false, audibleSignal: item.audibleSignal ?? false };
+    roadCrossing: item.roadCrossing ?? false };
 }
 
 export type BuildingEntranceObject = {
@@ -178,7 +175,7 @@ export function initRoutingGraph(
     }
 
     for (const item of toIds) {
-      const { to: toId, accessible: isAccessible, indoor: isIndoor, roadCrossing, audibleSignal } = normalizeWalkwayConnection(item);
+      const { to: toId, accessible: isAccessible, indoor: isIndoor, roadCrossing } = normalizeWalkwayConnection(item);
 
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
@@ -193,8 +190,7 @@ export function initRoutingGraph(
         toNode,
         isAccessible,
         isIndoor,
-        roadCrossing,
-        audibleSignal
+        roadCrossing
       );
     }
   }
@@ -218,7 +214,7 @@ export function initRoutingGraph(
             accessible: edge.accessible,
             indoor: edge.indoor,
             roadCrossing: edge.roadCrossing,
-            audibleSignal: edge.audibleSignal,
+
           },
         ]);
       }
@@ -405,9 +401,10 @@ function smoothPolyline(points: [number, number][], iterations = 2, tension = 0.
 // --- Math & Distance Calculations ---
 
 function isEdgeAllowed(edge: GraphEdge, preferences: RoutingPreferences): boolean {
+  // Every enabled preference must pass; one preference cannot override another.
   return (!preferences.avoidStairs || edge.accessible) &&
     (!preferences.avoidIndoorRoutes || !edge.indoor) &&
-    (!preferences.avoidInaccessibleCrosswalks || !edge.roadCrossing || edge.audibleSignal);
+    (!preferences.avoidInaccessibleCrosswalks || !edge.roadCrossing || edge.accessible);
 }
 
 function nearestEdges(
@@ -448,7 +445,7 @@ function nearestEdges(
             accessible: neighbor.accessible,
             indoor: neighbor.indoor,
             roadCrossing: neighbor.roadCrossing,
-            audibleSignal: neighbor.audibleSignal,
+
           },
           {
             nodeId: toNode.id,
@@ -456,7 +453,7 @@ function nearestEdges(
             accessible: neighbor.accessible,
             indoor: neighbor.indoor,
             roadCrossing: neighbor.roadCrossing,
-            audibleSignal: neighbor.audibleSignal,
+
           },
         ];
       }
@@ -486,10 +483,10 @@ function projectPointToSegment(pLat: number, pLng: number, a: GraphNode, b: Grap
   return { distToSegment, distToFrom, distToTo };
 }
 
-function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean, indoor: boolean, roadCrossing: boolean, audibleSignal: boolean) {
+function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean, indoor: boolean, roadCrossing: boolean) {
   const distance = distanceBetween(first.latitude, first.longitude, second.latitude, second.longitude);
-  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible, indoor, roadCrossing, audibleSignal });
-  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible, indoor, roadCrossing, audibleSignal });
+  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible, indoor, roadCrossing });
+  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible, indoor, roadCrossing });
 }
 
 function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
@@ -500,7 +497,6 @@ function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
     existingEdge.indoor = existingEdge.indoor || edge.indoor;
     // A label on either direction applies to the bidirectional crossing.
     existingEdge.roadCrossing = existingEdge.roadCrossing || edge.roadCrossing;
-    existingEdge.audibleSignal = existingEdge.audibleSignal || edge.audibleSignal;
     return;
   }
   graphEdges.set(nodeId, [...edges, edge]);
