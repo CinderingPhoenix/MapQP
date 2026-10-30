@@ -39,6 +39,23 @@ export type GraphEdge = {
 // Updated to support tuple-based connections [toNodeId, accessible]
 export type WalkwayConnectionItem = string | [string, boolean];
 
+export type BuildingEntranceObject = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  floor?: number;
+  accessibility?: boolean;
+};
+
+export type BuildingObject = {
+  name: string;
+  entrances: BuildingEntranceObject[];
+};
+
+export type BuildingTuple = [string, [number, number, string, number, boolean][]];
+
+export type BuildingInput = BuildingObject | BuildingTuple;
+
 // --- Constants & Graph Initialization ---
 
 const WALKING_SPEED_METERS_PER_SECOND = 1.4;
@@ -53,7 +70,7 @@ let graphEdges = new Map<string, GraphEdge[]>();
 
 export function initRoutingGraph(
   routePointsData: { nodes: [string, number, number][]; connections: Record<string, WalkwayConnectionItem[]> },
-  buildingData: [string, [number, number, string, number, boolean][]][]
+  buildingData: BuildingInput[]
 ) {
   // Clear existing state for fresh over-the-air updates
   routeCache.clear();
@@ -68,26 +85,37 @@ export function initRoutingGraph(
   }));
   walkwayConnections = routePointsData.connections;
 
-  // Map tuple building entrances [latitude, longitude, name, floor, accessibility]
+  // Map building entrances supporting both object and tuple formats
   campusNodes = [
     ...walkwayNodes,
-    ...buildingData.flatMap(([buildingName, entrances]) =>
-      entrances.map(([latitude, longitude], index: number) => ({
-        id: `${buildingName}-entrance-${index}`,
-        latitude,
-        longitude,
-      }))
-    ),
+    ...buildingData.flatMap((item) => {
+      const buildingName = Array.isArray(item) ? item[0] : item.name;
+      const entrances = Array.isArray(item) ? item[1] : item.entrances;
+
+      return entrances.map((entrance, index: number) => {
+        const latitude = Array.isArray(entrance) ? entrance[0] : entrance.latitude;
+        const longitude = Array.isArray(entrance) ? entrance[1] : entrance.longitude;
+        return {
+          id: `${buildingName}-entrance-${index}`,
+          latitude,
+          longitude,
+        };
+      });
+    }),
   ];
 
   campusNodesById = new Map(campusNodes.map((node) => [node.id, node]));
   
   const accessibleEntranceIds = new Set(
-    buildingData.flatMap(([buildingName, entrances]) =>
-      entrances.flatMap(([, , , , accessibility], index: number) =>
-        accessibility ? [`${buildingName}-entrance-${index}`] : []
-      )
-    )
+    buildingData.flatMap((item) => {
+      const buildingName = Array.isArray(item) ? item[0] : item.name;
+      const entrances = Array.isArray(item) ? item[1] : item.entrances;
+
+      return entrances.flatMap((entrance, index: number) => {
+        const accessibility = Array.isArray(entrance) ? entrance[4] : entrance.accessibility;
+        return accessibility ? [`${buildingName}-entrance-${index}`] : [];
+      });
+    })
   );
 
   for (const node of campusNodes) {
