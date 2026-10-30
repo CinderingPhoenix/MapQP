@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
+import { formatRoutePoints } from "./route-points-format";
 import { defineConfig, type Plugin } from "vite";
 
 function editorApi(): Plugin {
@@ -140,11 +141,15 @@ function editorApi(): Plugin {
           for await (const chunk of request) chunks.push(Buffer.from(chunk));
           const data = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           const dataDirectory = path.resolve(__dirname, "../src/data");
+          const routePointsPath = path.join(dataDirectory, "route-points.json");
+          const currentRoutePoints = JSON.parse(await fs.readFile(routePointsPath, "utf8"));
           const routePoints = {
+            ...currentRoutePoints,
+            version: currentRoutePoints.version ?? "1.0",
             nodes: data.nodes,
             connections: data.connections,
           };
-          await fs.writeFile(path.join(dataDirectory, "route-points.json"), `${JSON.stringify(routePoints, null, 2)}\n`);
+          await fs.writeFile(routePointsPath, formatRoutePoints(routePoints));
           await fs.writeFile(path.join(dataDirectory, "wpi-buildings.json"), `${JSON.stringify(data.buildings, null, 2)}\n`);
           response.statusCode = 200;
           response.setHeader("Content-Type", "application/json");
