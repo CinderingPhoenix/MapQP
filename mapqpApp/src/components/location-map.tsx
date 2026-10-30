@@ -1,9 +1,8 @@
-import { useRef, useEffect, useState } from "react";
+import { Asset } from "expo-asset";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { WebView } from "react-native-webview";
-import * as Location from "expo-location";
-import { useAssets } from "expo-asset";
-import { File } from "expo-file-system";
+import WebView, { type WebViewMessageEvent } from "react-native-webview";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 
 type LocationMapProps = {
   latitude: number;
@@ -13,17 +12,16 @@ type LocationMapProps = {
   accuracy: number;
   heading?: number | null;
   route?: any;
+  directionsExpanded?: boolean;
+  accessibilityMode?: boolean;
   recenterSignal?: number;
   onUserDragged?: () => void;
   onHeadingModeChange?: (isFocused: boolean) => void;
   onToggleMute?: () => void;
+  onOpenSettings?: () => void;
   onPanBack?: () => void;
 };
 
-/**
- * LocationMap component embeds and bridges a Leaflet map HTML file within a React Native WebView.
- * Manages map initialization assets, user position updates, heading tracking subscriptions, and interaction callbacks.
- */
 export default function LocationMap({
   latitude,
   longitude,
@@ -32,68 +30,142 @@ export default function LocationMap({
   accuracy,
   heading,
   route,
+  directionsExpanded = false,
+  accessibilityMode = false,
   recenterSignal,
   onUserDragged,
   onHeadingModeChange,
   onToggleMute,
+  onOpenSettings,
   onPanBack,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
-  const [htmlContent, setHtmlContent] = useState<string>("");
+  const [mapUri, setMapUri] = useState<string>("");
 
-  // Track whether the user has manually dragged away from auto-centering
-  const hasUserPannedAwayRef = useRef(false);
+  const {
+    reduceMotionEnabled,
+    boldTextEnabled,
+    darkerSystemColorsEnabled,
+    highTextContrastEnabled,
+    reduceTransparencyEnabled,
+    loaded: accessibilityLoaded,
+  } = useAccessibilityPreferences();
+  const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  const visualPreferencesScript = `
+    if (window.setVisualAccessibility) {
+      window.setVisualAccessibility(${boldTextEnabled}, ${increasedContrast}, ${reduceTransparencyEnabled});
+    }
+    true;
+  `;
+
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(visualPreferencesScript);
+  }, [visualPreferencesScript]);
+
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
+      if (window.setReduceMotion) {
+        window.setReduceMotion(${!accessibilityLoaded || reduceMotionEnabled});
+      }
+      true;
+    `);
+  }, [accessibilityLoaded, reduceMotionEnabled]);
 
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
 
-  const [assets] = useAssets([require("./leaflet.html")]);
-
+  // Robust asset loader ensuring the file is downloaded locally before passing URI to WebView
   useEffect(() => {
-    if (assets && assets[0]?.localUri) {
-      const file = new File(assets[0].localUri);
-      file.text().then((content) => {
-        setHtmlContent(content);
-      });
+    async function loadMapAsset() {
+      try {
+        const asset = Asset.fromModule(require("./leaflet.html"));
+        if (!asset.downloaded) {
+          await asset.downloadAsync();
+        }
+        if (asset.localUri) {
+          setMapUri(asset.localUri);
+        }
+      } catch (error) {
+        console.error("Failed to load Leaflet asset URI:", error);
+      }
     }
-  }, [assets]);
+    loadMapAsset();
+  }, []);
 
-  /**
-   * Injects initialization script into the WebView once the HTML content has loaded.
-   */
-  const handleLoadEnd = () => {
+  // Force Leaflet map resize and re-render tiles when directions expanded/collapsed state changes
+  useEffect(() => {
     webViewRef.current?.injectJavaScript(`
+      if (window.map) {
+        window.map.invalidateSize();
+      }
+      true;
+    `);
+  }, [directionsExpanded]);
+
+  const handleLoadEnd = () => {
+    webViewRef.current?.injectJavaScript(visualPreferencesScript);
+    webViewRef.current?.injectJavaScript(`
+      if (window.setReduceMotion) {
+        window.setReduceMotion(${!accessibilityLoaded || reduceMotionEnabled});
+      }
       if (window.initMap) {
         window.initMap(
-          ${latitude}, 
-          ${longitude}, 
-          ${currentMarkerLat}, 
-          ${currentMarkerLng}, 
-          ${accuracy}, 
-          ${JSON.stringify(route || null)}
+          ${latitude},
+          ${longitude},
+          ${currentMarkerLat},
+          ${currentMarkerLng},
+          ${accuracy},
+          ${JSON.stringify(route || null)},
+          ${accessibilityMode}
         );
       }
+      setTimeout(function() {
+        if (window.map) {
+          window.map.invalidateSize();
+        }
+      }, 300);
       true;
     `);
   };
 
-  // 1. Initial route overview fitBounds -> 4 second silent delay -> focuses on user & sets heading focused
+  /**
+   * Show the complete route facing North, then switch to
+   * heading-focused navigation and zoom into the user after 4 seconds.
+   */
   useEffect(() => {
     if (route && route.geometry && route.geometry.length > 0) {
       hasUserPannedAwayRef.current = false;
-      const routeCoords = route.geometry.map((pt: [number, number]) => [pt[0], pt[1]]);
+
+      const routeCoords = route.geometry.map(
+        (pt: [number, number]) => [pt[0], pt[1]]
+      );
 
       webViewRef.current?.injectJavaScript(`
         if (window.map) {
-          var bounds = L.latLngBounds(${JSON.stringify(routeCoords)});
-          window.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+          if (window.smoothRotateToZero) {
+            window.smoothRotateToZero();
+          } else {
+            window.map.setBearing(0);
+          }
+
+          var bounds = L.latLngBounds(
+            ${JSON.stringify(routeCoords)}
+          );
+
+          window.map.fitBounds(bounds, {
+            padding: [60, 60],
+            maxZoom: 16,
+            animate: !window.reduceMotionEnabled
+          });
+          window.map.invalidateSize();
         }
         true;
       `);
 
       const timeoutId = setTimeout(() => {
         hasUserPannedAwayRef.current = false;
+
         setIsHeadingFocused(true);
         onHeadingModeChange?.(true);
         onPanBack?.();
@@ -102,8 +174,17 @@ export default function LocationMap({
           if (window.setHeadingFocus) {
             window.setHeadingFocus(true);
           }
+
           if (window.updateMap) {
-            window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(route)});
+            window.updateMap(
+              ${currentMarkerLat},
+              ${currentMarkerLng},
+              ${accuracy},
+              ${JSON.stringify(route)}
+            );
+          }
+          if (window.map) {
+            window.map.invalidateSize();
           }
           true;
         `);
@@ -115,84 +196,47 @@ export default function LocationMap({
     }
   }, [route]);
 
-  /**
-   * Subscribes to device heading updates when heading focus is locked.
-   */
+  const hasUserPannedAwayRef = useRef(false);
+
   useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
-    let isMounted = true;
-    let previousRawHeading: number | null = null;
-    let absoluteHeading: number | null = null;
-
-    async function startHeadingTracking() {
-      if (isHeadingFocused) {
-        const sub = await Location.watchHeadingAsync((headingData) => {
-          let rawHeadingDeg = headingData.trueHeading >= 0 
-            ? headingData.trueHeading 
-            : headingData.magHeading;
-
-          rawHeadingDeg = rawHeadingDeg % 360;
-
-          if (absoluteHeading === null || previousRawHeading === null) {
-            absoluteHeading = rawHeadingDeg;
-            previousRawHeading = rawHeadingDeg; 
-          } else {
-            let diff = rawHeadingDeg - previousRawHeading;
-            
-            if (diff > 180) diff -= 360;
-            if (diff < -180) diff += 360;
-
-            if (Math.abs(diff) < 0.5) return;
-
-            absoluteHeading += diff;
-            previousRawHeading = rawHeadingDeg;
-
-            webViewRef.current?.injectJavaScript(`
-              if (window.setTargetHeading) window.setTargetHeading(${absoluteHeading.toFixed(2)});
-              true;
-            `);
-          }
-        });
-
-        if (isMounted) {
-          subscription = sub;
-        } else {
-          sub.remove();
-        }
-      }
-    }
-
-    startHeadingTracking();
-
-    return () => {
-      isMounted = false;
-      subscription?.remove();
-    };
-  }, [isHeadingFocused]);
-
-  // Keep the marker and route progress synchronized even when the viewport is manually panned.
-  useEffect(() => {
+    if (!isHeadingFocused || heading === null || heading === undefined) return;
     webViewRef.current?.injectJavaScript(`
-      if (window.updateMap) {
-        window.updateMap(${currentMarkerLat}, ${currentMarkerLng}, ${accuracy}, ${JSON.stringify(
-      route || null
-    )});
+      if (window.setTargetHeading) {
+        window.setTargetHeading(${heading});
       }
       true;
     `);
-  }, [currentMarkerLat, currentMarkerLng, accuracy, route, heading]);
+  }, [heading, isHeadingFocused]);
 
-  // Recenter signal explicitly resets the view and re-enables tracking
   useEffect(() => {
     if (recenterSignal !== undefined && recenterSignal > 0) {
-      hasUserPannedAwayRef.current = false;
-      webViewRef.current?.injectJavaScript(
-        "if (window.resetView) window.resetView(); true;"
-      );
+      webViewRef.current?.injectJavaScript(`
+        if (window.resetView) {
+          window.resetView();
+        }
+        if (window.map) {
+          window.map.invalidateSize();
+        }
+        true;
+      `);
     }
   }, [recenterSignal]);
 
-  if (!htmlContent) {
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
+      if (window.updateMap) {
+        window.updateMap(
+          ${currentMarkerLat},
+          ${currentMarkerLng},
+          ${accuracy},
+          ${JSON.stringify(route || null)}
+        );
+      }
+      true;
+    `);
+  }, [currentMarkerLat, currentMarkerLng, accuracy, route]);
+
+  if (!mapUri) {
     return <View style={styles.container} />;
   }
 
@@ -201,10 +245,13 @@ export default function LocationMap({
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
-        source={{ html: htmlContent, baseUrl: "https://localhost" }}
+        source={{ uri: mapUri }}
         style={styles.map}
+        allowFileAccess={true}
+        allowUniversalAccessFromFileURLs={true}
+        allowFileAccessFromFileURLs={true}
         onLoadEnd={handleLoadEnd}
-        onMessage={(event) => {
+        onMessage={(event: WebViewMessageEvent) => {
           const data = event.nativeEvent.data;
           if (data === "USER_DRAGGED") {
             hasUserPannedAwayRef.current = true;
@@ -214,14 +261,14 @@ export default function LocationMap({
             hasUserPannedAwayRef.current = false;
             setIsHeadingFocused(true);
             onHeadingModeChange?.(true);
-            onPanBack?.();
           } else if (data === "HEADING_UNLOCKED") {
             hasUserPannedAwayRef.current = false;
             setIsHeadingFocused(false);
             onHeadingModeChange?.(false);
-            onPanBack?.();
           } else if (data === "TOGGLE_MUTE") {
             onToggleMute?.();
+          } else if (data === "OPEN_SETTINGS") {
+            onOpenSettings?.();
           }
         }}
       />
