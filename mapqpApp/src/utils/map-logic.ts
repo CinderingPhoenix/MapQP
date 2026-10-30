@@ -19,6 +19,7 @@ export type Point = {
 };
 
 export type RoutePlan = WalkingRoute & {
+  arrivalTime: number;
   origin: Point;
   destination: Point;
 };
@@ -163,13 +164,23 @@ export function formatDistance(meters: number, units: "imperial" | "metric" = "m
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+export function formatArrivalTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
-export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric"): string {
-  return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters, units)}`;
+export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric", isCurrentStep = true): string {
+  const message = instruction === "Arrive at destination"
+    ? "You will arrive at your destination"
+    : instruction;
+  return isCurrentStep && distMeters <= 5 ? `${message} now` : `${message} in ${formatDistance(distMeters, units)}`;
 }
 
 function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
@@ -197,7 +208,7 @@ export function formatDirectionInstruction(step: DirectionStep, style: "natural"
 
 export function generateDirections(geometry: [number, number][], navigationPath: NavigationPoint[] = []): DirectionStep[] {
   const steps: DirectionStep[] = [];
-  if (!geometry || geometry.length < 2 || navigationPath.length < 3) return steps;
+  if (!geometry || geometry.length < 2) return steps;
 
   for (let index = 1; index < navigationPath.length - 1; index++) {
     const decisionPoint = navigationPath[index];
@@ -211,12 +222,18 @@ export function generateDirections(geometry: [number, number][], navigationPath:
     let diff = outgoingBearing - incomingBearing;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-    const instruction = diff > 45 ? "Turn right" : diff > 15 ? "Slight right" : diff < -45 ? "Turn left" : diff < -15 ? "Slight left" : "Continue straight";
+    // Small changes in mapped path geometry are bends, not maneuvers.
+    // Do not add a straight-ahead instruction for these junctions.
+    if (Math.abs(diff) <= 30) continue;
+    const instruction = diff > 45 ? "Turn right" : diff > 0 ? "Slight right" : diff < -45 ? "Turn left" : "Slight left";
     const pointIndex = closestGeometryIndex(geometry, currentPoint);
     const lastStep = steps[steps.length - 1];
-    if (!lastStep || lastStep.instruction !== instruction || pointIndex - lastStep.pointIndex > 3) {
-      steps.push({ instruction, pointIndex, turnDegrees: diff });
-    }
+    // Smoothed geometry can have many vertices within a few meters. Merge
+    // repeated instructions by walking distance rather than vertex count.
+    if (lastStep && pointIndex <= lastStep.pointIndex) continue;
+    if (lastStep && lastStep.instruction === instruction &&
+        getSegmentDistance(geometry, lastStep.pointIndex, pointIndex) <= 10) continue;
+    steps.push({ instruction, pointIndex, turnDegrees: diff });
   }
   steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
   return steps;
@@ -464,7 +481,11 @@ export function useMapNavigation(buildings: Building[]) {
       if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
       const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
       if (!availableRoutes.length) throw new Error("The walking route service could not find a route. Try again.");
-      const selectedRoute = fastestRoute(availableRoutes);
+      const fastest = fastestRoute(availableRoutes);
+      const selectedRoute = {
+        ...fastest,
+        arrivalTime: Date.now() + fastest.duration * 1000,
+      };
       setRoute(selectedRoute);
       setRouteDestinationBuilding(targetBuilding);
       const steps = generateDirections(selectedRoute.geometry, selectedRoute.navigationPath);
