@@ -465,20 +465,6 @@
         "accessibility": true
       },
       {
-        "latitude": 42.274644,
-        "longitude": -71.809414,
-        "name": "Back Entrance",
-        "floor": 1,
-        "accessibility": true
-      },
-      {
-        "latitude": 42.274691,
-        "longitude": -71.809823,
-        "name": "Back Loading Entrance",
-        "floor": 0,
-        "accessibility": true
-      },
-      {
         "latitude": 42.274551,
         "longitude": -71.810102,
         "name": "Rec Center Stairs Entrance",

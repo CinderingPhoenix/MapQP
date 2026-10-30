@@ -482,8 +482,8 @@
     ],
     [
       "node_8qpxnld",
-      42.274673,
-      -71.809516
+      42.274687,
+      -71.809551
     ],
     [
       "node_0dgf1d7",
@@ -4679,6 +4679,11 @@
       "node_slt9g67",
       42.274812,
       -71.804052
+    ],
+    [
+      "node_2l5l6b0",
+      42.274649,
+      -71.809322
     ]
   ],
   "connections": {
@@ -4731,7 +4736,8 @@
       [
         "node_c6b52mo",
         false
-      ]
+      ],
+      "node_2l5l6b0"
     ],
     "fountain-campus-center": [
       "fountain-olin",
@@ -8308,6 +8314,13 @@
     ],
     "Founders Hall-entrance-0": [
       "node_q6836m6"
+    ],
+    "Harrington Auditorium-entrance-5": [],
+    "node_2l5l6b0": [
+      "node_8qpxnld"
+    ],
+    "Harrington Auditorium-entrance-4": [
+      "node_butnucl"
     ]
   }
 }
