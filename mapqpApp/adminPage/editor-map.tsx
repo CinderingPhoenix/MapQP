@@ -23,7 +23,7 @@ export default function EditorMap({
   onConnectionClick,
   onNodeDragEnd,
 }: EditorMapProps) {
-  const lines: { key: string; fromId: string; toId: string; accessible: boolean; roadCrossing: boolean; audibleSignal: boolean; positions: [[number, number], [number, number]] }[] = [];
+  const lines: { key: string; fromId: string; toId: string; accessible: boolean; roadCrossing: boolean; positions: [[number, number], [number, number]] }[] = [];
   const seenEdges = new Set<string>();
 
   const allNodes: { id: string; latitude: number; longitude: number }[] = [...nodes];
@@ -64,7 +64,6 @@ export default function EditorMap({
           toId,
           accessible,
           roadCrossing: typeof item !== "string" && !!item.roadCrossing,
-          audibleSignal: typeof item !== "string" && !!item.audibleSignal,
           positions: [
             [fromNode.latitude, fromNode.longitude],
             [toNode.latitude, toNode.longitude],
@@ -92,7 +91,7 @@ export default function EditorMap({
       <MapEventCatcher onMapClick={onMapClick} />
 
       {lines.map((line) => {
-        const lineColor = line.roadCrossing ? (line.audibleSignal ? "#15803d" : "#2563eb") : line.accessible ? "#d46b3f" : "#8e44ad";
+        const lineColor = line.roadCrossing ? (line.accessible ? "#15803d" : "#2563eb") : line.accessible ? "#d46b3f" : "#8e44ad";
 
         return (
           <React.Fragment key={line.key}>
@@ -128,7 +127,7 @@ export default function EditorMap({
                 },
               }}
             >
-              {line.roadCrossing && <Tooltip direction="center">{line.audibleSignal ? "Crosswalk with audible walk signal" : "Crosswalk"}</Tooltip>}
+              {line.roadCrossing && <Tooltip direction="center">{line.accessible ? "Accessible crosswalk" : "Crosswalk"}</Tooltip>}
               {!line.accessible && !line.roadCrossing && (
                 <Tooltip permanent={false} direction="center">
                   Not Accessibility Friendly (Stairs/Steep)

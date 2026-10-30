@@ -37,7 +37,19 @@ export type GraphEdge = {
 };
 
 // Updated to support tuple-based connections [toNodeId, accessible]
-export type WalkwayConnectionItem = string | [string, boolean];
+export type WalkwayConnectionItem = string | [string, boolean, boolean?, boolean?] | {
+  to: string;
+  accessible?: boolean;
+  indoor?: boolean;
+  roadCrossing?: boolean;
+};
+
+function connectionDetails(item: WalkwayConnectionItem) {
+  if (typeof item === "string") return { to: item, accessible: true };
+  if (Array.isArray(item)) return { to: item[0], accessible: item[1] !== false };
+  // An accessible crosswalk is inferred from accessible && roadCrossing.
+  return { to: item.to, accessible: item.accessible ?? true };
+}
 
 export type BuildingEntranceObject = {
   latitude: number;
@@ -134,8 +146,8 @@ export function initRoutingGraph(
     }
 
     for (const item of toIds) {
-      const toId = typeof item === "string" ? item : item[0];
-      const isAccessible = typeof item === "string" ? true : item[1];
+      const toId = connectionDetails(item).to;
+      const isAccessible = connectionDetails(item).accessible;
 
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
@@ -201,7 +213,7 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
       if (!fromNode) return [];
       return toIds
         .map((item) => {
-          const toId = typeof item === "string" ? item : item[0];
+          const toId = connectionDetails(item).to;
           const toNode = campusNodesById.get(toId);
           if (!toNode) return null;
           return [

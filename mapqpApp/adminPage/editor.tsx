@@ -16,7 +16,6 @@ type ConnectionDetail = {
   accessible?: boolean;
   indoor?: boolean;
   roadCrossing?: boolean;
-  audibleSignal?: boolean;
 };
 
 type Connections = Record<string, (string | ConnectionDetail)[]>;
@@ -239,11 +238,6 @@ export default function Editor() {
     saveToDisk(nodes, next);
   };
 
-  const toggleAudibleSignal = (fromId: string, toId: string) => {
-    const next = updateConnectionFlag(connections, fromId, toId, "audibleSignal");
-    setConnections(next);
-    saveToDisk(nodes, next);
-  };
 
   const handleNodeClick = (nodeId: string) => {
     if (selectedNodeId === nodeId && (mode === "add" || mode === "add-entrance")) {
@@ -379,7 +373,7 @@ export default function Editor() {
     }
   };
 
-  const activeConnectionList: { from: string; to: string; accessible: boolean; roadCrossing: boolean; audibleSignal: boolean }[] = [];
+  const activeConnectionList: { from: string; to: string; accessible: boolean; roadCrossing: boolean }[] = [];
   const seen = new Set<string>();
 
   Object.entries(connections).forEach(([from, toArray]) => {
@@ -391,7 +385,7 @@ export default function Editor() {
       const key = [from, to].sort().join("::");
       if (!seen.has(key)) {
         seen.add(key);
-        activeConnectionList.push({ from, to, accessible, roadCrossing: typeof item !== "string" && !!item.roadCrossing, audibleSignal: typeof item !== "string" && !!item.audibleSignal });
+        activeConnectionList.push({ from, to, accessible, roadCrossing: typeof item !== "string" && !!item.roadCrossing });
       }
     });
   });
@@ -638,7 +632,7 @@ export default function Editor() {
             {mode === "connect" && (!selectedNodeId ? "Click the first node to select it." : `Selected "${selectedNodeId}". Click second node to connect.`)}
             {mode === "accessibility" && (!selectedNodeId ? "Click first node of a connection." : `Selected "${selectedNodeId}". Click target node or line to toggle accessibility.`)}
             {mode === "disconnect" && (!selectedNodeId ? "Click two connected nodes or click line directly." : `Selected "${selectedNodeId}". Click connected node to remove.`)}
-            {mode === "crosswalk" && "Click a connection to mark or unmark it as a crosswalk. Blue lines are crosswalks; green lines have audible signals."}
+            {mode === "crosswalk" && "Click a connection to mark or unmark it as a crosswalk. Blue lines are inaccessible crosswalks; green lines are accessible crosswalks."}
             {mode === "delete" && "Click a node on the map to delete it immediately."}
           </p>
 
@@ -647,7 +641,7 @@ export default function Editor() {
           <div>
             <h4 style={{ margin: "0 0 0.5rem 0" }}>Active Connections ({activeConnectionList.length})</h4>
             <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              {activeConnectionList.map(({ from, to, accessible, roadCrossing, audibleSignal }) => (
+              {activeConnectionList.map(({ from, to, accessible, roadCrossing }) => (
                 <div key={`${from}::${to}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", background: "#f5f5f5", padding: "0.25rem 0.5rem", borderRadius: "3px" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                     {from} â†” {to}
