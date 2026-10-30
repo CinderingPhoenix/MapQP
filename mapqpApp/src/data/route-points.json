@@ -937,7 +937,12 @@
     ["node_lwi85pb", 42.274638, -71.8036],
     ["node_s9nzmio", 42.274678, -71.804157],
     ["node_slt9g67", 42.274812, -71.804052],
-    ["node_2l5l6b0", 42.274649, -71.809322]
+    ["node_2l5l6b0", 42.274649, -71.809322],
+    ["node_swthrbe", 42.276209, -71.80236],
+    ["node_4iicjug", 42.276188, -71.802423],
+    ["node_95ifo4l", 42.276145, -71.802479],
+    ["node_sarxih1", 42.275694, -71.802768],
+    ["node_tgq5wux", 42.272781, -71.805791]
   ],
   "connections": {
     "quad-center": [
@@ -1251,9 +1256,9 @@
       },
       {
         "to": "node_gaz4s9p",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "fuller-upper": [
@@ -1265,9 +1270,9 @@
       },
       {
         "to": "node_0dv9bei",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "gordon": [
@@ -1279,9 +1284,9 @@
       },
       {
         "to": "node_a2gsuto",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_rzwcnms",
@@ -1325,9 +1330,9 @@
       },
       {
         "to": "node_k767ddn",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "boynton-corner": [
@@ -1612,9 +1617,9 @@
     "olin-atwater-cut": [
       {
         "to": "node_0nr3ojf",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_4x153s8",
@@ -1640,9 +1645,9 @@
       },
       {
         "to": "node_e17wwaa",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "kaven-stairs": [
@@ -1736,9 +1741,9 @@
       },
       {
         "to": "node_h65mlhu",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "kaven-stairs",
@@ -1770,9 +1775,9 @@
       },
       {
         "to": "node_5wn2t79",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_ltpwu2c",
@@ -2569,15 +2574,21 @@
     "node_5wn2t79": [
       {
         "to": "node_vtr2tpd",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_ibx0g3x",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "institute-park-humbolt-ave",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_ibx0g3x": [
@@ -2662,6 +2673,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_5wn2t79",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_97yu309": [
@@ -3505,9 +3522,9 @@
       },
       {
         "to": "node_fymgegf",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_0hayt91": [
@@ -3527,7 +3544,7 @@
       },
       {
         "to": "node_0znqu4l",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
@@ -3547,15 +3564,21 @@
       },
       {
         "to": "node_6q22zbv",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_s0nwmhf",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_fymgegf",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_w143iqx": [
@@ -3687,13 +3710,13 @@
     "node_wqjgtsv": [
       {
         "to": "node_pghw3s1",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_auk2r8r",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3701,13 +3724,19 @@
     "node_pghw3s1": [
       {
         "to": "node_zbyw586",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_x43habn",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_wqjgtsv",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3715,13 +3744,13 @@
     "node_5reduqb": [
       {
         "to": "node_cj7a1xz",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_efgbflg",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3729,7 +3758,13 @@
     "node_cj7a1xz": [
       {
         "to": "node_zj24m5r",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_5reduqb",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3737,7 +3772,13 @@
     "node_zj24m5r": [
       {
         "to": "node_1nowm59",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_cj7a1xz",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3745,13 +3786,19 @@
     "node_1nowm59": [
       {
         "to": "node_vvjm8w9",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_vsv48oy",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_zj24m5r",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3768,18 +3815,30 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_1nowm59",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
       }
     ],
     "node_vsv48oy": [
       {
         "to": "node_qpdtt45",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_out8vym",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_1nowm59",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3787,7 +3846,13 @@
     "node_qpdtt45": [
       {
         "to": "node_iruk5p4",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_vsv48oy",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3795,7 +3860,13 @@
     "node_iruk5p4": [
       {
         "to": "node_5bzfqek",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_qpdtt45",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3803,7 +3874,13 @@
     "node_5bzfqek": [
       {
         "to": "node_dz607nw",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_iruk5p4",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3820,12 +3897,24 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_5bzfqek",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
       }
     ],
     "node_out8vym": [
       {
         "to": "node_729gnpk",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_vsv48oy",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3833,7 +3922,13 @@
     "node_729gnpk": [
       {
         "to": "node_bwj5yvb",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_out8vym",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3841,7 +3936,13 @@
     "node_bwj5yvb": [
       {
         "to": "node_2vvpeb0",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_729gnpk",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3849,7 +3950,13 @@
     "node_2vvpeb0": [
       {
         "to": "node_2l2s2zw",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_bwj5yvb",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3857,7 +3964,13 @@
     "node_2l2s2zw": [
       {
         "to": "node_8so2u1x",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_2vvpeb0",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3865,7 +3978,13 @@
     "node_8so2u1x": [
       {
         "to": "node_iaows3s",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_2l2s2zw",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3873,7 +3992,13 @@
     "node_iaows3s": [
       {
         "to": "node_gpe4qes",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_8so2u1x",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3881,7 +4006,13 @@
     "node_gpe4qes": [
       {
         "to": "node_o8eytzg",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_iaows3s",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3889,13 +4020,13 @@
     "node_90nt0uu": [
       {
         "to": "node_o8eytzg",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_ur6hsmh",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3903,13 +4034,13 @@
     "node_z89mfb1": [
       {
         "to": "node_ur6hsmh",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_5qoim60",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3917,13 +4048,13 @@
     "node_hg56var": [
       {
         "to": "node_ovyxtf7",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_5qoim60",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3931,7 +4062,13 @@
     "node_ovyxtf7": [
       {
         "to": "node_oe6one1",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_hg56var",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3939,7 +4076,13 @@
     "node_oe6one1": [
       {
         "to": "node_an7lxcz",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_ovyxtf7",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3947,13 +4090,13 @@
     "node_7rk3129": [
       {
         "to": "node_an7lxcz",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_l0odvr3",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3961,13 +4104,13 @@
     "node_p0ouxf5": [
       {
         "to": "node_l0odvr3",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_5qxqvz8",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3975,13 +4118,13 @@
     "node_mo83bdg": [
       {
         "to": "node_5qxqvz8",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_p9ez9b2",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -3989,13 +4132,13 @@
     "node_40b3qo9": [
       {
         "to": "node_p9ez9b2",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_3nmddtc",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -4003,13 +4146,13 @@
     "node_nexhzqm": [
       {
         "to": "node_oe7t7uj",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_hx0igye",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -4017,7 +4160,13 @@
     "node_oe7t7uj": [
       {
         "to": "node_tx2tesu",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_nexhzqm",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -4025,7 +4174,13 @@
     "node_tx2tesu": [
       {
         "to": "node_o4lpo3s",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_oe7t7uj",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -4033,7 +4188,13 @@
     "node_o4lpo3s": [
       {
         "to": "node_hn56wis",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_tx2tesu",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -4047,7 +4208,7 @@
       },
       {
         "to": "node_hn56wis",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
@@ -4073,9 +4234,9 @@
       },
       {
         "to": "node_et9mcxo",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_mo4nufy": [
@@ -4227,6 +4388,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "gordon",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_asqoh7a": [
@@ -4533,6 +4700,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "fuller-upper",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_7x2h2f6": [
@@ -4578,9 +4751,15 @@
       },
       {
         "to": "node_273q4b0",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
+      },
+      {
+        "to": "node_75hve00",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_fpqmuk8": [
@@ -4653,6 +4832,12 @@
         "accessible": false,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "olin-atwater-cut",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_gaz4s9p": [
@@ -4661,6 +4846,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "olin-atwater",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_7v9ru73": [
@@ -4906,6 +5097,12 @@
     "node_ycelv86": [
       {
         "to": "node_h65mlhu",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      },
+      {
+        "to": "node_5srbb6n",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
@@ -5021,6 +5218,12 @@
         "accessible": false,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "boynton",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_37ji0er": [
@@ -5174,9 +5377,9 @@
     "node_u1758nb": [
       {
         "to": "node_a2gf1u1",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_c2u79yo",
@@ -5185,10 +5388,10 @@
         "roadCrossing": false
       },
       {
-        "to": "node_sw3k0xv",
-        "accessible": true,
+        "to": "node_tgq5wux",
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_a2gf1u1": [
@@ -5197,6 +5400,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_u1758nb",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_tzit9kf": [
@@ -5238,9 +5447,9 @@
     "node_ypa65hk": [
       {
         "to": "node_43ro1vp",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_43ro1vp": [
@@ -5255,6 +5464,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_ypa65hk",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_f06j0q3": [
@@ -5790,9 +6005,9 @@
     "node_ijbrz6b": [
       {
         "to": "node_hggiuf3",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_hggiuf3": [
@@ -5801,6 +6016,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_ijbrz6b",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_1ziqiy7": [
@@ -5944,27 +6165,33 @@
     "node_npdzggl": [
       {
         "to": "node_ga4ktfs",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_6q22zbv",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       },
       {
         "to": "node_fymgegf",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_ga4ktfs": [
       {
         "to": "node_n1y4ivs",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_npdzggl",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -5972,7 +6199,13 @@
     "node_n1y4ivs": [
       {
         "to": "node_xal315c",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_ga4ktfs",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -5980,7 +6213,13 @@
     "node_xal315c": [
       {
         "to": "node_umgp607",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_n1y4ivs",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -5988,7 +6227,13 @@
     "node_zbyw586": [
       {
         "to": "node_umgp607",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_pghw3s1",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -5996,13 +6241,13 @@
     "node_xkotmlf": [
       {
         "to": "node_x43habn",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       },
       {
         "to": "node_la36ldf",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -6010,7 +6255,13 @@
     "node_la36ldf": [
       {
         "to": "node_efgbflg",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_xkotmlf",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -6018,7 +6269,13 @@
     "node_hx0igye": [
       {
         "to": "node_3nmddtc",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_nexhzqm",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -6042,7 +6299,13 @@
     "node_auk2r8r": [
       {
         "to": "node_jwgx2o9",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_wqjgtsv",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -6050,7 +6313,13 @@
     "node_jwgx2o9": [
       {
         "to": "node_0znqu4l",
-        "accessible": true,
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_auk2r8r",
+        "accessible": false,
         "indoor": false,
         "roadCrossing": false
       }
@@ -7211,7 +7480,7 @@
         "to": "node_4t86378",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_nmvr91l": [
@@ -7231,9 +7500,21 @@
       },
       {
         "to": "node_cx2cktd",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
+      },
+      {
+        "to": "node_npdzggl",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      },
+      {
+        "to": "node_aclfzeo",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_6q22zbv": [
@@ -7242,6 +7523,18 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_cx2cktd",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      },
+      {
+        "to": "node_npdzggl",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_yfk4rj4": [
@@ -7532,6 +7825,12 @@
     "node_n139bjh": [
       {
         "to": "node_zw5gpx8",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_clpyotw",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
@@ -8824,6 +9123,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_l7ol8eu",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "node_7llxrli": [
@@ -8877,9 +9182,9 @@
     "node_l7ol8eu": [
       {
         "to": "node_zdjdyl8",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_jdbfuj1": [
@@ -9711,7 +10016,7 @@
         "to": "node_fj7qnwp",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_s0nwmhf": [
@@ -9865,9 +10170,9 @@
       },
       {
         "to": "node_mrtsh89",
-        "accessible": true,
+        "accessible": false,
         "indoor": false,
-        "roadCrossing": false
+        "roadCrossing": true
       }
     ],
     "node_273q4b0": [
@@ -9876,6 +10181,12 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      },
+      {
+        "to": "node_mrtsh89",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ],
     "Salisbury Laboratories-entrance-4": [
@@ -10563,6 +10874,270 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
+      }
+    ],
+    "node_et9mcxo": [
+      {
+        "to": "node_4vh4dvn",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      }
+    ],
+    "node_sarxih1": [
+      {
+        "to": "node_vtr2tpd",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_95ifo4l",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_95ifo4l": [
+      {
+        "to": "node_4iicjug",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_4iicjug": [
+      {
+        "to": "node_swthrbe",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_swthrbe": [
+      {
+        "to": "node_et9mcxo",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_an7lxcz": [
+      {
+        "to": "node_7rk3129",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_oe6one1",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_l0odvr3": [
+      {
+        "to": "node_7rk3129",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_p0ouxf5",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_5qxqvz8": [
+      {
+        "to": "node_p0ouxf5",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_mo83bdg",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_p9ez9b2": [
+      {
+        "to": "node_mo83bdg",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_40b3qo9",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_3nmddtc": [
+      {
+        "to": "node_40b3qo9",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_hx0igye",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_hn56wis": [
+      {
+        "to": "node_o4lpo3s",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_weao2ri",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_5qoim60": [
+      {
+        "to": "node_hg56var",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_z89mfb1",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_ur6hsmh": [
+      {
+        "to": "node_z89mfb1",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_90nt0uu",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_o8eytzg": [
+      {
+        "to": "node_90nt0uu",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_gpe4qes",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_efgbflg": [
+      {
+        "to": "node_5reduqb",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_la36ldf",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_x43habn": [
+      {
+        "to": "node_xkotmlf",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_pghw3s1",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_umgp607": [
+      {
+        "to": "node_zbyw586",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_xal315c",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_0znqu4l": [
+      {
+        "to": "node_z67yd2v",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_jwgx2o9",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_h65mlhu": [
+      {
+        "to": "fuller-side-stairs",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      },
+      {
+        "to": "node_ycelv86",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      }
+    ],
+    "node_e17wwaa": [
+      {
+        "to": "gordon-washburn-cut",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
+      }
+    ],
+    "node_tgq5wux": [
+      {
+        "to": "node_sw3k0xv",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_u1758nb",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": true
       }
     ]
   }
