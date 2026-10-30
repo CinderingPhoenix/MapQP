@@ -302,12 +302,12 @@ function findLocalWalkingRoute(
     path.unshift(parent);
   }
 
-  const rawGeometry = path.map((nodeId) => {
+  // Preserve every graph vertex so the displayed line follows mapped walkways.
+  const geometry = path.map((nodeId) => {
     const node = nodes.find((candidate) => candidate.id === nodeId)!;
     return [node.latitude, node.longitude] as [number, number];
   });
 
-  const geometry = smoothPolyline(rawGeometry);
   const navigationPath = path.map((nodeId) => ({
     coordinate: nodes.find((candidate) => candidate.id === nodeId)!,
     connectionCount: (edges.get(nodeId) ?? []).filter(
@@ -325,30 +325,6 @@ function findLocalWalkingRoute(
     distance,
     duration: distance / WALKING_SPEED_METERS_PER_SECOND,
   };
-}
-
-function smoothPolyline(points: [number, number][], iterations = 2, tension = 0.25): [number, number][] {
-  if (points.length <= 2 || iterations <= 0) return points;
-  let current = points;
-  for (let i = 0; i < iterations; i++) {
-    const smoothed: [number, number][] = [current[0]];
-    for (let j = 0; j < current.length - 1; j++) {
-      const p0 = current[j];
-      const p1 = current[j + 1];
-      const q: [number, number] = [
-        (1 - tension) * p0[0] + tension * p1[0],
-        (1 - tension) * p0[1] + tension * p1[1],
-      ];
-      const r: [number, number] = [
-        tension * p0[0] + (1 - tension) * p1[0],
-        tension * p0[1] + (1 - tension) * p1[1],
-      ];
-      smoothed.push(q, r);
-    }
-    smoothed.push(current[current.length - 1]);
-    current = smoothed;
-  }
-  return current;
 }
 
 // --- Math & Distance Calculations ---
