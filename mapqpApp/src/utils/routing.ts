@@ -54,17 +54,34 @@ export type GraphEdge = {
   audibleSignal: boolean;
 };
 
-// Legacy strings are accessible outdoor paths with no crossing metadata.
-// Mark every road-crossing edge so the audible-signal preference can filter it.
-// Example: ["crosswalk-end", true, false, true, true] has an audible walk signal.
-// The accessibility flag remains the dataset proxy for stair-free paths.
-export type WalkwayConnectionItem = string | [
+// Named flags make connection data readable without knowing tuple positions.
+// Legacy strings and tuples remain supported for downloaded map data.
+export type WalkwayConnection = {
+  to: string;
+  accessible?: boolean;
+  indoor?: boolean;
+  roadCrossing?: boolean;
+  audibleSignal?: boolean;
+};
+export type WalkwayConnectionItem = WalkwayConnection | string | [
   nodeId: string,
   accessible: boolean,
   indoor?: boolean,
   roadCrossing?: boolean,
   audibleSignal?: boolean,
 ];
+
+export function normalizeWalkwayConnection(item: WalkwayConnectionItem) {
+  if (typeof item === "string") {
+    return { to: item, accessible: true, indoor: false, roadCrossing: false, audibleSignal: false };
+  }
+  if (Array.isArray(item)) {
+    return { to: item[0], accessible: item[1] !== false, indoor: item[2] ?? false,
+      roadCrossing: item[3] ?? false, audibleSignal: item[4] ?? false };
+  }
+  return { to: item.to, accessible: item.accessible ?? true, indoor: item.indoor ?? false,
+    roadCrossing: item.roadCrossing ?? false, audibleSignal: item.audibleSignal ?? false };
+}
 
 export type BuildingEntranceObject = {
   latitude: number;
@@ -161,11 +178,7 @@ export function initRoutingGraph(
     }
 
     for (const item of toIds) {
-      const toId = typeof item === "string" ? item : item[0];
-      const isAccessible = typeof item === "string" ? true : item[1];
-      const isIndoor = typeof item === "string" ? false : item[2] ?? false;
-      const roadCrossing = typeof item === "string" ? false : item[3] ?? false;
-      const audibleSignal = typeof item === "string" ? false : item[4] ?? false;
+      const { to: toId, accessible: isAccessible, indoor: isIndoor, roadCrossing, audibleSignal } = normalizeWalkwayConnection(item);
 
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
@@ -237,7 +250,7 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
       if (!fromNode) return [];
       return toIds
         .map((item) => {
-          const toId = typeof item === "string" ? item : item[0];
+          const toId = normalizeWalkwayConnection(item).to;
           const toNode = campusNodesById.get(toId);
           if (!toNode) return null;
           return [

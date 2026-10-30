@@ -39,3 +39,24 @@ test('crosswalk preference combines with stair and indoor avoidance', async () =
     await assert.rejects(routeBetween(origin, destination, { ...options, avoidInaccessibleCrosswalks: true }), /No local walking route/);
   }
 });
+test('named connections route identically to legacy tuples and load the migrated campus data', async () => {
+  initialize();
+  const legacy = await routeBetween(origin, destination, { avoidInaccessibleCrosswalks: true });
+  const normalize = context.exports.normalizeWalkwayConnection;
+  const connections = { start: ['a'], a: [['b', true, false, true], ['signal', true, false, true, true]],
+    signal: [['b', true, false, true, true]], b: ['end', 'a'] };
+  initRoutingGraph({
+    nodes: [['start', 0, -0.001], ['a', 0, 0], ['b', 0, 0.002], ['end', 0, 0.003], ['signal', 0.001, 0.001]],
+    connections: Object.fromEntries(Object.entries(connections).map(([key, items]) => [key, items.map(normalize)])),
+  }, []);
+  const named = await routeBetween(origin, destination, { avoidInaccessibleCrosswalks: true });
+  assert.equal(JSON.stringify(named), JSON.stringify(legacy));
+  assert.ok(context.exports.getWalkwayDebugOverlay().connections.length > 0);
+  const campus = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/route-points.json'), 'utf8'));
+  for (const items of Object.values(campus.connections)) for (const item of items) {
+    assert.equal(typeof item.to, 'string');
+    for (const flag of ['accessible', 'indoor', 'roadCrossing', 'audibleSignal']) assert.equal(typeof item[flag], 'boolean');
+  }
+  initRoutingGraph(campus, []);
+  assert.ok(context.exports.getWalkwayDebugOverlay().connections.length > 0);
+});
