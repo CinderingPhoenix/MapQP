@@ -76,6 +76,7 @@ type AppSettings = AccessibilitySettings & {
   distanceUnits: DistanceUnits;
   directionStyle: DirectionStyle;
   avoidStairs: boolean;
+  hasAnsweredAvoidStairsPrompt: boolean;
   fontSize: number;
   accessibilitySettingsVersion: 5;
 };
@@ -88,6 +89,9 @@ type SettingsContextType = AppSettings & {
   setFontSize: (size: number) => void;
   setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
+  settingsReadSucceeded: boolean;
+  configureAvoidStairs: (enabled: boolean) => Promise<void>;
+  resetAvoidStairsPreference: () => void;
   deviceAccessibility: DeviceAccessibilitySettings;
   setAccessibilityPreference: (preference: AccessibilityPreference, enabled: boolean) => void;
   resetAccessibilitySettings: () => void;
@@ -101,6 +105,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   distanceUnits: "imperial",
   directionStyle: "natural",
   avoidStairs: false,
+  hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
@@ -148,11 +153,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     DEFAULT_SETTINGS.directionStyle
   );
 
-  const [avoidStairs, setAvoidStairsState] = useState(DEFAULT_SETTINGS.avoidStairs);
+  const [routingPreference, setRoutingPreference] = useState({
+    avoidStairs: false, hasAnsweredAvoidStairsPrompt: false, revision: 0,
+  });
+  const { avoidStairs } = routingPreference;
   const avoidStairsEdit = useRef<boolean | undefined>(undefined);
+  const choiceRevision = useRef(0);
+  const pendingChoices = useRef(new Map<number, { resolve: () => void; reject: (error: unknown) => void; previouslyAnswered: boolean }>());
+  const pendingChoice = pendingChoices.current.get(routingPreference.revision);
+  const hasAnsweredAvoidStairsPrompt = pendingChoice
+    ? pendingChoice.previouslyAnswered : routingPreference.hasAnsweredAvoidStairsPrompt;
   const setAvoidStairs = (enabled: boolean) => {
     avoidStairsEdit.current = enabled;
-    setAvoidStairsState(enabled);
+    setRoutingPreference((previous) => ({ ...previous, avoidStairs: enabled }));
+  };
+  const configureAvoidStairs = (enabled: boolean): Promise<void> => {
+    if (!settingsLoaded || !settingsReadSucceeded) return Promise.reject(new Error("Settings are not ready. Please try again."));
+    const revision = ++choiceRevision.current;
+    avoidStairsEdit.current = enabled;
+    const completion = new Promise<void>((resolve, reject) => pendingChoices.current.set(revision, { resolve, reject, previouslyAnswered: hasAnsweredAvoidStairsPrompt }));
+    setRoutingPreference({ avoidStairs: enabled, hasAnsweredAvoidStairsPrompt: true, revision });
+    return completion;
+  };
+  const resetAvoidStairsPreference = () => {
+    avoidStairsEdit.current = false;
+    setRoutingPreference({ avoidStairs: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
   };
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
@@ -204,7 +229,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           }
 
           if (typeof parsedSettings.avoidStairs === "boolean" && avoidStairsEdit.current === undefined) {
-            setAvoidStairsState(parsedSettings.avoidStairs);
+            setRoutingPreference({
+              avoidStairs: parsedSettings.avoidStairs,
+              hasAnsweredAvoidStairsPrompt: typeof parsedSettings.hasAnsweredAvoidStairsPrompt === "boolean"
+                ? parsedSettings.hasAnsweredAvoidStairsPrompt
+                : parsedSettings.hasAnsweredAvoidStairsPrompt === undefined,
+              revision: 0,
+            });
+          }
+
+          if (typeof parsedSettings.avoidStairs !== "boolean" && avoidStairsEdit.current === undefined &&
+              typeof parsedSettings.hasAnsweredAvoidStairsPrompt === "boolean") {
+            setRoutingPreference({ avoidStairs: false, hasAnsweredAvoidStairsPrompt: parsedSettings.hasAnsweredAvoidStairsPrompt, revision: 0 });
           }
 
           if (
@@ -238,20 +274,50 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       distanceUnits,
       directionStyle,
       avoidStairs,
+      hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
     // Capture this render's snapshot and serialize writes so an older save
     // cannot finish after a newer preference change.
+    const revision = routingPreference.revision;
     saveQueue.current = saveQueue.current.then(async () => {
       try {
         await SecureStore.setItemAsync(
           SETTINGS_STORAGE_KEY,
           JSON.stringify(settings)
         );
+        let acknowledgedChoice = false;
+        for (const [pendingRevision, pending] of pendingChoices.current) {
+          // React may batch rapid choices into one render. The saved latest
+          // snapshot supersedes any earlier choice that had no separate render.
+          if (pendingRevision <= revision) {
+            pending.resolve();
+            pendingChoices.current.delete(pendingRevision);
+            acknowledgedChoice = true;
+          }
+        }
+        if (acknowledgedChoice) {
+          setRoutingPreference((previous) => previous.revision === revision ? { ...previous } : previous);
+        }
       } catch (error) {
         console.error("Failed to save settings:", error);
+        let failedChoice = false;
+        let previouslyAnswered = false;
+        for (const [pendingRevision, pending] of pendingChoices.current) {
+          if (pendingRevision <= revision) {
+            previouslyAnswered = pending.previouslyAnswered;
+            pending.reject(error);
+            pendingChoices.current.delete(pendingRevision);
+            failedChoice = true;
+          }
+        }
+        if (failedChoice) {
+          // A failed answer remains eligible. Its caller keeps the dialog open for retry.
+          setRoutingPreference((previous) => previous.revision === revision
+            ? { ...previous, hasAnsweredAvoidStairsPrompt: previouslyAnswered } : previous);
+        }
       }
     });
   }, [
@@ -260,6 +326,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     distanceUnits,
     directionStyle,
     avoidStairs,
+    routingPreference,
     fontSize,
     settingsLoaded,
     settingsReadSucceeded,
@@ -275,6 +342,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         directionStyle,
         avoidStairs,
         setAvoidStairs,
+        hasAnsweredAvoidStairsPrompt,
+        configureAvoidStairs,
+        resetAvoidStairsPreference,
+        settingsReadSucceeded,
         fontSize,
         setNavigationMode,
         setHasSelectedMode,

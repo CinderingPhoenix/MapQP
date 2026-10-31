@@ -112,7 +112,9 @@ export default function SettingsPage() {
     directionStyle,
     setDirectionStyle,
     avoidStairs,
-    setAvoidStairs,
+    configureAvoidStairs,
+    resetAvoidStairsPreference,
+    settingsReadSucceeded,
     fontSize,
     setFontSize,
     deviceAccessibility,
@@ -222,7 +224,7 @@ export default function SettingsPage() {
                 setHasSelectedMode(false);
                 setDistanceUnits("imperial");
                 setDirectionStyle("natural");
-                setAvoidStairs(false);
+                resetAvoidStairsPreference();
                 setFontSize(1);
                 resetAccessibilitySettings();
 
@@ -929,10 +931,10 @@ export default function SettingsPage() {
               </AccessibleText>
             </View>
             <Switch style={stackControls ? styles.stackedSwitch : undefined}
-              value={avoidStairs} disabled={!settingsLoaded}
-              onValueChange={(enabled) => { if (settingsLoaded) setAvoidStairs(enabled); }}
+              value={avoidStairs} disabled={!settingsLoaded || !settingsReadSucceeded}
+              onValueChange={(enabled) => { if (settingsLoaded && settingsReadSucceeded) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }}
               accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
-              accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded }}
+              accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded || !settingsReadSucceeded }}
               accessibilityHint={"Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." +
                 (navigationMode === "accessibility" ? " Accessibility mode always uses accessible routing." : "")} />
           </View>
