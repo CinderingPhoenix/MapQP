@@ -46,8 +46,11 @@ import defaultBuildings from "../data/wpi-buildings.json";
 export default function Home() {
   useKeepAwake();
   useAuthGuard();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, height: windowHeight } = useWindowDimensions();
+  const [viewportHeight, setViewportHeight] = useState(windowHeight);
   const [textRefresh, setTextRefresh] = useState(0);
+  const [summaryBottom, setSummaryBottom] = useState(0);
+  const [plannerHeight, setPlannerHeight] = useState(160);
 
   // --- Dynamic Map Data State & Hooks (Must be called unconditionally) ---
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -189,14 +192,17 @@ export default function Home() {
   const emphasizedText = accessibilityPreferences.emphasizedTextEnabled;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
       {route && (
         <View
+          onLayout={(event) => setSummaryBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
           style={[
             styles.topRouteSummary,
             increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
             reduceTransparencyEnabled && { backgroundColor: "#fff" },
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
+            directionsExpanded && { height: Math.min(viewportHeight * 0.65,
+              Math.max(120, viewportHeight - plannerHeight - keyboardHeight - (showRecenter ? 72 : 16) - 248)) },
           ]}
         >
           {/* Header Row containing Route Info and a dedicated Cancel Button */}
@@ -382,6 +388,8 @@ export default function Home() {
             heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
+            controlsTop={route ? summaryBottom + 12 : 132}
+            controlsBottom={plannerHeight + keyboardHeight + (showRecenter ? 72 : 16)}
             accessibilityMode
             recenterSignal={recenterSignal}
             onUserDragged={() => setShowRecenter(true)}
@@ -400,6 +408,7 @@ export default function Home() {
 
       {/* Destination picker */}
       <Animated.View
+        onLayout={(event) => setPlannerHeight(event.nativeEvent.layout.height)}
         style={[
           styles.plannerPanel,
           increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
