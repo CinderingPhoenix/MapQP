@@ -35,7 +35,7 @@ export function createNavigationModeRouting(
 
   function observe(state: ModeRoutingState) {
     const active = state.routes[state.index];
-    if (active?.name === "settings") {
+    if (active?.name === "settings" || active?.name === "accessibility-settings") {
       const source = state.routes[state.index - 1];
       if (!source || !isNavigationRoute(source.name)) {
         pending = null;
