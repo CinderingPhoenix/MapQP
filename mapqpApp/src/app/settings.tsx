@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   Switch,
+  type SwitchProps,
   StyleSheet,
   Text,
   type AccessibilityActionEvent,
@@ -31,12 +32,29 @@ type SettingsIconName = keyof typeof MaterialCommunityIcons.glyphMap | "reduce-m
 const ACCESSIBILITY_CONTROLS: {
   label: string; preference: AccessibilityPreference; devicePreference: DeviceAccessibilityPreference;
   icon: SettingsIconName;
+  description: string;
 }[] = [
-  { label: "Reduce Motion", preference: "reduceMotionEnabled", devicePreference: "reduceMotionEnabled", icon: "reduce-motion" },
-  { label: "Bold Text", preference: "boldTextEnabled", devicePreference: "boldTextEnabled", icon: "format-bold" },
-  { label: "Increase Contrast", preference: "increaseContrastEnabled", devicePreference: "darkerSystemColorsEnabled", icon: "contrast-circle" },
-  { label: "Reduce Transparency", preference: "reduceTransparencyEnabled", devicePreference: "reduceTransparencyEnabled", icon: "layers-outline" },
+  { label: "Reduce Motion", preference: "reduceMotionEnabled", devicePreference: "reduceMotionEnabled", icon: "reduce-motion", description: "Reduces animations and movement in MapQP." },
+  { label: "Bold Text", preference: "boldTextEnabled", devicePreference: "boldTextEnabled", icon: "format-bold", description: "Makes supported app text thicker and easier to read." },
+  { label: "Increase Contrast", preference: "increaseContrastEnabled", devicePreference: "darkerSystemColorsEnabled", icon: "contrast-circle", description: "Increases contrast in supported interface elements to make them easier to distinguish." },
+  { label: "Reduce Transparency", preference: "reduceTransparencyEnabled", devicePreference: "reduceTransparencyEnabled", icon: "layers-outline", description: "Uses opaque backgrounds in supported interface elements to improve readability." },
 ];
+
+// Disabled native switches are not consistently discoverable by assistive
+// navigation. Keep one read-only target with the same semantics in that case.
+function SettingsSwitch({ style, disabled, ...props }: SwitchProps) {
+  return <View style={style} accessible={!!disabled}
+    importantForAccessibility={disabled ? "yes" : "auto"}
+    accessibilityRole={disabled ? "switch" : undefined}
+    accessibilityLabel={disabled ? props.accessibilityLabel : undefined}
+    accessibilityValue={disabled ? props.accessibilityValue : undefined}
+    accessibilityState={disabled ? props.accessibilityState : undefined}
+    accessibilityHint={disabled ? props.accessibilityHint : undefined}>
+    <Switch {...props} disabled={disabled} accessible={!disabled}
+      accessibilityElementsHidden={!!disabled}
+      importantForAccessibility={disabled ? "no-hide-descendants" : "yes"} />
+  </View>;
+}
 
 const KEYS_TO_DELETE = [
   "mapqp_microsoft_session",
@@ -669,6 +687,8 @@ export default function SettingsPage() {
                 key={`settings-text-15-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
                 accessible={false}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
                 style={[
                   styles.smallA,
                   increasedContrast && styles.secondaryTextHighContrast,
@@ -685,8 +705,8 @@ export default function SettingsPage() {
                 accessibilityLabel="Text size"
                 accessibilityHint={
                   Platform.OS === "ios"
-                    ? "Swipe up or down to adjust text size"
-                    : "Use the increase or decrease accessibility action to adjust text size"
+                    ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
+                    : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"
                 }
                 accessibilityValue={{
                   min: 80,
@@ -711,6 +731,7 @@ export default function SettingsPage() {
                   maximumTrackTintColor="#D1D5DB"
                   thumbTintColor="#6848A0"
                   accessible={false}
+                  accessibilityElementsHidden
                   importantForAccessibility="no-hide-descendants"
                 />
               </View>
@@ -720,6 +741,8 @@ export default function SettingsPage() {
                 key={`settings-text-16-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
                 accessible={false}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
                 style={[
                   styles.largeA,
                   increasedContrast && styles.secondaryTextHighContrast,
@@ -734,6 +757,9 @@ export default function SettingsPage() {
               boldTextEnabled={accessibilityPreferences.boldTextEnabled}
               key={`settings-text-17-${fontScale}`}
               maxFontSizeMultiplier={2.5}
+              accessible={false}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
               style={[
                 styles.fontSizeValue,
                 increasedContrast && styles.secondaryTextHighContrast,
@@ -777,8 +803,10 @@ export default function SettingsPage() {
         <View style={[styles.settingsCard, styles.deviceSettingsCard,
           increasedContrast && styles.settingsCardHighContrast]}>
           <View style={styles.deviceSettingRow} accessible accessibilityRole="text"
+            accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
             accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.`}>
-            <View style={[styles.settingLabelRow, styles.deviceSettingTitle]}>
+            <View style={[styles.settingLabelRow, styles.deviceSettingTitle]}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <SettingIcon name="account-voice" highContrast={increasedContrast} />
               <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 maxFontSizeMultiplier={2.5}
@@ -788,6 +816,7 @@ export default function SettingsPage() {
             </View>
             <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
               maxFontSizeMultiplier={2.5}
+              accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
               style={[...deviceSettingStyles("screenReaderEnabled"), { fontSize: 14 * fontSize }]}>
               {deviceSettingValue("screenReaderEnabled")}
             </AccessibleText>
@@ -798,18 +827,29 @@ export default function SettingsPage() {
               { fontSize: 13 * fontSize }]}>
             VoiceOver and TalkBack are controlled in device settings. MapQP always keeps screen-reader support active.
           </AccessibleText>
-          {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, icon }) => {
+          {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, icon, description }) => {
             const detectedPreference = preference === "increaseContrastEnabled" && Platform.OS === "android"
               ? "highTextContrastEnabled" : devicePreference;
             const control = accessibilityControlState(deviceAccessibility, detectedPreference,
               savedAccessibilityPreferences[preference], settingsLoaded);
+            const status = deviceAccessibility.detectionStatus[detectedPreference];
+            const deviceControlled = deviceAccessibility[detectedPreference];
+            // Native checked state conveys on/off; the value explains source and
+            // detection availability, including when a switch cannot be edited.
+            const sourceDescription = !settingsLoaded || status === "loading" ? control.explanation
+              : deviceControlled ? (status === "unavailable"
+                ? "Device status unavailable. Using the last detected device preference."
+                : "Controlled by device settings.")
+              : status === "unavailable" ? "Device status unavailable. Saved MapQP preference."
+              : "Saved MapQP preference.";
             return (
               <View key={preference}>
                 <Divider />
                 <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
                   stackControls && styles.accessibilitySourceRowStacked]}>
                   <View style={[styles.accessibilitySourceLabel,
-                    stackControls && styles.accessibilitySourceLabelStacked]} accessible={false}>
+                    stackControls && styles.accessibilitySourceLabelStacked]} accessible={false}
+                    accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <View style={styles.settingLabelRow}>
                       <SettingIcon name={icon} highContrast={increasedContrast} />
                       <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
@@ -825,7 +865,8 @@ export default function SettingsPage() {
                       {control.explanation}
                     </AccessibleText>
                   </View>
-                  <Switch
+                  <SettingsSwitch
+                    accessible importantForAccessibility="yes"
                     style={stackControls ? styles.stackedSwitch : undefined}
                     value={control.enabled}
                     disabled={control.disabled}
@@ -834,9 +875,11 @@ export default function SettingsPage() {
                     }}
                     accessibilityRole="switch"
                     accessibilityLabel={label}
-                    accessibilityValue={{ text: control.explanation }}
+                    accessibilityValue={{ text: sourceDescription }}
                     accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
-                    accessibilityHint={control.disabled ? undefined : "Changes only your saved MapQP preference"}
+                    accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
+                      : control.disabled ? "This preference cannot be changed while settings are loading."
+                      : "Changes only your saved MapQP preference."}`}
                   />
                 </View>
               </View>
@@ -879,8 +922,8 @@ export default function SettingsPage() {
           style={styles.landingButton}
           onPress={returnToLandingPage}
           accessibilityRole="button"
-          accessibilityLabel="Back to landing page"
-          accessibilityHint="Leaves navigation and returns to the landing page"
+          accessibilityLabel="Back to Home"
+          accessibilityHint="Returns to the home screen."
         >
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
@@ -888,7 +931,7 @@ export default function SettingsPage() {
             maxFontSizeMultiplier={2.5}
             style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
           >
-            Back to landing page
+            Back to Home
           </AccessibleText>
         </TouchableOpacity>
 
@@ -930,7 +973,7 @@ export default function SettingsPage() {
                 {navigationMode === "accessibility" && "\nAccessibility mode always uses accessible routing."}
               </AccessibleText>
             </View>
-            <Switch style={stackControls ? styles.stackedSwitch : undefined}
+            <SettingsSwitch accessible importantForAccessibility="yes" style={stackControls ? styles.stackedSwitch : undefined}
               value={avoidStairs} disabled={!settingsLoaded || !settingsReadSucceeded}
               onValueChange={(enabled) => { if (settingsLoaded && settingsReadSucceeded) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }}
               accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
