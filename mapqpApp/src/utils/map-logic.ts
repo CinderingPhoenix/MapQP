@@ -333,7 +333,12 @@ export function useMapNavigation(buildings: Building[]) {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle, navigationMode } = useSettings();
+  const { distanceUnits, directionStyle, navigationMode, avoidStairs = false } = useSettings();
+  const routingPreferencesRef = useRef({ navigationMode, avoidStairs });
+  routingPreferencesRef.current = { navigationMode, avoidStairs };
+  const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean } | null>(null);
+  const routeRequestIdRef = useRef(0);
+  useEffect(() => () => { routeRequestIdRef.current += 1; }, []);
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
@@ -341,6 +346,9 @@ export function useMapNavigation(buildings: Building[]) {
 
   const handleCancelRoute = useCallback(() => {
     isRouteCancelledRef.current = true;
+    routeRequestIdRef.current += 1;
+    routePolicyRef.current = null;
+    setRouteLoading(false);
     destinationBuildingRef.current = "";
     autoRouteKeyRef.current = "";
     routeGeometryRef.current = null;
@@ -366,7 +374,7 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => {
     if (prevNavigationModeRef.current !== navigationMode) {
       prevNavigationModeRef.current = navigationMode;
-      if (route) {
+      if (route || routePolicyRef.current) {
         handleCancelRoute();
       }
     }
@@ -398,8 +406,13 @@ export function useMapNavigation(buildings: Building[]) {
     }, 50);
   }, []);
 
-  const planRoute = useCallback(async (currentCoords?: Coordinates) => {
+  const planRoute = useCallback(async (currentCoords?: Coordinates, newRoute = false) => {
     const targetBuilding = destinationBuildingRef.current;
+    const requestId = ++routeRequestIdRef.current;
+    const requestMode = navigationMode;
+    const isCurrentRequest = () => requestId === routeRequestIdRef.current &&
+      destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current &&
+      routingPreferencesRef.current.navigationMode === requestMode;
     setRouteError("");
     
     const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
@@ -409,10 +422,16 @@ export function useMapNavigation(buildings: Building[]) {
     if (!selectedBuilding) return setRouteError("Choose a WPI destination building.");
     if (!activeCoords) return setRouteError("Waiting for your current location before planning.");
     
+    if (!routePolicyRef.current || routePolicyRef.current.buildingId !== targetBuilding) {
+      const { navigationMode, avoidStairs } = routingPreferencesRef.current;
+      const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
+      routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly };
+    }
+    const accessibleOnly = routePolicyRef.current.accessibleOnly;
     setRouteLoading(true);
+    isReroutingRef.current = true;
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const accessibleOnly = navigationMode === "accessibility";
       const entrances = selectedBuilding.entrances.filter(
         (entrance) => !accessibleOnly || entrance.accessibility
       );
@@ -435,9 +454,11 @@ export function useMapNavigation(buildings: Building[]) {
           return null;
         }
       }));
-      if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
+      if (!isCurrentRequest()) return;
       const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
-      if (!availableRoutes.length) throw new Error("The walking route service could not find a route. Try again.");
+      if (!availableRoutes.length) throw new Error(accessibleOnly
+        ? "No route was found using paths and entrances marked accessible."
+        : "The walking route service could not find a route. Try again.");
       const selectedRoute = fastestRoute(availableRoutes);
       setRoute(selectedRoute);
       setRouteDestinationBuilding(targetBuilding);
@@ -470,13 +491,17 @@ export function useMapNavigation(buildings: Building[]) {
         }
       }
     } catch (routeRequestError) {
-      if (destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current) {
+      if (isCurrentRequest()) {
+        // A failed new request must not leave an older route looking like its result.
+        if (newRoute) handleCancelRoute();
         autoRouteKeyRef.current = "";
         setRouteError(routeRequestError instanceof Error ? routeRequestError.message : "The route could not be planned. Try again.");
       }
     } finally {
-      setRouteLoading(false);
-      isReroutingRef.current = false;
+      if (isCurrentRequest()) {
+        setRouteLoading(false);
+        isReroutingRef.current = false;
+      }
     }
   }, [
     coordinates,
@@ -486,6 +511,7 @@ export function useMapNavigation(buildings: Building[]) {
     distanceUnits,
     directionStyle,
     startRoutePreviewCountdown,
+    handleCancelRoute,
   ]);
 
   const planRouteRef = useRef(planRoute);
@@ -564,11 +590,18 @@ export function useMapNavigation(buildings: Building[]) {
   }, [coordinates, destinationBuilding, planRoute]);
 
   const handleDestinationChange = useCallback((buildingId: string) => {
+    if (!buildingId) { handleCancelRoute(); return; }
+    routeRequestIdRef.current += 1;
     isRouteCancelledRef.current = false;
-    autoRouteKeyRef.current = "";
+    destinationBuildingRef.current = buildingId;
+    const { navigationMode, avoidStairs } = routingPreferencesRef.current;
+    const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
+    routePolicyRef.current = { buildingId, accessibleOnly };
+    // The explicit request below owns this selection; avoid a duplicate effect request.
+    autoRouteKeyRef.current = coordinates ? `current::${buildingId}` : "";
     setDestinationBuilding(buildingId);
-    if (buildingId) void planRoute();
-  }, [planRoute]);
+    void planRoute(undefined, true);
+  }, [coordinates, planRoute, handleCancelRoute]);
 
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);

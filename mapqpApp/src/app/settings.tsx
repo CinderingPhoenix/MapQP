@@ -83,7 +83,7 @@ function SettingIcon({ name }: {
     ) : (
       <View style={[styles.accessibilityIconTile, {
         width: iconSize, height: iconSize, borderRadius: iconSize * 0.22,
-        backgroundColor: name === "compass" ? "#B32635" : name === "navigation" ? "#7950B2"
+        backgroundColor: name === "stairs" ? "#C45100" : name === "compass" ? "#B32635" : name === "navigation" ? "#7950B2"
           : name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF",
       }]}>
         <MaterialCommunityIcons name={name} size={Math.round(iconSize * 0.78)} color="#FFFFFF"
@@ -96,6 +96,7 @@ function SettingIcon({ name }: {
 export default function SettingsPage() {
   useAuthGuard();
   const { fontScale, width } = useWindowDimensions();
+  const [activeTab, setActiveTab] = useState<"general" | "routing">("general");
   useFocusEffect(
     useCallback(() => {
       Speech.stop();
@@ -110,6 +111,8 @@ export default function SettingsPage() {
     setDistanceUnits,
     directionStyle,
     setDirectionStyle,
+    avoidStairs,
+    setAvoidStairs,
     fontSize,
     setFontSize,
     deviceAccessibility,
@@ -219,6 +222,7 @@ export default function SettingsPage() {
                 setHasSelectedMode(false);
                 setDistanceUnits("imperial");
                 setDirectionStyle("natural");
+                setAvoidStairs(false);
                 setFontSize(1);
                 resetAccessibilitySettings();
 
@@ -283,10 +287,28 @@ export default function SettingsPage() {
         <View style={styles.headerSpacer} />
       </View>
 
+      <View style={styles.settingsTabs} accessibilityRole="tablist">
+        {(["general", "routing"] as const).map((tab) => {
+          const selected = activeTab === tab;
+          const label = tab === "general" ? "General" : "Routing";
+          return <TouchableOpacity key={tab} accessibilityRole="tab" accessibilityLabel={label}
+            accessibilityState={{ selected }} onPress={() => setActiveTab(tab)}
+            style={[styles.settingsTab, selected && styles.settingsTabSelected]}>
+            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
+              style={[styles.settingsTabLabel, { fontSize: 17 * fontSize },
+                selected && styles.settingsTabLabelSelected]}>
+              {label}
+            </AccessibleText>
+          </TouchableOpacity>;
+        })}
+      </View>
+
       <ScrollView
+        key={activeTab}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {activeTab === "general" ? <>
         {/* Navigation Mode */}
         <AccessibleText
           boldTextEnabled={accessibilityPreferences.boldTextEnabled}
@@ -598,6 +620,7 @@ export default function SettingsPage() {
               </TouchableOpacity>
             </View>
           </View>
+
         </View>
 
         {/* Display */}
@@ -882,6 +905,38 @@ export default function SettingsPage() {
             Delete all local data
           </AccessibleText>
         </TouchableOpacity>
+        </> : <View style={[styles.settingsCard, styles.preferencesCard,
+          increasedContrast && styles.settingsCardHighContrast]}>
+          <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
+            stackControls && styles.accessibilitySourceRowStacked]}>
+            <View style={[styles.accessibilitySourceLabel,
+              stackControls && styles.accessibilitySourceLabelStacked]} accessible={false}>
+              <View style={styles.settingLabelRow}>
+                <SettingIcon name="stairs" highContrast={increasedContrast} />
+                <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                  maxFontSizeMultiplier={2.5} accessible={false}
+                  style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * fontSize }]}>
+                  Avoid Stairs &amp; Use Accessible Entrances
+                </AccessibleText>
+              </View>
+              <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                maxFontSizeMultiplier={2.5} accessible={false}
+                style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
+                  { fontSize: 13 * fontSize }]}>
+                Uses paths and building entrances marked accessible in the map data.
+                {"\n"}Changes apply when you start a new route.
+                {navigationMode === "accessibility" && "\nAccessibility mode always uses accessible routing."}
+              </AccessibleText>
+            </View>
+            <Switch style={stackControls ? styles.stackedSwitch : undefined}
+              value={avoidStairs} disabled={!settingsLoaded}
+              onValueChange={(enabled) => { if (settingsLoaded) setAvoidStairs(enabled); }}
+              accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
+              accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded }}
+              accessibilityHint={"Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." +
+                (navigationMode === "accessibility" ? " Accessibility mode always uses accessible routing." : "")} />
+          </View>
+        </View>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -892,6 +947,13 @@ function Divider() {
 }
 
 const styles = StyleSheet.create({
+  settingsTabs: { flexDirection: "row", marginHorizontal: 18, marginTop: 16, padding: 4,
+    gap: 4, borderWidth: 2, borderColor: "#761723", borderRadius: 12, backgroundColor: "#F9E5E7" },
+  settingsTab: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 12, paddingHorizontal: 8,
+    alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent", borderRadius: 8 },
+  settingsTabSelected: { backgroundColor: "#AC2B37", borderColor: "#761723" },
+  settingsTabLabel: { color: "#761723", fontWeight: "600", textAlign: "center", flexShrink: 1 },
+  settingsTabLabelSelected: { color: "#FFFFFF", fontWeight: "800", textDecorationLine: "underline" },
   accessibilityIconTile: { alignItems: "center", justifyContent: "center" },
   reduceMotionTile: { backgroundColor: "#30D158" },
   reduceMotionDot: { position: "absolute", backgroundColor: "#FFFFFF" },

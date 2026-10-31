@@ -75,6 +75,7 @@ type AppSettings = AccessibilitySettings & {
   hasSelectedMode: boolean;
   distanceUnits: DistanceUnits;
   directionStyle: DirectionStyle;
+  avoidStairs: boolean;
   fontSize: number;
   accessibilitySettingsVersion: 5;
 };
@@ -85,6 +86,7 @@ type SettingsContextType = AppSettings & {
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
+  setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
   deviceAccessibility: DeviceAccessibilitySettings;
   setAccessibilityPreference: (preference: AccessibilityPreference, enabled: boolean) => void;
@@ -98,6 +100,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   hasSelectedMode: false,
   distanceUnits: "imperial",
   directionStyle: "natural",
+  avoidStairs: false,
   fontSize: 1,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
@@ -145,6 +148,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     DEFAULT_SETTINGS.directionStyle
   );
 
+  const [avoidStairs, setAvoidStairsState] = useState(DEFAULT_SETTINGS.avoidStairs);
+  const avoidStairsEdit = useRef<boolean | undefined>(undefined);
+  const setAvoidStairs = (enabled: boolean) => {
+    avoidStairsEdit.current = enabled;
+    setAvoidStairsState(enabled);
+  };
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -194,6 +203,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setDirectionStyle(parsedSettings.directionStyle);
           }
 
+          if (typeof parsedSettings.avoidStairs === "boolean" && avoidStairsEdit.current === undefined) {
+            setAvoidStairsState(parsedSettings.avoidStairs);
+          }
+
           if (
             typeof parsedSettings.fontSize === "number" &&
             parsedSettings.fontSize >= 0.8 &&
@@ -224,6 +237,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       hasSelectedMode,
       distanceUnits,
       directionStyle,
+      avoidStairs,
       fontSize,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
@@ -245,6 +259,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     hasSelectedMode,
     distanceUnits,
     directionStyle,
+    avoidStairs,
     fontSize,
     settingsLoaded,
     settingsReadSucceeded,
@@ -258,6 +273,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         hasSelectedMode,
         distanceUnits,
         directionStyle,
+        avoidStairs,
+        setAvoidStairs,
         fontSize,
         setNavigationMode,
         setHasSelectedMode,
