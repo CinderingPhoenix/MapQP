@@ -7,8 +7,8 @@ import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Vibration } from "react-native";
-import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
-import { useFocusEffect } from "expo-router"; // ✅ Use Expo Router's hook instead
+import { getRoutingPreferences, NavigationPoint, routeBetween, WalkingRoute } from "./routing";
+import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
 
@@ -377,7 +377,12 @@ export function useMapNavigation(buildings: Building[]) {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle, navigationMode } = useSettings();
+  const { distanceUnits, directionStyle, navigationMode, avoidStairs = false } = useSettings();
+  const routingPreferencesRef = useRef({ navigationMode, avoidStairs });
+  routingPreferencesRef.current = { navigationMode, avoidStairs };
+  const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean } | null>(null);
+  const routeRequestIdRef = useRef(0);
+  useEffect(() => () => { routeRequestIdRef.current += 1; }, []);
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
@@ -385,6 +390,9 @@ export function useMapNavigation(buildings: Building[]) {
 
   const handleCancelRoute = useCallback(() => {
     isRouteCancelledRef.current = true;
+    routeRequestIdRef.current += 1;
+    routePolicyRef.current = null;
+    setRouteLoading(false);
     destinationBuildingRef.current = "";
     autoRouteKeyRef.current = "";
     routeGeometryRef.current = null;
@@ -409,7 +417,7 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => {
     if (prevNavigationModeRef.current !== navigationMode) {
       prevNavigationModeRef.current = navigationMode;
-      if (route) {
+      if (route || routePolicyRef.current) {
         handleCancelRoute();
       }
     }
@@ -441,8 +449,13 @@ export function useMapNavigation(buildings: Building[]) {
     }, 50);
   }, []);
 
-  const planRoute = useCallback(async (currentCoords?: Coordinates) => {
+  const planRoute = useCallback(async (currentCoords?: Coordinates, newRoute = false) => {
     const targetBuilding = destinationBuildingRef.current;
+    const requestId = ++routeRequestIdRef.current;
+    const requestMode = navigationMode;
+    const isCurrentRequest = () => requestId === routeRequestIdRef.current &&
+      destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current &&
+      routingPreferencesRef.current.navigationMode === requestMode;
     setRouteError("");
     
     const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
@@ -452,12 +465,22 @@ export function useMapNavigation(buildings: Building[]) {
     if (!selectedBuilding) return setRouteError("Choose a WPI destination building.");
     if (!activeCoords) return setRouteError("Waiting for your current location before planning.");
     
+    if (!routePolicyRef.current || routePolicyRef.current.buildingId !== targetBuilding) {
+      const { navigationMode, avoidStairs } = routingPreferencesRef.current;
+      const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
+      routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly };
+    }
+    const accessibleOnly = routePolicyRef.current.accessibleOnly;
     setRouteLoading(true);
+    isReroutingRef.current = true;
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const accessibleOnly = navigationMode === "accessibility";
+      const preferences = getRoutingPreferences({
+        avoidStairs: accessibleOnly,
+        avoidInaccessibleCrosswalks: requestMode === "accessibility",
+      });
       const entrances = selectedBuilding.entrances.filter(
-        (entrance) => !accessibleOnly || entrance.accessibility
+        (entrance) => !preferences.avoidStairs || entrance.accessibility
       );
       if (entrances.length === 0) {
         throw new Error("This building has no accessible entrance.");
@@ -470,7 +493,7 @@ export function useMapNavigation(buildings: Building[]) {
         };
         try {
           return {
-            ...(await routeBetween(origin, destination, { accessibleOnly })),
+            ...(await routeBetween(origin, destination, preferences)),
             origin,
             destination,
           };
@@ -478,7 +501,7 @@ export function useMapNavigation(buildings: Building[]) {
           return null;
         }
       }));
-      if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
+      if (!isCurrentRequest()) return;
       const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
       if (!availableRoutes.length) throw new Error("The walking route service could not find a route. Try again.");
       const fastest = fastestRoute(availableRoutes);
@@ -517,24 +540,29 @@ export function useMapNavigation(buildings: Building[]) {
         }
       }
     } catch (routeRequestError) {
-      if (destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current) {
+      if (isCurrentRequest()) {
+        // A failed new request must not leave an older route looking like its result.
+        if (newRoute) handleCancelRoute();
         autoRouteKeyRef.current = "";
         setRouteError(routeRequestError instanceof Error ? routeRequestError.message : "The route could not be planned. Try again.");
       }
     } finally {
-      setRouteLoading(false);
-      isReroutingRef.current = false;
+      if (isCurrentRequest()) {
+        setRouteLoading(false);
+        isReroutingRef.current = false;
+      }
     }
   }, [
     coordinates,
     buildings,
-    navigationMode,
     navigationSpeech,
     distanceUnits,
     directionStyle,
     startRoutePreviewCountdown,
+    handleCancelRoute,
     isFocused,
     buildings,
+    handleCancelRoute,
   ]);
 
   const planRouteRef = useRef(planRoute);
@@ -613,11 +641,18 @@ export function useMapNavigation(buildings: Building[]) {
   }, [coordinates, destinationBuilding, planRoute]);
 
   const handleDestinationChange = useCallback((buildingId: string) => {
+    if (!buildingId) { handleCancelRoute(); return; }
+    routeRequestIdRef.current += 1;
     isRouteCancelledRef.current = false;
-    autoRouteKeyRef.current = "";
+    destinationBuildingRef.current = buildingId;
+    const { navigationMode, avoidStairs } = routingPreferencesRef.current;
+    const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
+    routePolicyRef.current = { buildingId, accessibleOnly };
+    // The explicit request below owns this selection; avoid a duplicate effect request.
+    autoRouteKeyRef.current = coordinates ? `current::${buildingId}` : "";
     setDestinationBuilding(buildingId);
-    if (buildingId) void planRoute();
-  }, [planRoute]);
+    void planRoute(undefined, true);
+  }, [coordinates, planRoute, handleCancelRoute]);
 
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);

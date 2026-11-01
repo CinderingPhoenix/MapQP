@@ -1,6 +1,7 @@
 // tutorial-modal.tsx
 
 import { useState, useEffect } from "react";
+import { useModalDismissal } from "./avoid-stairs-prompt";
 import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle } from "react-native";
 
 interface HighlightItem {
@@ -115,9 +116,11 @@ const tutorialPages: TutorialPage[] = [
 interface TutorialModalProps {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
 }
 
-export function TutorialModal({ visible, onClose }: TutorialModalProps) {
+export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProps) {
+  const nativeDismiss = useModalDismissal(visible, onDismiss);
   const [currentPage, setCurrentPage] = useState(0);
 
   // Reset to page 0 every time the modal is opened
@@ -148,7 +151,8 @@ export function TutorialModal({ visible, onClose }: TutorialModalProps) {
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="none"
+      onDismiss={nativeDismiss}
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
