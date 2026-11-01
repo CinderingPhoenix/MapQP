@@ -29,7 +29,7 @@ test('all eight preference combinations apply together and have distinct cached 
     const options = { avoidStairs: !!(mask & 1), avoidIndoorRoutes: !!(mask & 2), avoidInaccessibleCrosswalks: !!(mask & 4) };
     for (const [start, end] of [[origin,destination],[destination,origin]]) {
       const route = await routeBetween(start, end, options);
-      assert.equal(visits(route,0.001), options.avoidStairs || options.avoidInaccessibleCrosswalks, JSON.stringify(options));
+      assert.equal(visits(route,0.001), options.avoidInaccessibleCrosswalks, JSON.stringify(options));
       assert.equal(visits(route,0.003), options.avoidStairs, JSON.stringify(options));
       assert.equal(visits(route,0.005), options.avoidIndoorRoutes, JSON.stringify(options));
     }
@@ -46,4 +46,23 @@ test('named flags match legacy connections without a separate audible flag', () 
   const normalize = context.exports.normalizeWalkwayConnection;
   assert.equal(JSON.stringify(normalize(['b',false,false,true])), JSON.stringify(normalize(edge('b',false,false,true))));
   assert.equal('audibleSignal' in normalize(edge('b')),false);
+});
+
+test('Faraday to Fuller avoids stairs via the ramp in both directions', async () => {
+  const buildings = require('../src/data/wpi-buildings.json');
+  initRoutingGraph(require('../src/data/route-points.json'), buildings);
+  const faraday = buildings.find(building => building.name === 'Faraday Hall');
+  const fuller = buildings.find(building => building.name === 'Fuller Laboratories');
+  for (const start of faraday.entrances) {
+    for (const end of fuller.entrances) {
+      assert.equal(start.accessibility && end.accessibility, true);
+      for (const [origin, destination] of [[start, end], [end, start]]) {
+        const route = await routeBetween(origin, destination, { avoidStairs: true });
+        assert.ok(route.distance > 0 && route.distance < 1000);
+        assert.ok(route.navigationPath.some(point =>
+          point.coordinate[0] === 42.275245 && point.coordinate[1] === -71.806161
+        ), 'route uses the Fuller ramp');
+      }
+    }
+  }
 });

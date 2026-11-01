@@ -458,7 +458,10 @@ export function useMapNavigation(buildings: Building[]) {
     isReroutingRef.current = true;
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const preferences = getRoutingPreferences();
+      const preferences = getRoutingPreferences({
+        avoidStairs: accessibleOnly,
+        avoidInaccessibleCrosswalks: requestMode === "accessibility",
+      });
       const entrances = selectedBuilding.entrances.filter(
         (entrance) => !preferences.avoidStairs || entrance.accessibility
       );

@@ -1,16 +1,11 @@
-// Temporary preferences for testing; replace with settings values when wired up.
-const avoidStairs = false;
-const avoidIndoorRoutes = false;
-const avoidInaccessibleCrosswalks = false;
-
 export type RoutingPreferences = {
   avoidStairs: boolean;
   avoidIndoorRoutes: boolean;
   avoidInaccessibleCrosswalks: boolean;
 };
 
-export function getRoutingPreferences(): RoutingPreferences {
-  return { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+export function getRoutingPreferences(settings: Partial<RoutingPreferences> = {}): RoutingPreferences {
+  return { avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, ...settings };
 }
 
 // --- Types ---
@@ -440,7 +435,8 @@ function smoothPolyline(points: [number, number][], iterations = 2, tension = 0.
 
 function isEdgeAllowed(edge: GraphEdge, preferences: RoutingPreferences): boolean {
   // Every enabled preference must pass; one preference cannot override another.
-  return (!preferences.avoidStairs || edge.accessible) &&
+  // Crossing accessibility is controlled separately from stair avoidance.
+  return (!preferences.avoidStairs || edge.roadCrossing || edge.accessible) &&
     (!preferences.avoidIndoorRoutes || !edge.indoor) &&
     (!preferences.avoidInaccessibleCrosswalks || !edge.roadCrossing || edge.accessible);
 }
