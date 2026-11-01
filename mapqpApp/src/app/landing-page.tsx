@@ -20,7 +20,7 @@ const TUTORIAL_SHOWN_KEY = "mapqp_tutorial_shown_once";
 export default function LandingPage() {
   useLocationWarmup();
   const { isChecking: authChecking } = useAuthGuard();
-  const { setNavigationMode, setHasSelectedMode, settingsLoaded, settingsReadSucceeded, hasAnsweredAvoidStairsPrompt } = useSettings();
+  const { setNavigationMode, setHasSelectedMode, settingsLoaded, settingsReadSucceeded, hasAnsweredAvoidStairsPrompt, accessibilityNeed, setAccessibilityNeed } = useSettings();
   const { fontScale, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
@@ -34,6 +34,9 @@ export default function LandingPage() {
   const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
 
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showAccessibilityChoice, setShowAccessibilityChoice] = useState(false);
+  const [selectedNeed, setSelectedNeed] = useState<AccessibilityNeed | null>(accessibilityNeed);
+  const pendingAccessibilityNavigation = useRef(false);
   const [tutorialReady, setTutorialReady] = useState(false);
   const [tutorialReadSucceeded, setTutorialReadSucceeded] = useState(false);
   const [tutorialDismissed, setTutorialDismissed] = useState(true);

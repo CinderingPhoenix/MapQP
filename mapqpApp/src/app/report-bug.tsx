@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useRef, useState, type ComponentRef } from "react";
 import {
   AccessibilityInfo,
   KeyboardAvoidingView,
@@ -10,7 +10,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  type ScrollViewInstance,
   type TextProps,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -34,7 +33,7 @@ export default function ReportBugPage() {
   const { fontSize } = useSettings();
   const preferences = useAccessibilityPreferences();
   const contrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
-  const scroll = useRef<ScrollViewInstance>(null);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const [draft, setDraft] = useState<BugReportDraft>({
     category: null, description: "", stepsToReproduce: "",
   });

@@ -107,9 +107,20 @@ type WalkwaySegment = { from: GraphNode; to: GraphNode; edge: GraphEdge };
 let routingSegments: WalkwaySegment[] | null = null;
 
 export function initRoutingGraph(
-  routePointsData: { nodes: [string, number, number][]; connections: Record<string, WalkwayConnectionItem[]> },
+  routePointsData: { nodes: (string | number)[][]; connections: Record<string, WalkwayConnectionItem[]> },
   buildingData: BuildingInput[]
 ) {
+  // JSON imports infer arrays rather than tuples. Validate at the data boundary.
+  const validatedNodes: GraphNode[] = routePointsData.nodes.map((node, index) => {
+    const [id, latitude, longitude] = node;
+    if (node.length !== 3 || typeof id !== "string" ||
+        typeof latitude !== "number" || !Number.isFinite(latitude) ||
+        typeof longitude !== "number" || !Number.isFinite(longitude)) {
+      throw new Error(`Invalid walkway node at index ${index}: expected [id, latitude, longitude].`);
+    }
+    return { id, latitude, longitude };
+  });
+
   // Clear existing state for fresh over-the-air updates
   routeCache.clear();
   routingSegments = null;
@@ -117,11 +128,7 @@ export function initRoutingGraph(
   campusNodesById.clear();
 
   // Map tuple nodes [id, latitude, longitude] to GraphNode objects
-  walkwayNodes = routePointsData.nodes.map(([id, latitude, longitude]) => ({
-    id,
-    latitude,
-    longitude,
-  }));
+  walkwayNodes = validatedNodes;
   walkwayConnections = routePointsData.connections;
 
   // Map building entrances supporting both object and tuple formats
@@ -379,10 +386,12 @@ function findLocalWalkingRoute(
     if (!parent) throw new Error("The local walking route is incomplete.");
     path.push(parent);
   }
+  // Predecessors reconstruct from destination to origin; guidance follows travel order.
+  path.reverse();
 
   // Preserve every graph vertex so the displayed line follows mapped walkways.
   const geometry = path.map((nodeId) => {
-    const node = nodes.find((candidate) => candidate.id === nodeId)!;
+    const node = nodeById(nodeId);
     return [node.latitude, node.longitude] as [number, number];
   });
 

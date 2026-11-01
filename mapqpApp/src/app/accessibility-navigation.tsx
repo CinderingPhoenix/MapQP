@@ -395,7 +395,7 @@ export default function Home() {
             onToggleMute={toggleMute}
             onOpenSettings={() =>
               router.push({
-                pathname: "/accessibility-settings",
+                pathname: "/settings",
                 params: { from: "accessibility-navigation" },
               })
             }
@@ -445,7 +445,7 @@ export default function Home() {
           accessibilityControls
           onOpenSettings={() =>
             router.push({
-              pathname: "/accessibility-settings",
+              pathname: "/settings",
               params: { from: "accessibility-navigation" },
             })
           }

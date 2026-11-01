@@ -377,10 +377,10 @@ export function useMapNavigation(buildings: Building[]) {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle, navigationMode, avoidStairs = false } = useSettings();
-  const routingPreferencesRef = useRef({ navigationMode, avoidStairs });
-  routingPreferencesRef.current = { navigationMode, avoidStairs };
-  const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean } | null>(null);
+  const { distanceUnits, directionStyle, navigationMode, avoidIndoorRoutes, avoidInaccessibleCrosswalks, avoidStairs = false } = useSettings();
+  const routingPreferencesRef = useRef({ navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks });
+  routingPreferencesRef.current = { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+  const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean; avoidIndoorRoutes: boolean; avoidInaccessibleCrosswalks: boolean } | null>(null);
   const routeRequestIdRef = useRef(0);
   useEffect(() => () => { routeRequestIdRef.current += 1; }, []);
 
@@ -466,18 +466,19 @@ export function useMapNavigation(buildings: Building[]) {
     if (!activeCoords) return setRouteError("Waiting for your current location before planning.");
     
     if (!routePolicyRef.current || routePolicyRef.current.buildingId !== targetBuilding) {
-      const { navigationMode, avoidStairs } = routingPreferencesRef.current;
+      const { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
       const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
-      routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly };
+      routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
     }
-    const accessibleOnly = routePolicyRef.current.accessibleOnly;
+    const { accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routePolicyRef.current;
     setRouteLoading(true);
     isReroutingRef.current = true;
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
       const preferences = getRoutingPreferences({
         avoidStairs: accessibleOnly,
-        avoidInaccessibleCrosswalks: requestMode === "accessibility",
+        avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks: requestMode === "accessibility" || avoidInaccessibleCrosswalks,
       });
       const entrances = selectedBuilding.entrances.filter(
         (entrance) => !preferences.avoidStairs || entrance.accessibility
@@ -645,9 +646,9 @@ export function useMapNavigation(buildings: Building[]) {
     routeRequestIdRef.current += 1;
     isRouteCancelledRef.current = false;
     destinationBuildingRef.current = buildingId;
-    const { navigationMode, avoidStairs } = routingPreferencesRef.current;
+    const { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
     const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
-    routePolicyRef.current = { buildingId, accessibleOnly };
+    routePolicyRef.current = { buildingId, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
     // The explicit request below owns this selection; avoid a duplicate effect request.
     autoRouteKeyRef.current = coordinates ? `current::${buildingId}` : "";
     setDestinationBuilding(buildingId);

@@ -7,7 +7,7 @@ import {
   type ModeReplacement,
 } from "../utils/navigation-mode-routing";
 
-type RootNavigation = NativeStackNavigationProp<Record<string, undefined>>;
+type RootNavigation = NativeStackNavigationProp<Record<string, object | undefined>>;
 
 export function useNavigationModeRouting(mode: NavigationMode, ready: boolean) {
   const latestMode = useRef<NavigationMode | null>(null);

@@ -1,3 +1,4 @@
+import type { RoutingPreferences } from "../utils/routing";
 import * as SecureStore from "expo-secure-store";
 import {
   createContext,
@@ -71,7 +72,7 @@ export function restoreAccessibilitySettings(value: unknown): AccessibilitySetti
   return { customAccessibilityPreferences };
 }
 
-type AppSettings = AccessibilitySettings & {
+type AppSettings = AccessibilitySettings & RoutingPreferences & {
   navigationMode: NavigationMode;
   accessibilityNeed: AccessibilityNeed | null;
   hasSelectedMode: boolean;
@@ -94,6 +95,7 @@ type SettingsContextType = AppSettings & {
   settingsLoaded: boolean;
   settingsReadSucceeded: boolean;
   configureAvoidStairs: (enabled: boolean) => Promise<void>;
+  configureRoutingPreferences: (preferences: Partial<RoutingPreferences>) => Promise<void>;
   resetAvoidStairsPreference: () => void;
   deviceAccessibility: DeviceAccessibilitySettings;
   setAccessibilityPreference: (preference: AccessibilityPreference, enabled: boolean) => void;
@@ -109,6 +111,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   distanceUnits: "imperial",
   directionStyle: "natural",
   avoidStairs: false,
+  avoidIndoorRoutes: false,
+  avoidInaccessibleCrosswalks: false,
   hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
   accessibilitySettingsVersion: 5,
@@ -160,9 +164,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 
   const [routingPreference, setRoutingPreference] = useState({
-    avoidStairs: false, hasAnsweredAvoidStairsPrompt: false, revision: 0,
+    avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: 0,
   });
-  const { avoidStairs } = routingPreference;
+  const { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreference;
   const avoidStairsEdit = useRef<boolean | undefined>(undefined);
   const choiceRevision = useRef(0);
   const pendingChoices = useRef(new Map<number, { resolve: () => void; reject: (error: unknown) => void; previouslyAnswered: boolean }>());
@@ -173,17 +177,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairsEdit.current = enabled;
     setRoutingPreference((previous) => ({ ...previous, avoidStairs: enabled }));
   };
-  const configureAvoidStairs = (enabled: boolean): Promise<void> => {
+  const configureAvoidStairs = (enabled: boolean) => configureRoutingPreferences({ avoidStairs: enabled });
+  const configureRoutingPreferences = (preferences: Partial<RoutingPreferences>): Promise<void> => {
     if (!settingsLoaded || !settingsReadSucceeded) return Promise.reject(new Error("Settings are not ready. Please try again."));
     const revision = ++choiceRevision.current;
-    avoidStairsEdit.current = enabled;
+    avoidStairsEdit.current = preferences.avoidStairs ?? avoidStairs;
     const completion = new Promise<void>((resolve, reject) => pendingChoices.current.set(revision, { resolve, reject, previouslyAnswered: hasAnsweredAvoidStairsPrompt }));
-    setRoutingPreference({ avoidStairs: enabled, hasAnsweredAvoidStairsPrompt: true, revision });
+    setRoutingPreference((previous) => ({ ...previous, ...preferences, hasAnsweredAvoidStairsPrompt: true, revision }));
     return completion;
   };
   const resetAvoidStairsPreference = () => {
     avoidStairsEdit.current = false;
-    setRoutingPreference({ avoidStairs: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
+    setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
   };
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
@@ -241,6 +246,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if (typeof parsedSettings.avoidStairs === "boolean" && avoidStairsEdit.current === undefined) {
             setRoutingPreference({
               avoidStairs: parsedSettings.avoidStairs,
+              avoidIndoorRoutes: parsedSettings.avoidIndoorRoutes === true,
+              avoidInaccessibleCrosswalks: parsedSettings.avoidInaccessibleCrosswalks === true,
               hasAnsweredAvoidStairsPrompt: typeof parsedSettings.hasAnsweredAvoidStairsPrompt === "boolean"
                 ? parsedSettings.hasAnsweredAvoidStairsPrompt
                 : parsedSettings.hasAnsweredAvoidStairsPrompt === undefined,
@@ -250,7 +257,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
           if (typeof parsedSettings.avoidStairs !== "boolean" && avoidStairsEdit.current === undefined &&
               typeof parsedSettings.hasAnsweredAvoidStairsPrompt === "boolean") {
-            setRoutingPreference({ avoidStairs: false, hasAnsweredAvoidStairsPrompt: parsedSettings.hasAnsweredAvoidStairsPrompt, revision: 0 });
+            setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: parsedSettings.avoidIndoorRoutes === true, avoidInaccessibleCrosswalks: parsedSettings.avoidInaccessibleCrosswalks === true, hasAnsweredAvoidStairsPrompt: parsedSettings.hasAnsweredAvoidStairsPrompt, revision: 0 });
           }
 
           if (
@@ -285,6 +292,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       distanceUnits,
       directionStyle,
       avoidStairs,
+      avoidIndoorRoutes,
+      avoidInaccessibleCrosswalks,
       hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
       accessibilitySettingsVersion: 5,
@@ -355,9 +364,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         distanceUnits,
         directionStyle,
         avoidStairs,
+        avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks,
         setAvoidStairs,
         hasAnsweredAvoidStairsPrompt,
         configureAvoidStairs,
+        configureRoutingPreferences,
         resetAvoidStairsPreference,
         settingsReadSucceeded,
         fontSize,

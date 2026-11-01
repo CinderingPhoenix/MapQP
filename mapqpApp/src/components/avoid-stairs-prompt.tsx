@@ -34,8 +34,10 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss }: {
   onAnswered: () => void;
   onDismiss: () => void;
 }) {
-  const { fontSize, avoidStairs, configureAvoidStairs } = useSettings();
+  const { fontSize, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks, configureRoutingPreferences } = useSettings();
   const [selectedAvoidStairs, setSelectedAvoidStairs] = useState(avoidStairs);
+  const [selectedIndoor, setSelectedIndoor] = useState(avoidIndoorRoutes);
+  const [selectedCrosswalks, setSelectedCrosswalks] = useState(avoidInaccessibleCrosswalks);
   const { width, fontScale } = useWindowDimensions();
   const stackControls = width < 360 || fontSize * fontScale >= 1.4;
   const { screenReaderEnabled, loaded, boldTextEnabled } = useAccessibilityPreferences();
@@ -54,9 +56,13 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss }: {
   // Refresh the draft on presentation; toggling it never writes saved settings.
   const previouslyVisible = useRef(false);
   useEffect(() => {
-    if (visible && !previouslyVisible.current) setSelectedAvoidStairs(avoidStairs);
+    if (visible && !previouslyVisible.current) {
+      setSelectedAvoidStairs(avoidStairs);
+      setSelectedIndoor(avoidIndoorRoutes);
+      setSelectedCrosswalks(avoidInaccessibleCrosswalks);
+    }
     previouslyVisible.current = visible;
-  }, [visible, avoidStairs]);
+  }, [visible, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks]);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
@@ -78,7 +84,7 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss }: {
     if (busy.current) return;
     busy.current = true; setSaving(true); setError(false);
     try {
-      await configureAvoidStairs(enabled);
+      await configureRoutingPreferences({ avoidStairs: enabled, avoidIndoorRoutes: selectedIndoor, avoidInaccessibleCrosswalks: selectedCrosswalks });
       if (mounted.current) onAnswered();
     } catch {
       if (mounted.current && visibleRef.current) setError(true);
@@ -101,23 +107,23 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss }: {
           <Text style={[styles.text, { fontSize: 17 * fontSize }, boldTextEnabled && styles.bold]}>
             Choose how you'd prefer to navigate campus.
           </Text>
-          {/* Connect the teammate's settings, setters, and save action here once
-              implemented. Placeholder values must not enter persistent settings. */}
-          {["Avoid Stairs", "Avoid Indoor Navigation", "Avoid Crossing Roads"].map((label, index) => {
-            const comingSoon = index !== 0;
-            const disabled = comingSoon || saving;
+          {[
+            { label: "Avoid Stairs", value: selectedAvoidStairs, setValue: setSelectedAvoidStairs, hint: "Uses accessible paths and entrances." },
+            { label: "Avoid Indoor Navigation", value: selectedIndoor, setValue: setSelectedIndoor, hint: "Excludes indoor walkways." },
+            { label: "Avoid Inaccessible Road Crossings", value: selectedCrosswalks, setValue: setSelectedCrosswalks, hint: "Allows road crossings marked accessible." },
+          ].map(({ label, value, setValue, hint }) => {
+            const disabled = saving;
             return <View key={label} style={[styles.preferenceRow, stackControls && styles.stackedRow]}>
               <View style={styles.preferenceLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                 <Text style={[styles.text, { fontSize: 17 * fontSize }, styles.bold]}>{label}</Text>
-                {comingSoon && <Text style={[styles.text, { fontSize: 15 * fontSize }]}>Coming Soon</Text>}
               </View>
               <View style={styles.switchTarget}>
                 <Switch accessible importantForAccessibility="yes" hitSlop={8}
-                  value={comingSoon ? false : selectedAvoidStairs} disabled={disabled}
-                  onValueChange={comingSoon ? undefined : setSelectedAvoidStairs}
-                  accessibilityRole="switch" accessibilityLabel={comingSoon ? `${label}, Coming Soon` : label}
-                  accessibilityHint={comingSoon ? "Not available yet" : "Uses paths and building entrances marked accessible. Saved when you press Continue."}
-                  accessibilityState={{ checked: comingSoon ? false : selectedAvoidStairs, disabled }}
+                  value={value} disabled={disabled}
+                  onValueChange={setValue}
+                  accessibilityRole="switch" accessibilityLabel={label}
+                  accessibilityHint={`${hint} Saved when you press Continue.`}
+                  accessibilityState={{ checked: value, disabled }}
                   trackColor={{ false: "#636366", true: "#761723" }} thumbColor="#FFFFFF" ios_backgroundColor="#636366" />
               </View>
             </View>;

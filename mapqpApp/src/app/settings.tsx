@@ -131,6 +131,9 @@ export default function SettingsPage() {
     setDirectionStyle,
     avoidStairs,
     configureAvoidStairs,
+    avoidIndoorRoutes,
+    avoidInaccessibleCrosswalks,
+    configureRoutingPreferences,
     resetAvoidStairsPreference,
     settingsReadSucceeded,
     fontSize,
@@ -981,6 +984,31 @@ export default function SettingsPage() {
               accessibilityHint={"Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." +
                 (navigationMode === "accessibility" ? " Accessibility mode always uses accessible routing." : "")} />
           </View>
+          {([
+            { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid Indoor Navigation", value: avoidIndoorRoutes, description: "Excludes indoor walkways." },
+            { key: "avoidInaccessibleCrosswalks", icon: "road-variant", label: "Avoid Inaccessible Road Crossings", value: avoidInaccessibleCrosswalks, description: "Allows road crossings marked accessible. Accessibility mode always enables this restriction." },
+          ] as const).map(({ key, icon, label, value, description }) => (
+            <View key={key} style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
+              stackControls && styles.accessibilitySourceRowStacked]}>
+              <View style={[styles.accessibilitySourceLabel, stackControls && styles.accessibilitySourceLabelStacked]}>
+                <View style={styles.settingLabelRow}>
+                  <SettingIcon name={icon} highContrast={increasedContrast} />
+                  <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                    style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * fontSize }]}>{label}</AccessibleText>
+                </View>
+                <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                  style={[styles.deviceSectionDescription, { fontSize: 13 * fontSize }]}>
+                  {description}{"\n"}Changes apply when you start a new route.
+                </AccessibleText>
+              </View>
+              <SettingsSwitch value={value} disabled={!settingsLoaded || !settingsReadSucceeded}
+                style={stackControls ? styles.stackedSwitch : undefined}
+                accessibilityRole="switch" accessibilityLabel={label} accessibilityHint={description}
+                accessibilityState={{ checked: value, disabled: !settingsLoaded || !settingsReadSucceeded }}
+                onValueChange={(enabled) => { void configureRoutingPreferences({ [key]: enabled }).catch(() =>
+                  Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
+            </View>
+          ))}
         </View>}
       </ScrollView>
     </SafeAreaView>

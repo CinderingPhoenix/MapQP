@@ -15,6 +15,8 @@ test('route geometry preserves mapped corners on unequal-length walkway segments
   initRoutingGraph({ nodes, connections: { start: ['corner'], corner: ['bend'], bend: ['end'] } }, []);
   const route = await routeBetween({ latitude: 0, longitude: -0.001, label: 'Start' },
     { latitude: 0.002, longitude: 0, label: 'End' });
+  assert.equal(JSON.stringify(route.geometry[0]), JSON.stringify(nodes[0].slice(1)));
+  assert.equal(JSON.stringify(route.geometry.at(-1)), JSON.stringify(nodes.at(-1).slice(1)));
   assert.equal(JSON.stringify(route.geometry), JSON.stringify(route.navigationPath.map(p => p.coordinate)));
   for (const [, lat, lng] of nodes) {
     assert.ok(route.geometry.some(p => p[0] === lat && p[1] === lng), `Missing corner ${lat}, ${lng}`);
