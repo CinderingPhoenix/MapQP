@@ -37,7 +37,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Destination Search",
     subtitle: "Find a campus building",
     description: "Tap the destination search bar at the bottom of the map and enter a building name. Select a result to start a route to that destination.",
-    image: require("../../assets/tutorial/standard-navigation.png"),
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
     highlights: [
       { top: "90%", left: "5%", width: "90%", height: "9%", label: "Destination Search", tagPosition: "top" },
     ],
@@ -46,7 +46,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Map Orientation",
     subtitle: "Change how the map faces",
     description: "Use the orientation control at the top right to change the map orientation while you navigate.",
-    image: require("../../assets/tutorial/standard-navigation.png"),
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
     highlights: [
       { top: "6%", left: "80%", width: "16%", height: "7%", label: "Map Orientation", tagPosition: "top" },
     ],
@@ -55,7 +55,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Audio Feedback",
     subtitle: "Control spoken navigation",
     description: "Tap the audio control below the orientation button to mute or unmute spoken navigation instructions.",
-    image: require("../../assets/tutorial/standard-navigation.png"),
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
     highlights: [
       { top: "13%", left: "80%", width: "16%", height: "7%", label: "Audio Feedback", tagPosition: "top" },
     ],
@@ -64,7 +64,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Open Saved Locations",
     subtitle: "Find your favorites from the map",
     description: "Tap the star beside the destination search to view your saved buildings and choose a frequent destination.",
-    image: require("../../assets/tutorial/standard-navigation.png"),
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
     highlights: [
       { top: "92%", left: "70%", width: "13%", height: "6%", label: "Saved Locations", tagPosition: "top" },
     ],
@@ -73,7 +73,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Recent Searches",
     subtitle: "Return to a previous destination",
     description: "Open the destination search to see your recent searches. Tap a building in the list to start a new route there.",
-    image: require("../../assets/tutorial/routing.png"),
+    image: require("../../assets/tutorial/standard/routing.png"),
     highlights: [
       { top: "66%", left: "6%", width: "87%", height: "32%", label: "Recent Searches", tagPosition: "top" },
     ],
@@ -82,7 +82,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Building Chooser",
     subtitle: "Browse available destinations",
     description: "Open the building chooser from the search panel to browse campus buildings instead of typing a name.",
-    image: require("../../assets/tutorial/routing.png"),
+    image: require("../../assets/tutorial/standard/routing.png"),
     highlights: [
       { top: "59%", left: "6%", width: "87%", height: "6%", label: "Building Chooser", tagPosition: "top" },
     ],
@@ -91,7 +91,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Select a Building",
     subtitle: "Start a route from the building list",
     description: "Tap a building name in the chooser to select it as your destination and generate a route.",
-    image: require("../../assets/tutorial/building-chooser.png"),
+    image: require("../../assets/tutorial/standard/building-chooser.png"),
     highlights: [
       { top: "19%", left: "2%", width: "35%", height: "4%", label: "Select Building", tagPosition: "top" },
     ],
@@ -100,7 +100,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Save a Building",
     subtitle: "Keep a destination for later",
     description: "Tap the star beside a building to save it. Tap the star again to remove that building from your saved locations.",
-    image: require("../../assets/tutorial/building-chooser.png"),
+    image: require("../../assets/tutorial/standard/building-chooser.png"),
     highlights: [
       { top: "19%", left: "84%", width: "10%", height: "4%", label: "Save or Remove", tagPosition: "top" },
     ],
@@ -109,7 +109,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Saved List",
     subtitle: "Browse only your favorite buildings",
     description: "Switch to the Saved tab in the building chooser to see your favorites. Select a building to navigate there.",
-    image: require("../../assets/tutorial/building-chooser.png"),
+    image: require("../../assets/tutorial/standard/building-chooser.png"),
     highlights: [
       { top: "12%", left: "57%", width: "38%", height: "5%", label: "Saved Tab", tagPosition: "top" },
     ],
@@ -118,7 +118,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Manage Saved Locations",
     subtitle: "Remove a destination you no longer need",
     description: "In your saved locations, tap the filled star beside a building to remove it from the list. You can save it again from the building chooser.",
-    image: require("../../assets/tutorial/saved-locations.png"),
+    image: require("../../assets/tutorial/standard/saved-locations.png"),
     highlights: [
       { top: "19%", left: "84%", width: "10%", height: "4%", label: "Remove Favorite", tagPosition: "top" },
     ],
@@ -127,7 +127,7 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Open Settings",
     subtitle: "Find navigation preferences",
     description: "Tap the settings button at the top left of the map to open your navigation preferences.",
-    image: require("../../assets/tutorial/standard-navigation.png"),
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
     highlights: [
       { top: "7%", left: "2%", width: "13%", height: "6%", label: "Settings", tagPosition: "top" },
     ],
@@ -136,13 +136,13 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Customize Navigation",
     subtitle: "Adjust the app to your preferences",
     description: "In Settings, choose your navigation mode, distance units, direction style, and text size.",
-    image: require("../../assets/tutorial/settings.png"),
+    image: require("../../assets/tutorial/standard/settings.png"),
   },
   {
     title: "Next Direction",
     subtitle: "Follow the upcoming instruction",
     description: "Once a route starts, read the instruction at the top of the screen to see your next navigation step.",
-    image: require("../../assets/tutorial/next-direction.png"),
+    image: require("../../assets/tutorial/standard/next-direction.png"),
     highlights: [
       { top: "5%", left: "2%", width: "94%", height: "10%", label: "Next Direction", tagPosition: "top" },
     ],
@@ -151,13 +151,13 @@ const standardTutorialPages: TutorialPage[] = [
     title: "Expanded Directions",
     subtitle: "Review the upcoming steps",
     description: "Tap the direction summary at the top to expand the list of upcoming directions along your route.",
-    image: require("../../assets/tutorial/direction-list.png"),
+    image: require("../../assets/tutorial/standard/direction-list.png"),
   },
   {
     title: "Cancel a Route",
     subtitle: "Stop the current navigation",
     description: "Tap the cancel control at the bottom of the screen to end the current route. You can then search for a new destination.",
-    image: require("../../assets/tutorial/next-direction.png"),
+    image: require("../../assets/tutorial/standard/next-direction.png"),
     highlights: [
       { top: "93%", left: "80%", width: "12%", height: "5%", label: "Cancel Route", tagPosition: "top" },
     ],
@@ -169,7 +169,7 @@ const accessibilityTutorialPages: TutorialPage[] = [
     title: "Accessibility Mode",
     subtitle: "Find your destination with accessible controls",
     description: "Choose Accessibility Mode on the landing page. Use the destination search or Voice Search to find a campus building, then select it to start navigation.",
-    image: require("../../assets/tutorial/accessibility-navigation.png"),
+    image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
       { top: "89%" as any, left: "40%" as any, width: "20%" as any, height: "9%" as any, label: "Voice Search", tagPosition: "top" },
 
@@ -179,7 +179,7 @@ const accessibilityTutorialPages: TutorialPage[] = [
     title: "Saved Destinations",
     subtitle: "Open your favorite places from the bottom controls",
     description: "Tap Saved to open your saved destinations. Select a building to navigate there, or use the star beside a building in the chooser to save or remove it.",
-    image: require("../../assets/tutorial/accessibility-navigation.png"),
+    image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
       { top: "89%", left: "69%", width: "15%", height: "7%", label: "Saved Destinations", tagPosition: "top" },
     ],
@@ -188,7 +188,7 @@ const accessibilityTutorialPages: TutorialPage[] = [
     title: "Accessible Directions",
     subtitle: "Follow the route summary at the top",
     description: "After choosing a destination, read the next instruction in the top route summary. Tap the summary to expand upcoming directions. Use Cancel at the top to stop navigation.",
-    image: require("../../assets/tutorial/accessibility-navigation.png"),
+    image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
       { top: "6%", left: "76%", width: "20%", height: "7%", label: "Cancel Route", tagPosition: "top" },
     ],
@@ -197,7 +197,7 @@ const accessibilityTutorialPages: TutorialPage[] = [
     title: "Accessibility Settings",
     subtitle: "Customize your navigation experience",
     description: "Open Settings from the bottom controls to adjust text size, distance units, and direction style. Screen reader, contrast, and reduced motion preferences are controlled in your device settings.",
-    image: require("../../assets/tutorial/accessibility-navigation.png"),
+    image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
       { top: "89%", left: "14%", width: "20%", height: "9%", label: "Settings", tagPosition: "top" },
     ],
@@ -233,7 +233,8 @@ interface TutorialModalProps {
   onDismiss?: () => void;
 }
 
-export function TutorialModal({ visible, onClose }: TutorialModalProps) {
+export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProps) {
+  const nativeDismiss = useModalDismissal(visible, onDismiss);
   const [mode, setMode] = useState<TutorialMode>("standard");
   const [currentPage, setCurrentPage] = useState(0);
 
