@@ -62,8 +62,8 @@
         "accessibility": true
       },
       {
-        "latitude": 42.273402,
-        "longitude": -71.807416,
+        "latitude": 42.273401,
+        "longitude": -71.807417,
         "name": "South Entrance",
         "floor": 1,
         "accessibility": true
@@ -211,13 +211,6 @@
         "longitude": -71.805708,
         "name": "Boynton Lot Entrance",
         "floor": 1.5,
-        "accessibility": false
-      },
-      {
-        "latitude": 42.274934,
-        "longitude": -71.805761,
-        "name": "Salisbury Street Entrance",
-        "floor": 1,
         "accessibility": false
       },
       {
@@ -472,22 +465,8 @@
         "accessibility": true
       },
       {
-        "latitude": 42.274644,
-        "longitude": -71.809414,
-        "name": "Back Entrance",
-        "floor": 1,
-        "accessibility": true
-      },
-      {
-        "latitude": 42.274691,
-        "longitude": -71.809823,
-        "name": "Back Loading Entrance",
-        "floor": 0,
-        "accessibility": true
-      },
-      {
-        "latitude": 42.274552,
-        "longitude": -71.810101,
+        "latitude": 42.274551,
+        "longitude": -71.810102,
         "name": "Rec Center Stairs Entrance",
         "floor": 0,
         "accessibility": true
