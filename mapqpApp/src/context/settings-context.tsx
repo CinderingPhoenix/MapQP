@@ -12,6 +12,7 @@ import { useDeviceAccessibility, type DeviceAccessibilitySettings } from "../hoo
 export type DistanceUnits = "imperial" | "metric";
 export type DirectionStyle = "natural" | "degrees";
 export type NavigationMode = "standard" | "accessibility";
+export type AccessibilityNeed = "visual" | "motor";
 
 export type CustomAccessibilityPreferences = {
   reduceMotionEnabled: boolean;
@@ -72,6 +73,7 @@ export function restoreAccessibilitySettings(value: unknown): AccessibilitySetti
 
 type AppSettings = AccessibilitySettings & {
   navigationMode: NavigationMode;
+  accessibilityNeed: AccessibilityNeed | null;
   hasSelectedMode: boolean;
   distanceUnits: DistanceUnits;
   directionStyle: DirectionStyle;
@@ -83,6 +85,7 @@ type AppSettings = AccessibilitySettings & {
 
 type SettingsContextType = AppSettings & {
   setNavigationMode: (mode: NavigationMode) => void;
+  setAccessibilityNeed: (need: AccessibilityNeed) => void;
   setHasSelectedMode: (selected: boolean) => void;
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
@@ -101,6 +104,7 @@ const SETTINGS_STORAGE_KEY = "mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
   navigationMode: "standard",
+  accessibilityNeed: null,
   hasSelectedMode: false,
   distanceUnits: "imperial",
   directionStyle: "natural",
@@ -140,6 +144,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [navigationMode, setNavigationMode] = useState<NavigationMode>(
     DEFAULT_SETTINGS.navigationMode
   );
+
+  const [accessibilityNeed, setAccessibilityNeed] = useState<AccessibilityNeed | null>(null);
 
   const [hasSelectedMode, setHasSelectedMode] = useState(
     DEFAULT_SETTINGS.hasSelectedMode
@@ -210,6 +216,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setNavigationMode(parsedSettings.navigationMode);
           }
 
+          if (parsedSettings.accessibilityNeed === "visual" || parsedSettings.accessibilityNeed === "motor") {
+            setAccessibilityNeed(parsedSettings.accessibilityNeed);
+          }
+
           if (typeof parsedSettings.hasSelectedMode === "boolean") {
             setHasSelectedMode(parsedSettings.hasSelectedMode);
           }
@@ -270,6 +280,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     const settings: AppSettings = {
       navigationMode,
+      accessibilityNeed,
       hasSelectedMode,
       distanceUnits,
       directionStyle,
@@ -322,6 +333,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, [
     navigationMode,
+    accessibilityNeed,
     hasSelectedMode,
     distanceUnits,
     directionStyle,
@@ -337,6 +349,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     <SettingsContext.Provider
       value={{
         navigationMode,
+        accessibilityNeed,
+        setAccessibilityNeed,
         hasSelectedMode,
         distanceUnits,
         directionStyle,

@@ -5,10 +5,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState, useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
-import { useSettings } from "../context/settings-context";
+import { useSettings, type AccessibilityNeed } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
@@ -147,9 +147,25 @@ export default function LandingPage() {
   };
 
   const openAccessibilityNavigation = () => {
+    setSelectedNeed(accessibilityNeed);
+    setShowAccessibilityChoice(true);
+  };
+
+  const finishAccessibilityNavigation = () => {
+    if (!pendingAccessibilityNavigation.current) return;
+    pendingAccessibilityNavigation.current = false;
+    router.push("/accessibility-navigation");
+  };
+
+  const confirmAccessibilityChoice = () => {
+    if (!selectedNeed || !settingsLoaded) return;
+    setAccessibilityNeed(selectedNeed);
     setNavigationMode("accessibility");
     setHasSelectedMode(true);
-    router.push("/accessibility-navigation");
+    pendingAccessibilityNavigation.current = true;
+    setShowAccessibilityChoice(false);
+    // iOS must finish dismissing its native modal before pushing a screen.
+    if (Platform.OS !== "ios") finishAccessibilityNavigation();
   };
 
   return (
@@ -285,7 +301,7 @@ export default function LandingPage() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Accessibility mode"
-                  accessibilityHint="Opens accessible campus navigation"
+                  accessibilityHint="Choose visual or motor impairment support before opening campus navigation"
                 >
                   <LinearGradient
                     colors={opaqueSurfaces
@@ -321,6 +337,60 @@ export default function LandingPage() {
         </SafeAreaView>
       </View>
 
+      <Modal
+        visible={showAccessibilityChoice}
+        transparent
+        animationType="none"
+        onRequestClose={() => setShowAccessibilityChoice(false)}
+        onDismiss={finishAccessibilityNavigation}
+      >
+        <View style={styles.choiceOverlay}>
+          <View style={styles.choiceCard} accessibilityViewIsModal>
+            <ScrollView contentContainerStyle={styles.choiceContent}>
+              <Text accessibilityRole="header" style={styles.choiceTitle}>Accessibility support</Text>
+              <Text style={styles.choiceDescription}>Choose the option that best matches your needs.</Text>
+              {([
+                { value: "visual", label: "Visual impairment" },
+                { value: "motor", label: "Motor impairment" },
+              ] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.choiceOption, selectedNeed === option.value && styles.choiceOptionSelected]}
+                  accessibilityRole="radio"
+                  accessibilityLabel={option.label}
+                  accessibilityState={{ checked: selectedNeed === option.value }}
+                  onPress={() => setSelectedNeed(option.value)}
+                >
+                  <Text style={styles.choiceOptionText}>{option.label}</Text>
+                  <Ionicons
+                    name={selectedNeed === option.value ? "radio-button-on" : "radio-button-off"}
+                    size={26}
+                    color="#064C52"
+                    accessible={false}
+                  />
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.choiceContinue, (!selectedNeed || !settingsLoaded) && styles.choiceDisabled]}
+                disabled={!selectedNeed || !settingsLoaded}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !selectedNeed || !settingsLoaded }}
+                onPress={confirmAccessibilityChoice}
+              >
+                <Text style={styles.choiceContinueText}>Continue</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.choiceCancel}
+                accessibilityRole="button"
+                onPress={() => setShowAccessibilityChoice(false)}
+              >
+                <Text style={styles.choiceOptionText}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* First-time Tutorial Modal Component */}
       <TutorialModal visible={tutorialVisible} onClose={handleDismissTutorial} onDismiss={() => {
         if (!showTutorial && mounted.current) {
@@ -341,6 +411,24 @@ export default function LandingPage() {
 }
 
 const styles = StyleSheet.create({
+  choiceOverlay: {
+    flex: 1, justifyContent: "center", alignItems: "center",
+    padding: 24, backgroundColor: "rgba(0,0,0,0.65)",
+  },
+  choiceCard: { width: "100%", maxWidth: 420, maxHeight: "90%", backgroundColor: "#FFFFFF", borderRadius: 24 },
+  choiceContent: { padding: 24, gap: 16 },
+  choiceTitle: { fontSize: 24, fontWeight: "800", color: "#064C52" },
+  choiceDescription: { fontSize: 16, color: "#334155" },
+  choiceOption: {
+    minHeight: 56, padding: 16, borderWidth: 2, borderColor: "#64748B",
+    borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 12,
+  },
+  choiceOptionSelected: { borderColor: "#064C52", backgroundColor: "#DDF2F0" },
+  choiceOptionText: { flexShrink: 1, flexGrow: 1, fontSize: 18, fontWeight: "700", color: "#064C52" },
+  choiceContinue: { minHeight: 48, padding: 14, borderRadius: 12, backgroundColor: "#064C52", alignItems: "center" },
+  choiceContinueText: { fontSize: 18, fontWeight: "700", color: "#FFFFFF" },
+  choiceDisabled: { backgroundColor: "#64748B" },
+  choiceCancel: { minHeight: 48, alignItems: "center", justifyContent: "center", padding: 12 },
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   safeArea: { flex: 1, backgroundColor: "transparent" },
   header: {
