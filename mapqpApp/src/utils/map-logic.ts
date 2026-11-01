@@ -540,6 +540,7 @@ export function useMapNavigation(buildings: Building[]) {
     distanceUnits,
     directionStyle,
     startRoutePreviewCountdown,
+    handleCancelRoute,
     isFocused,
     buildings,
     handleCancelRoute,
