@@ -1,7 +1,8 @@
 import { Asset } from "expo-asset";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
+import MapControls, { type CameraAction, type CameraState } from "./map-controls";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 
 type LocationMapProps = {
@@ -20,6 +21,8 @@ type LocationMapProps = {
   onToggleMute?: () => void;
   onOpenSettings?: () => void;
   onPanBack?: () => void;
+  controlsTop?: number;
+  controlsBottom?: number;
 };
 
 export default function LocationMap({
@@ -38,9 +41,35 @@ export default function LocationMap({
   onToggleMute,
   onOpenSettings,
   onPanBack,
+  controlsTop = 132,
+  controlsBottom = 160,
 }: LocationMapProps) {
   const webViewRef = useRef<WebView>(null);
+  const [mapHeight, setMapHeight] = useState(0);
+  const [controlLayout, setControlLayout] = useState<{
+    hasRoute: boolean; expanded: boolean; clearance: number; top: number; leftBottom: number;
+  } | null>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
+  const [camera, setCamera] = useState<CameraState>({ ready: false, zoom: 16, minZoom: 0, maxZoom: 19 });
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewGeneration = useRef(0);
+  const hasUserPannedAwayRef = useRef(false);
+  const cancelPreview = () => {
+    previewGeneration.current += 1;
+    if (previewTimer.current !== null) clearTimeout(previewTimer.current);
+    previewTimer.current = null;
+  };
+  const beginManualExploration = () => {
+    cancelPreview();
+    hasUserPannedAwayRef.current = true;
+    setIsHeadingFocused(false);
+    onUserDragged?.();
+  };
+  const sendCameraCommand = (action: CameraAction) => {
+    if (!camera.ready) return;
+    beginManualExploration();
+    webViewRef.current?.injectJavaScript(`window.cameraCommand && window.cameraCommand(${JSON.stringify(action)}); true;`);
+  };
   const [mapUri, setMapUri] = useState<string>("");
 
   const {
@@ -93,15 +122,24 @@ export default function LocationMap({
     loadMapAsset();
   }, []);
 
-  // Force Leaflet map resize and re-render tiles when directions expanded/collapsed state changes
+  const hasRoute = !!route;
+  const summaryClearance = hasRoute ? controlsTop : 0;
+  const controlPositionScript = `
+    if (window.updateDirectionsExpanded) {
+      window.updateDirectionsExpanded(${directionsExpanded}, ${hasRoute}, ${summaryClearance});
+    }
+    if (window.map) window.map.invalidateSize();
+    true;
+  `;
   useEffect(() => {
-    webViewRef.current?.injectJavaScript(`
-      if (window.map) {
-        window.map.invalidateSize();
-      }
-      true;
-    `);
-  }, [directionsExpanded]);
+    webViewRef.current?.injectJavaScript(controlPositionScript);
+  }, [controlPositionScript, camera.ready, mapHeight]);
+
+  const layoutCurrent = controlLayout?.hasRoute === hasRoute &&
+    controlLayout?.expanded === directionsExpanded && controlLayout?.clearance === summaryClearance;
+  const panelTop = Math.max(hasRoute ? Math.max(150, controlsTop) : 132,
+    layoutCurrent ? (accessibilityMode ? controlLayout.top : controlLayout.leftBottom + 8) : 0);
+  const availableControlsHeight = mapHeight > 0 ? Math.max(0, mapHeight - panelTop - controlsBottom) : 164;
 
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(visualPreferencesScript);
@@ -127,14 +165,19 @@ export default function LocationMap({
       }, 300);
       true;
     `);
+    webViewRef.current?.injectJavaScript(controlPositionScript);
   };
+
+  const latestPosition = useRef({ currentMarkerLat, currentMarkerLng, accuracy, route });
+  latestPosition.current = { currentMarkerLat, currentMarkerLng, accuracy, route };
 
   /**
    * Show the complete route facing North, then switch to
    * heading-focused navigation and zoom into the user after 4 seconds.
    */
   useEffect(() => {
-    if (route && route.geometry && route.geometry.length > 0) {
+    cancelPreview();
+    if (camera.ready && route && route.geometry && route.geometry.length > 0) {
       hasUserPannedAwayRef.current = false;
 
       const routeCoords = route.geometry.map(
@@ -142,6 +185,7 @@ export default function LocationMap({
       );
 
       webViewRef.current?.injectJavaScript(`
+        window.manualCameraExploration = false;
         if (window.map) {
           if (window.smoothRotateToZero) {
             window.smoothRotateToZero();
@@ -163,40 +207,40 @@ export default function LocationMap({
         true;
       `);
 
-      const timeoutId = setTimeout(() => {
-        hasUserPannedAwayRef.current = false;
+      const generation = previewGeneration.current;
+      previewTimer.current = setTimeout(() => {
+        if (hasUserPannedAwayRef.current || generation !== previewGeneration.current) return;
+        previewTimer.current = null;
+        const latest = latestPosition.current;
 
         setIsHeadingFocused(true);
         onHeadingModeChange?.(true);
         onPanBack?.();
 
         webViewRef.current?.injectJavaScript(`
-          if (window.setHeadingFocus) {
-            window.setHeadingFocus(true);
-          }
+          if (!window.manualCameraExploration) {
+            if (window.setHeadingFocus) {
+              window.setHeadingFocus(true);
+            }
 
-          if (window.updateMap) {
-            window.updateMap(
-              ${currentMarkerLat},
-              ${currentMarkerLng},
-              ${accuracy},
-              ${JSON.stringify(route)}
-            );
-          }
-          if (window.map) {
-            window.map.invalidateSize();
+            if (window.updateMap) {
+              window.updateMap(
+                ${latest.currentMarkerLat},
+                ${latest.currentMarkerLng},
+                ${latest.accuracy},
+                ${JSON.stringify(latest.route)}
+              );
+            }
+            if (window.map) {
+              window.map.invalidateSize();
+            }
           }
           true;
         `);
       }, 4000);
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
     }
-  }, [route]);
-
-  const hasUserPannedAwayRef = useRef(false);
+    return cancelPreview;
+  }, [route, camera.ready]);
 
   useEffect(() => {
     if (!isHeadingFocused || heading === null || heading === undefined) return;
@@ -210,6 +254,7 @@ export default function LocationMap({
 
   useEffect(() => {
     if (recenterSignal !== undefined && recenterSignal > 0) {
+      cancelPreview();
       webViewRef.current?.injectJavaScript(`
         if (window.resetView) {
           window.resetView();
@@ -241,7 +286,7 @@ export default function LocationMap({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={(event) => setMapHeight(event.nativeEvent.layout.height)}>
       <WebView
         ref={webViewRef}
         originWhitelist={["*"]}
@@ -250,18 +295,38 @@ export default function LocationMap({
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}
         allowFileAccessFromFileURLs={true}
+        onLoadStart={() => {
+          cancelPreview();
+          setCamera((previous) => ({ ...previous, ready: false }));
+        }}
+        onError={() => {
+          cancelPreview();
+          setCamera((previous) => ({ ...previous, ready: false }));
+        }}
         onLoadEnd={handleLoadEnd}
         onMessage={(event: WebViewMessageEvent) => {
           const data = event.nativeEvent.data;
-          if (data === "USER_DRAGGED") {
-            hasUserPannedAwayRef.current = true;
-            setIsHeadingFocused(false);
-            onUserDragged?.();
+          if (data.startsWith("{")) {
+            try {
+              const state = JSON.parse(data);
+              if (state.type === "MAP_CONTROLS_LAYOUT" &&
+                  [state.top, state.leftBottom, state.clearance].every(Number.isFinite)) {
+                setControlLayout(state);
+              }
+              if (["MAP_READY", "CAMERA_STATE", "CAMERA_COMMAND_COMPLETE"].includes(state.type) &&
+                  [state.zoom, state.minZoom, state.maxZoom].every(Number.isFinite)) {
+                setCamera({ ready: true, zoom: state.zoom, minZoom: state.minZoom, maxZoom: state.maxZoom });
+              }
+            } catch { /* Ignore messages outside the camera protocol. */ }
+          } else if (data === "USER_DRAGGED") {
+            beginManualExploration();
           } else if (data === "HEADING_LOCKED") {
+            cancelPreview();
             hasUserPannedAwayRef.current = false;
             setIsHeadingFocused(true);
             onHeadingModeChange?.(true);
           } else if (data === "HEADING_UNLOCKED") {
+            cancelPreview();
             hasUserPannedAwayRef.current = false;
             setIsHeadingFocused(false);
             onHeadingModeChange?.(false);
@@ -272,6 +337,13 @@ export default function LocationMap({
           }
         }}
       />
+      <View pointerEvents="box-none" style={[styles.controls, { top: panelTop, bottom: controlsBottom, width: accessibilityMode ? 164 : 60 }]}>
+        <ScrollView style={styles.controlsViewport} contentContainerStyle={styles.controlsContent}
+          keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+          <MapControls accessibilityMode={accessibilityMode} camera={camera} onCommand={sendCameraCommand}
+            availableHeight={availableControlsHeight} />
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -279,4 +351,7 @@ export default function LocationMap({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
+  controlsViewport: { flexGrow: 0 },
+  controlsContent: { alignItems: "flex-start" },
+  controls: { position: "absolute", left: 12, maxWidth: "94%" },
 });
