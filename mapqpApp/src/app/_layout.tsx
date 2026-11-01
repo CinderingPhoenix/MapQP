@@ -44,14 +44,7 @@ function RootNavigator() {
         options={{ gestureEnabled: false }}
       />
 
-      <Stack.Screen name="settings" options={({ route }) => ({
-        animation: (route.params as { settingsTab?: string } | undefined)?.settingsTab === "true"
-          ? "none" : reduceMotionEnabled ? "none" : "default",
-      })} />
-      <Stack.Screen name="accessibility-settings" options={({ route }) => ({
-        animation: (route.params as { settingsTab?: string } | undefined)?.settingsTab === "true"
-          ? "none" : reduceMotionEnabled ? "none" : "default",
-      })} />
+      <Stack.Screen name="settings" />
       <Stack.Screen name="report-bug" />
     </Stack>
   );
