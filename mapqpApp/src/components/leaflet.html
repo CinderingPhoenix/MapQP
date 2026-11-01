@@ -238,6 +238,7 @@
      */
     function createTraversedPolyline(geometry) {
       return L.polyline(geometry, {
+        smoothFactor: 0,
         color: '#888888',
         weight: 6,
         opacity: 0.8,
@@ -251,6 +252,7 @@
      */
     function createRemainingPolyline(geometry) {
       return L.polyline(geometry, {
+        smoothFactor: 0,
         color: '#1d5962',
         weight: 6,
         opacity: 0.9

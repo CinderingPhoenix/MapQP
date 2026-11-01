@@ -29,9 +29,9 @@ import {
   formatDirectionInstruction,
   formatDistance,
   formatDuration,
+  formatArrivalTime,
   formatInstructionWithDistance,
   getDistanceToStepPoint,
-  getSegmentDistance,
   useMapNavigation,
 } from "../utils/map-logic";
 import { initRoutingGraph } from "../utils/routing";
@@ -237,7 +237,7 @@ export default function Home() {
                 { fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555" },
               ]}
             >
-              {formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}
+              {formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
             </Text>
           </CurrentNavigationSummary>
           {directionsExpanded && (
@@ -253,20 +253,14 @@ export default function Home() {
                 showsVerticalScrollIndicator
               >
                 {upcomingSteps.map((step, index) => {
-                  const distance =
-                    index === 0
-                      ? getDistanceToStepPoint(
-                          route.geometry,
-                          currentRouteIndex,
-                          step.pointIndex,
-                          coordinates?.latitude,
-                          coordinates?.longitude
-                        )
-                      : getSegmentDistance(
-                          route.geometry,
-                          upcomingSteps[index - 1].pointIndex,
-                          step.pointIndex
-                        );
+                  const distance = getDistanceToStepPoint(
+                    route.geometry,
+                    currentRouteIndex,
+                    step.pointIndex,
+                    coordinates?.latitude,
+                    coordinates?.longitude
+                  );
+
                   return (
                     <View
                       key={`${step.pointIndex}-${index}`}
@@ -283,7 +277,8 @@ export default function Home() {
                         {formatInstructionWithDistance(
                           formatDirectionInstruction(step, directionStyle),
                           distance,
-                          distanceUnits
+                          distanceUnits,
+                          index === 0
                         )}
                       </Text>
                     </View>
@@ -317,7 +312,7 @@ export default function Home() {
                     { marginTop: 10, fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555" },
                   ]}
                 >
-                  {formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left
+                  {formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
                 </Text>
               </TouchableOpacity>
             </View>
