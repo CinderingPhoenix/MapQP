@@ -24,7 +24,7 @@ function RootNavigator() {
       screenListeners={screenListeners}
       screenOptions={{
         headerShown: false,
-        animation: reduceMotionEnabled ? "none" : "default",
+        animation: reduceMotionEnabled ? "none" : undefined,
       }}
     >
       <Stack.Screen name="index" />
