@@ -1,6 +1,7 @@
 // tutorial-modal.tsx
 
 import { useState, useEffect } from "react";
+import { useModalDismissal } from "./avoid-stairs-prompt";
 import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle } from "react-native";
 
 interface HighlightItem {
@@ -229,6 +230,7 @@ const tutorialModes = [
 interface TutorialModalProps {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
 }
 
 export function TutorialModal({ visible, onClose }: TutorialModalProps) {
@@ -277,7 +279,8 @@ export function TutorialModal({ visible, onClose }: TutorialModalProps) {
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="none"
+      onDismiss={nativeDismiss}
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>

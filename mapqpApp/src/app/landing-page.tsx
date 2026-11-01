@@ -5,21 +5,22 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState, useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
-import { useSettings } from "../context/settings-context";
+import { useSettings, type AccessibilityNeed } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { TutorialModal } from "../components/tutorial-modal";
+import { AvoidStairsPrompt } from "../components/avoid-stairs-prompt";
 
 const TUTORIAL_SHOWN_KEY = "mapqp_tutorial_shown_once";
 
 export default function LandingPage() {
   useLocationWarmup();
-  useAuthGuard();
-  const { setNavigationMode, setHasSelectedMode } = useSettings();
+  const { isChecking: authChecking } = useAuthGuard();
+  const { setNavigationMode, setHasSelectedMode, settingsLoaded, settingsReadSucceeded, hasAnsweredAvoidStairsPrompt, accessibilityNeed, setAccessibilityNeed } = useSettings();
   const { fontScale, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
@@ -32,31 +33,50 @@ export default function LandingPage() {
   const initialFocusHandled = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
 
-  // Tutorial modal state
   const [showTutorial, setShowTutorial] = useState(false);
-
-  // Check if tutorial has been shown before using SecureStore
+  const [showAccessibilityChoice, setShowAccessibilityChoice] = useState(false);
+  const [selectedNeed, setSelectedNeed] = useState<AccessibilityNeed | null>(accessibilityNeed);
+  const pendingAccessibilityNavigation = useRef(false);
+  const [tutorialReady, setTutorialReady] = useState(false);
+  const [tutorialReadSucceeded, setTutorialReadSucceeded] = useState(false);
+  const [tutorialDismissed, setTutorialDismissed] = useState(true);
+  const [promptPhase, setPromptPhase] = useState<"waiting" | "open" | "closing" | "done">("waiting");
+  const [focused, setFocused] = useState(navigation.isFocused());
+  const mounted = useRef(true);
+  const tutorialClosing = useRef(false);
   useEffect(() => {
+    mounted.current = true;
+    let active = true;
     async function checkFirstLaunch() {
       try {
         const hasShown = await SecureStore.getItemAsync(TUTORIAL_SHOWN_KEY);
+        if (!active) return;
         if (hasShown !== "true") {
+          setTutorialDismissed(false);
           setShowTutorial(true);
         }
+        setTutorialReadSucceeded(true);
       } catch (error) {
+        // Skip new onboarding after an unverified read; keep landing usable.
         console.error("Failed to check tutorial status", error);
+      } finally {
+        if (active) setTutorialReady(true);
       }
     }
-    checkFirstLaunch();
+    void checkFirstLaunch();
+    return () => { active = false; mounted.current = false; };
   }, []);
 
   const handleDismissTutorial = async () => {
+    if (tutorialClosing.current) return;
+    tutorialClosing.current = true;
     try {
       await SecureStore.setItemAsync(TUTORIAL_SHOWN_KEY, "true");
     } catch (error) {
       console.error("Failed to save tutorial status", error);
     }
-    setShowTutorial(false);
+    if (mounted.current) setShowTutorial(false);
+    tutorialClosing.current = false;
   };
 
   // The web stack has no native transition events. On iOS/Android, onAppear
@@ -65,6 +85,7 @@ export default function LandingPage() {
   const transitionCompleteRef = useRef(Platform.OS === "web");
 
   useLayoutEffect(() => {
+    const removeFocus = navigation.addListener("focus", () => setFocused(true));
     const removeStart = navigation.addListener("transitionStart", () => {
       transitionCompleteRef.current = false;
       setTransitionComplete(false);
@@ -75,33 +96,51 @@ export default function LandingPage() {
       setTransitionComplete(true);
     });
     const removeBlur = navigation.addListener("blur", () => {
+      setFocused(false);
       initialFocusHandled.current = true;
       transitionCompleteRef.current = false;
       setTransitionComplete(false);
     });
     return () => {
+      removeFocus();
       removeStart();
       removeEnd();
       removeBlur();
     };
   }, [navigation]);
 
+  useEffect(() => {
+    if (!focused) setPromptPhase("waiting");
+  }, [focused]);
+
+  const eligibilityReady = settingsLoaded && tutorialReady && accessibilityLoaded && !authChecking;
+  useEffect(() => {
+    if (!focused || !transitionComplete || !eligibilityReady || showTutorial || !tutorialDismissed || promptPhase !== "waiting") return;
+    setPromptPhase(!settingsReadSucceeded || !tutorialReadSucceeded || hasAnsweredAvoidStairsPrompt ? "done" : "open");
+  }, [focused, transitionComplete, eligibilityReady, showTutorial, tutorialDismissed, promptPhase, hasAnsweredAvoidStairsPrompt, settingsReadSucceeded, tutorialReadSucceeded]);
+
+  const onboardingBlocksFocus = !eligibilityReady || showTutorial || !tutorialDismissed || promptPhase !== "done";
+  const onboardingBlocksFocusRef = useRef(onboardingBlocksFocus);
+  onboardingBlocksFocusRef.current = onboardingBlocksFocus;
+  const tutorialVisible = showTutorial && focused && !authChecking && transitionComplete;
+  const promptVisible = promptPhase === "open" && focused && !authChecking && transitionComplete;
+
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS !== "ios" && Platform.OS !== "android") return;
-      if (!accessibilityLoaded || !headingLaidOut || !transitionComplete || initialFocusHandled.current) return;
+      if (onboardingBlocksFocus || !focused || !accessibilityLoaded || !headingLaidOut || !transitionComplete || initialFocusHandled.current) return;
       if (!screenReaderEnabled) {
         initialFocusHandled.current = true;
         return;
       }
 
       const frame = requestAnimationFrame(() => {
-        if (!transitionCompleteRef.current || initialFocusHandled.current || !headingRef.current) return;
+        if (onboardingBlocksFocusRef.current || !navigation.isFocused() || !transitionCompleteRef.current || initialFocusHandled.current || !headingRef.current) return;
         initialFocusHandled.current = true;
         AccessibilityInfo.sendAccessibilityEvent(headingRef.current, "focus");
       });
       return () => cancelAnimationFrame(frame);
-    }, [accessibilityLoaded, headingLaidOut, screenReaderEnabled, transitionComplete])
+    }, [accessibilityLoaded, headingLaidOut, screenReaderEnabled, transitionComplete, onboardingBlocksFocus, focused, navigation])
   );
 
   const openStandardNavigation = () => {
@@ -111,14 +150,32 @@ export default function LandingPage() {
   };
 
   const openAccessibilityNavigation = () => {
-    setNavigationMode("accessibility");
-    setHasSelectedMode(true);
+    setSelectedNeed(accessibilityNeed);
+    setShowAccessibilityChoice(true);
+  };
+
+  const finishAccessibilityNavigation = () => {
+    if (!pendingAccessibilityNavigation.current) return;
+    pendingAccessibilityNavigation.current = false;
     router.push("/accessibility-navigation");
   };
 
+  const confirmAccessibilityChoice = () => {
+    if (!selectedNeed || !settingsLoaded) return;
+    setAccessibilityNeed(selectedNeed);
+    setNavigationMode("accessibility");
+    setHasSelectedMode(true);
+    pendingAccessibilityNavigation.current = true;
+    setShowAccessibilityChoice(false);
+    // iOS must finish dismissing its native modal before pushing a screen.
+    if (Platform.OS !== "ios") finishAccessibilityNavigation();
+  };
+
   return (
-    <View style={styles.container} onTouchStart={() => { initialFocusHandled.current = true; }}>
-      <View style={styles.mapBackground}>
+    <View style={styles.container} onTouchStart={() => { if (!onboardingBlocksFocus) initialFocusHandled.current = true; }}>
+      <View style={styles.mapBackground} pointerEvents={onboardingBlocksFocus ? "none" : "auto"}
+        accessibilityElementsHidden={onboardingBlocksFocus}
+        importantForAccessibility={onboardingBlocksFocus ? "no-hide-descendants" : "auto"}>
         <ExpoImage
           source={require("../../assets/images/campus-map.png")}
           style={[StyleSheet.absoluteFill, styles.mapImage]}
@@ -168,7 +225,7 @@ export default function LandingPage() {
           {/* Reopen Tutorial Button */}
           <TouchableOpacity
             style={[styles.tutorialButton, { top: insets.top + 195, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
-            onPress={() => setShowTutorial(true)}
+            onPress={() => { initialFocusHandled.current = false; setTutorialDismissed(false); setShowTutorial(true); }}
             activeOpacity={0.7}
             accessible
             accessibilityRole="button"
@@ -247,7 +304,7 @@ export default function LandingPage() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Accessibility mode"
-                  accessibilityHint="Opens accessible campus navigation"
+                  accessibilityHint="Choose visual or motor impairment support before opening campus navigation"
                 >
                   <LinearGradient
                     colors={opaqueSurfaces
@@ -283,13 +340,98 @@ export default function LandingPage() {
         </SafeAreaView>
       </View>
 
+      <Modal
+        visible={showAccessibilityChoice}
+        transparent
+        animationType="none"
+        onRequestClose={() => setShowAccessibilityChoice(false)}
+        onDismiss={finishAccessibilityNavigation}
+      >
+        <View style={styles.choiceOverlay}>
+          <View style={styles.choiceCard} accessibilityViewIsModal>
+            <ScrollView contentContainerStyle={styles.choiceContent}>
+              <Text accessibilityRole="header" style={styles.choiceTitle}>Accessibility support</Text>
+              <Text style={styles.choiceDescription}>Choose the option that best matches your needs.</Text>
+              {([
+                { value: "visual", label: "Visual impairment" },
+                { value: "motor", label: "Motor impairment" },
+              ] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.choiceOption, selectedNeed === option.value && styles.choiceOptionSelected]}
+                  accessibilityRole="radio"
+                  accessibilityLabel={option.label}
+                  accessibilityState={{ checked: selectedNeed === option.value }}
+                  onPress={() => setSelectedNeed(option.value)}
+                >
+                  <Text style={styles.choiceOptionText}>{option.label}</Text>
+                  <Ionicons
+                    name={selectedNeed === option.value ? "radio-button-on" : "radio-button-off"}
+                    size={26}
+                    color="#064C52"
+                    accessible={false}
+                  />
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.choiceContinue, (!selectedNeed || !settingsLoaded) && styles.choiceDisabled]}
+                disabled={!selectedNeed || !settingsLoaded}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !selectedNeed || !settingsLoaded }}
+                onPress={confirmAccessibilityChoice}
+              >
+                <Text style={styles.choiceContinueText}>Continue</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.choiceCancel}
+                accessibilityRole="button"
+                onPress={() => setShowAccessibilityChoice(false)}
+              >
+                <Text style={styles.choiceOptionText}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* First-time Tutorial Modal Component */}
-      <TutorialModal visible={showTutorial} onClose={handleDismissTutorial} />
+      <TutorialModal visible={tutorialVisible} onClose={handleDismissTutorial} onDismiss={() => {
+        if (!showTutorial && mounted.current) {
+          initialFocusHandled.current = false;
+          setTutorialDismissed(true);
+        }
+      }} />
+      <AvoidStairsPrompt visible={promptVisible} onAnswered={() => {
+        if (mounted.current) setPromptPhase(navigation.isFocused() ? "closing" : "waiting");
+      }} onDismiss={() => {
+        if (mounted.current && promptPhase === "closing") {
+          initialFocusHandled.current = false;
+          setPromptPhase("done");
+        }
+      }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  choiceOverlay: {
+    flex: 1, justifyContent: "center", alignItems: "center",
+    padding: 24, backgroundColor: "rgba(0,0,0,0.65)",
+  },
+  choiceCard: { width: "100%", maxWidth: 420, maxHeight: "90%", backgroundColor: "#FFFFFF", borderRadius: 24 },
+  choiceContent: { padding: 24, gap: 16 },
+  choiceTitle: { fontSize: 24, fontWeight: "800", color: "#064C52" },
+  choiceDescription: { fontSize: 16, color: "#334155" },
+  choiceOption: {
+    minHeight: 56, padding: 16, borderWidth: 2, borderColor: "#64748B",
+    borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 12,
+  },
+  choiceOptionSelected: { borderColor: "#064C52", backgroundColor: "#DDF2F0" },
+  choiceOptionText: { flexShrink: 1, flexGrow: 1, fontSize: 18, fontWeight: "700", color: "#064C52" },
+  choiceContinue: { minHeight: 48, padding: 14, borderRadius: 12, backgroundColor: "#064C52", alignItems: "center" },
+  choiceContinueText: { fontSize: 18, fontWeight: "700", color: "#FFFFFF" },
+  choiceDisabled: { backgroundColor: "#64748B" },
+  choiceCancel: { minHeight: 48, alignItems: "center", justifyContent: "center", padding: 12 },
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   safeArea: { flex: 1, backgroundColor: "transparent" },
   header: {

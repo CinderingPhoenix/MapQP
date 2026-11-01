@@ -7,8 +7,8 @@ import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Vibration } from "react-native";
-import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
-import { useFocusEffect } from "expo-router"; // ✅ Use Expo Router's hook instead
+import { getRoutingPreferences, NavigationPoint, routeBetween, WalkingRoute } from "./routing";
+import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
 
@@ -19,6 +19,7 @@ export type Point = {
 };
 
 export type RoutePlan = WalkingRoute & {
+  arrivalTime: number;
   origin: Point;
   destination: Point;
 };
@@ -163,13 +164,23 @@ export function formatDistance(meters: number, units: "imperial" | "metric" = "m
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+export function formatArrivalTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
-export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric"): string {
-  return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters, units)}`;
+export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric", isCurrentStep = true): string {
+  const message = instruction === "Arrive at destination"
+    ? "You will arrive at your destination"
+    : instruction;
+  return isCurrentStep && distMeters <= 5 ? `${message} now` : `${message} in ${formatDistance(distMeters, units)}`;
 }
 
 function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
@@ -197,7 +208,7 @@ export function formatDirectionInstruction(step: DirectionStep, style: "natural"
 
 export function generateDirections(geometry: [number, number][], navigationPath: NavigationPoint[] = []): DirectionStep[] {
   const steps: DirectionStep[] = [];
-  if (!geometry || geometry.length < 2 || navigationPath.length < 3) return steps;
+  if (!geometry || geometry.length < 2) return steps;
 
   for (let index = 1; index < navigationPath.length - 1; index++) {
     const decisionPoint = navigationPath[index];
@@ -211,12 +222,18 @@ export function generateDirections(geometry: [number, number][], navigationPath:
     let diff = outgoingBearing - incomingBearing;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-    const instruction = diff > 45 ? "Turn right" : diff > 15 ? "Slight right" : diff < -45 ? "Turn left" : diff < -15 ? "Slight left" : "Continue straight";
+    // Small changes in mapped path geometry are bends, not maneuvers.
+    // Do not add a straight-ahead instruction for these junctions.
+    if (Math.abs(diff) <= 30) continue;
+    const instruction = diff > 45 ? "Turn right" : diff > 0 ? "Slight right" : diff < -45 ? "Turn left" : "Slight left";
     const pointIndex = closestGeometryIndex(geometry, currentPoint);
     const lastStep = steps[steps.length - 1];
-    if (!lastStep || lastStep.instruction !== instruction || pointIndex - lastStep.pointIndex > 3) {
-      steps.push({ instruction, pointIndex, turnDegrees: diff });
-    }
+    // Smoothed geometry can have many vertices within a few meters. Merge
+    // repeated instructions by walking distance rather than vertex count.
+    if (lastStep && pointIndex <= lastStep.pointIndex) continue;
+    if (lastStep && lastStep.instruction === instruction &&
+        getSegmentDistance(geometry, lastStep.pointIndex, pointIndex) <= 10) continue;
+    steps.push({ instruction, pointIndex, turnDegrees: diff });
   }
   steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
   return steps;
@@ -360,7 +377,12 @@ export function useMapNavigation(buildings: Building[]) {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle, navigationMode } = useSettings();
+  const { distanceUnits, directionStyle, navigationMode, avoidIndoorRoutes, avoidInaccessibleCrosswalks, avoidStairs = false } = useSettings();
+  const routingPreferencesRef = useRef({ navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks });
+  routingPreferencesRef.current = { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+  const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean; avoidIndoorRoutes: boolean; avoidInaccessibleCrosswalks: boolean } | null>(null);
+  const routeRequestIdRef = useRef(0);
+  useEffect(() => () => { routeRequestIdRef.current += 1; }, []);
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
@@ -368,6 +390,9 @@ export function useMapNavigation(buildings: Building[]) {
 
   const handleCancelRoute = useCallback(() => {
     isRouteCancelledRef.current = true;
+    routeRequestIdRef.current += 1;
+    routePolicyRef.current = null;
+    setRouteLoading(false);
     destinationBuildingRef.current = "";
     autoRouteKeyRef.current = "";
     routeGeometryRef.current = null;
@@ -392,7 +417,7 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => {
     if (prevNavigationModeRef.current !== navigationMode) {
       prevNavigationModeRef.current = navigationMode;
-      if (route) {
+      if (route || routePolicyRef.current) {
         handleCancelRoute();
       }
     }
@@ -424,8 +449,13 @@ export function useMapNavigation(buildings: Building[]) {
     }, 50);
   }, []);
 
-  const planRoute = useCallback(async (currentCoords?: Coordinates) => {
+  const planRoute = useCallback(async (currentCoords?: Coordinates, newRoute = false) => {
     const targetBuilding = destinationBuildingRef.current;
+    const requestId = ++routeRequestIdRef.current;
+    const requestMode = navigationMode;
+    const isCurrentRequest = () => requestId === routeRequestIdRef.current &&
+      destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current &&
+      routingPreferencesRef.current.navigationMode === requestMode;
     setRouteError("");
     
     const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
@@ -435,12 +465,23 @@ export function useMapNavigation(buildings: Building[]) {
     if (!selectedBuilding) return setRouteError("Choose a WPI destination building.");
     if (!activeCoords) return setRouteError("Waiting for your current location before planning.");
     
+    if (!routePolicyRef.current || routePolicyRef.current.buildingId !== targetBuilding) {
+      const { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
+      const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
+      routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+    }
+    const { accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routePolicyRef.current;
     setRouteLoading(true);
+    isReroutingRef.current = true;
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const accessibleOnly = navigationMode === "accessibility";
+      const preferences = getRoutingPreferences({
+        avoidStairs: accessibleOnly,
+        avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks: requestMode === "accessibility" || avoidInaccessibleCrosswalks,
+      });
       const entrances = selectedBuilding.entrances.filter(
-        (entrance) => !accessibleOnly || entrance.accessibility
+        (entrance) => !preferences.avoidStairs || entrance.accessibility
       );
       if (entrances.length === 0) {
         throw new Error("This building has no accessible entrance.");
@@ -453,7 +494,7 @@ export function useMapNavigation(buildings: Building[]) {
         };
         try {
           return {
-            ...(await routeBetween(origin, destination, { accessibleOnly })),
+            ...(await routeBetween(origin, destination, preferences)),
             origin,
             destination,
           };
@@ -461,10 +502,14 @@ export function useMapNavigation(buildings: Building[]) {
           return null;
         }
       }));
-      if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
+      if (!isCurrentRequest()) return;
       const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
       if (!availableRoutes.length) throw new Error("The walking route service could not find a route. Try again.");
-      const selectedRoute = fastestRoute(availableRoutes);
+      const fastest = fastestRoute(availableRoutes);
+      const selectedRoute = {
+        ...fastest,
+        arrivalTime: Date.now() + fastest.duration * 1000,
+      };
       setRoute(selectedRoute);
       setRouteDestinationBuilding(targetBuilding);
       const steps = generateDirections(selectedRoute.geometry, selectedRoute.navigationPath);
@@ -496,24 +541,29 @@ export function useMapNavigation(buildings: Building[]) {
         }
       }
     } catch (routeRequestError) {
-      if (destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current) {
+      if (isCurrentRequest()) {
+        // A failed new request must not leave an older route looking like its result.
+        if (newRoute) handleCancelRoute();
         autoRouteKeyRef.current = "";
         setRouteError(routeRequestError instanceof Error ? routeRequestError.message : "The route could not be planned. Try again.");
       }
     } finally {
-      setRouteLoading(false);
-      isReroutingRef.current = false;
+      if (isCurrentRequest()) {
+        setRouteLoading(false);
+        isReroutingRef.current = false;
+      }
     }
   }, [
     coordinates,
     buildings,
-    navigationMode,
     navigationSpeech,
     distanceUnits,
     directionStyle,
     startRoutePreviewCountdown,
+    handleCancelRoute,
     isFocused,
     buildings,
+    handleCancelRoute,
   ]);
 
   const planRouteRef = useRef(planRoute);
@@ -592,11 +642,18 @@ export function useMapNavigation(buildings: Building[]) {
   }, [coordinates, destinationBuilding, planRoute]);
 
   const handleDestinationChange = useCallback((buildingId: string) => {
+    if (!buildingId) { handleCancelRoute(); return; }
+    routeRequestIdRef.current += 1;
     isRouteCancelledRef.current = false;
-    autoRouteKeyRef.current = "";
+    destinationBuildingRef.current = buildingId;
+    const { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
+    const accessibleOnly = navigationMode === "accessibility" || avoidStairs;
+    routePolicyRef.current = { buildingId, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+    // The explicit request below owns this selection; avoid a duplicate effect request.
+    autoRouteKeyRef.current = coordinates ? `current::${buildingId}` : "";
     setDestinationBuilding(buildingId);
-    if (buildingId) void planRoute();
-  }, [planRoute]);
+    void planRoute(undefined, true);
+  }, [coordinates, planRoute, handleCancelRoute]);
 
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);

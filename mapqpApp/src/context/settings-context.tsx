@@ -1,3 +1,4 @@
+import type { RoutingPreferences } from "../utils/routing";
 import * as SecureStore from "expo-secure-store";
 import {
   createContext,
@@ -12,6 +13,7 @@ import { useDeviceAccessibility, type DeviceAccessibilitySettings } from "../hoo
 export type DistanceUnits = "imperial" | "metric";
 export type DirectionStyle = "natural" | "degrees";
 export type NavigationMode = "standard" | "accessibility";
+export type AccessibilityNeed = "visual" | "motor";
 
 export type CustomAccessibilityPreferences = {
   reduceMotionEnabled: boolean;
@@ -70,22 +72,31 @@ export function restoreAccessibilitySettings(value: unknown): AccessibilitySetti
   return { customAccessibilityPreferences };
 }
 
-type AppSettings = AccessibilitySettings & {
+type AppSettings = AccessibilitySettings & RoutingPreferences & {
   navigationMode: NavigationMode;
+  accessibilityNeed: AccessibilityNeed | null;
   hasSelectedMode: boolean;
   distanceUnits: DistanceUnits;
   directionStyle: DirectionStyle;
+  avoidStairs: boolean;
+  hasAnsweredAvoidStairsPrompt: boolean;
   fontSize: number;
   accessibilitySettingsVersion: 5;
 };
 
 type SettingsContextType = AppSettings & {
   setNavigationMode: (mode: NavigationMode) => void;
+  setAccessibilityNeed: (need: AccessibilityNeed) => void;
   setHasSelectedMode: (selected: boolean) => void;
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
+  setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
+  settingsReadSucceeded: boolean;
+  configureAvoidStairs: (enabled: boolean) => Promise<void>;
+  configureRoutingPreferences: (preferences: Partial<RoutingPreferences>) => Promise<void>;
+  resetAvoidStairsPreference: () => void;
   deviceAccessibility: DeviceAccessibilitySettings;
   setAccessibilityPreference: (preference: AccessibilityPreference, enabled: boolean) => void;
   resetAccessibilitySettings: () => void;
@@ -95,9 +106,14 @@ const SETTINGS_STORAGE_KEY = "mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
   navigationMode: "standard",
+  accessibilityNeed: null,
   hasSelectedMode: false,
   distanceUnits: "imperial",
   directionStyle: "natural",
+  avoidStairs: false,
+  avoidIndoorRoutes: false,
+  avoidInaccessibleCrosswalks: false,
+  hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
@@ -133,6 +149,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     DEFAULT_SETTINGS.navigationMode
   );
 
+  const [accessibilityNeed, setAccessibilityNeed] = useState<AccessibilityNeed | null>(null);
+
   const [hasSelectedMode, setHasSelectedMode] = useState(
     DEFAULT_SETTINGS.hasSelectedMode
   );
@@ -145,6 +163,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     DEFAULT_SETTINGS.directionStyle
   );
 
+  const [routingPreference, setRoutingPreference] = useState({
+    avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: 0,
+  });
+  const { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreference;
+  const avoidStairsEdit = useRef<boolean | undefined>(undefined);
+  const choiceRevision = useRef(0);
+  const pendingChoices = useRef(new Map<number, { resolve: () => void; reject: (error: unknown) => void; previouslyAnswered: boolean }>());
+  const pendingChoice = pendingChoices.current.get(routingPreference.revision);
+  const hasAnsweredAvoidStairsPrompt = pendingChoice
+    ? pendingChoice.previouslyAnswered : routingPreference.hasAnsweredAvoidStairsPrompt;
+  const setAvoidStairs = (enabled: boolean) => {
+    avoidStairsEdit.current = enabled;
+    setRoutingPreference((previous) => ({ ...previous, avoidStairs: enabled }));
+  };
+  const configureAvoidStairs = (enabled: boolean) => configureRoutingPreferences({ avoidStairs: enabled });
+  const configureRoutingPreferences = (preferences: Partial<RoutingPreferences>): Promise<void> => {
+    if (!settingsLoaded || !settingsReadSucceeded) return Promise.reject(new Error("Settings are not ready. Please try again."));
+    const revision = ++choiceRevision.current;
+    avoidStairsEdit.current = preferences.avoidStairs ?? avoidStairs;
+    const completion = new Promise<void>((resolve, reject) => pendingChoices.current.set(revision, { resolve, reject, previouslyAnswered: hasAnsweredAvoidStairsPrompt }));
+    setRoutingPreference((previous) => ({ ...previous, ...preferences, hasAnsweredAvoidStairsPrompt: true, revision }));
+    return completion;
+  };
+  const resetAvoidStairsPreference = () => {
+    avoidStairsEdit.current = false;
+    setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
+  };
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -176,6 +221,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setNavigationMode(parsedSettings.navigationMode);
           }
 
+          if (parsedSettings.accessibilityNeed === "visual" || parsedSettings.accessibilityNeed === "motor") {
+            setAccessibilityNeed(parsedSettings.accessibilityNeed);
+          }
+
           if (typeof parsedSettings.hasSelectedMode === "boolean") {
             setHasSelectedMode(parsedSettings.hasSelectedMode);
           }
@@ -192,6 +241,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             parsedSettings.directionStyle === "degrees"
           ) {
             setDirectionStyle(parsedSettings.directionStyle);
+          }
+
+          if (typeof parsedSettings.avoidStairs === "boolean" && avoidStairsEdit.current === undefined) {
+            setRoutingPreference({
+              avoidStairs: parsedSettings.avoidStairs,
+              avoidIndoorRoutes: parsedSettings.avoidIndoorRoutes === true,
+              avoidInaccessibleCrosswalks: parsedSettings.avoidInaccessibleCrosswalks === true,
+              hasAnsweredAvoidStairsPrompt: typeof parsedSettings.hasAnsweredAvoidStairsPrompt === "boolean"
+                ? parsedSettings.hasAnsweredAvoidStairsPrompt
+                : parsedSettings.hasAnsweredAvoidStairsPrompt === undefined,
+              revision: 0,
+            });
+          }
+
+          if (typeof parsedSettings.avoidStairs !== "boolean" && avoidStairsEdit.current === undefined &&
+              typeof parsedSettings.hasAnsweredAvoidStairsPrompt === "boolean") {
+            setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: parsedSettings.avoidIndoorRoutes === true, avoidInaccessibleCrosswalks: parsedSettings.avoidInaccessibleCrosswalks === true, hasAnsweredAvoidStairsPrompt: parsedSettings.hasAnsweredAvoidStairsPrompt, revision: 0 });
           }
 
           if (
@@ -221,30 +287,67 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     const settings: AppSettings = {
       navigationMode,
+      accessibilityNeed,
       hasSelectedMode,
       distanceUnits,
       directionStyle,
+      avoidStairs,
+      avoidIndoorRoutes,
+      avoidInaccessibleCrosswalks,
+      hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
     // Capture this render's snapshot and serialize writes so an older save
     // cannot finish after a newer preference change.
+    const revision = routingPreference.revision;
     saveQueue.current = saveQueue.current.then(async () => {
       try {
         await SecureStore.setItemAsync(
           SETTINGS_STORAGE_KEY,
           JSON.stringify(settings)
         );
+        let acknowledgedChoice = false;
+        for (const [pendingRevision, pending] of pendingChoices.current) {
+          // React may batch rapid choices into one render. The saved latest
+          // snapshot supersedes any earlier choice that had no separate render.
+          if (pendingRevision <= revision) {
+            pending.resolve();
+            pendingChoices.current.delete(pendingRevision);
+            acknowledgedChoice = true;
+          }
+        }
+        if (acknowledgedChoice) {
+          setRoutingPreference((previous) => previous.revision === revision ? { ...previous } : previous);
+        }
       } catch (error) {
         console.error("Failed to save settings:", error);
+        let failedChoice = false;
+        let previouslyAnswered = false;
+        for (const [pendingRevision, pending] of pendingChoices.current) {
+          if (pendingRevision <= revision) {
+            previouslyAnswered = pending.previouslyAnswered;
+            pending.reject(error);
+            pendingChoices.current.delete(pendingRevision);
+            failedChoice = true;
+          }
+        }
+        if (failedChoice) {
+          // A failed answer remains eligible. Its caller keeps the dialog open for retry.
+          setRoutingPreference((previous) => previous.revision === revision
+            ? { ...previous, hasAnsweredAvoidStairsPrompt: previouslyAnswered } : previous);
+        }
       }
     });
   }, [
     navigationMode,
+    accessibilityNeed,
     hasSelectedMode,
     distanceUnits,
     directionStyle,
+    avoidStairs,
+    routingPreference,
     fontSize,
     settingsLoaded,
     settingsReadSucceeded,
@@ -255,9 +358,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     <SettingsContext.Provider
       value={{
         navigationMode,
+        accessibilityNeed,
+        setAccessibilityNeed,
         hasSelectedMode,
         distanceUnits,
         directionStyle,
+        avoidStairs,
+        avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks,
+        setAvoidStairs,
+        hasAnsweredAvoidStairsPrompt,
+        configureAvoidStairs,
+        configureRoutingPreferences,
+        resetAvoidStairsPreference,
+        settingsReadSucceeded,
         fontSize,
         setNavigationMode,
         setHasSelectedMode,

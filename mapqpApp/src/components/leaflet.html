@@ -238,6 +238,7 @@
      */
     function createTraversedPolyline(geometry) {
       return L.polyline(geometry, {
+        smoothFactor: 0,
         color: '#888888',
         weight: 6,
         opacity: 0.8,
@@ -251,6 +252,7 @@
      */
     function createRemainingPolyline(geometry) {
       return L.polyline(geometry, {
+        smoothFactor: 0,
         color: '#1d5962',
         weight: 6,
         opacity: 0.9
@@ -308,6 +310,47 @@
         animate: !window.reduceMotionEnabled
       });
     }
+
+    // Camera-only commands never change routeData, markers, or GPS subscriptions.
+    function reportCamera(type, command) {
+      if (!map || !window.ReactNativeWebView) return;
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: type, command: command,
+        zoom: map.getZoom(), minZoom: map.getMinZoom(), maxZoom: map.getMaxZoom()
+      }));
+    }
+
+    function beginManualExploration() {
+      window.manualCameraExploration = true;
+      cancelBearingAnimations();
+      map.stop();
+      isHeadingFocused = false;
+      var compass = document.querySelector('.compass-control');
+      if (compass) {
+        compass.style.backgroundColor = 'white';
+        compass.setAttribute('aria-pressed', 'false');
+      }
+      window.ReactNativeWebView.postMessage('USER_DRAGGED');
+    }
+
+    window.cameraCommand = function(command) {
+      if (!map || ['zoom-in', 'zoom-out', 'pan-up', 'pan-down', 'pan-left', 'pan-right'].indexOf(command) < 0) return;
+      beginManualExploration();
+      if (command === 'zoom-in' || command === 'zoom-out') {
+        var delta = command === 'zoom-in' ? 1 : -1;
+        map.setZoom(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + delta)), { animate: false });
+      } else {
+        var size = map.getSize();
+        var target = L.point(size.x / 2, size.y / 2);
+        if (command === 'pan-up') target.y -= size.y / 4;
+        if (command === 'pan-down') target.y += size.y / 4;
+        if (command === 'pan-left') target.x -= size.x / 4;
+        if (command === 'pan-right') target.x += size.x / 4;
+        // The rotation plugin converts screen coordinates to geographic coordinates.
+        map.panTo(map.containerPointToLatLng(target), { animate: false });
+      }
+      reportCamera('CAMERA_COMMAND_COMPLETE', command);
+    };
 
     /**
      * Initializes Leaflet and its map controls.
@@ -563,29 +606,23 @@
 
       map.addControl(new MuteControl());
 
-      // Detect manual map interaction
-      map.on('dragstart rotatestart', function() {
-        if (isHeadingFocused) {
-          isHeadingFocused = false;
-
-          var compass = document.querySelector(
-            '.compass-control'
-          );
-
-          if (compass) {
-            compass.style.backgroundColor = 'white';
-            compass.setAttribute('aria-pressed', 'false');
-          }
-
-          window.ReactNativeWebView.postMessage(
-            'HEADING_UNLOCKED'
-          );
-        }
-
-        window.ReactNativeWebView.postMessage(
-          'USER_DRAGGED'
-        );
+      // Gestures and native buttons share the same exploration state.
+      map.on('dragstart rotatestart', beginManualExploration);
+      map.on('zoomstart', function(e) {
+        // Programmatic follow zooms are not gestures. Leaflet's gesture handlers
+        // supply originalEvent only on some paths, so capture input at the DOM.
+        if (e.originalEvent) beginManualExploration();
       });
+      var mapElement = document.getElementById('map');
+      L.DomEvent.on(mapElement, 'wheel dblclick', beginManualExploration);
+      L.DomEvent.on(mapElement, 'touchstart', function(e) {
+        if (e.touches && e.touches.length > 1) beginManualExploration();
+      });
+      L.DomEvent.on(mapElement, 'keydown', function(e) {
+        if (['+', '-', '=', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.key) >= 0) beginManualExploration();
+      });
+      map.on('zoomend moveend', function() { reportCamera('CAMERA_STATE'); });
+      reportCamera('MAP_READY');
 
       updateControlPositions(!!routeData);
     };
@@ -851,6 +888,7 @@
      * Adjusts map control positions based on route state.
      */
     var directionsExpanded = false;
+    var summaryClearance = 0;
 
     function updateControlPositions(hasRoute) {
       var rightControlContainer = document.querySelector(
@@ -861,28 +899,29 @@
         '.leaflet-top.leaflet-left'
       );
 
-      var topPosition;
+      // Native summary measurements are in the same viewport as this WebView.
+      // Keep the existing idle/active anchors, but clear the actual summary.
+      var top = hasRoute ? Math.max(150, summaryClearance) : 60;
+      var topPosition = top + 'px';
+      if (rightControlContainer) rightControlContainer.style.top = topPosition;
+      if (leftControlContainer) leftControlContainer.style.top = topPosition;
 
-      if (directionsExpanded) {
-        topPosition = '68%';
-      } else {
-        topPosition = hasRoute ? '150px' : '60px';
+      var leftBottom = top;
+      if (leftControlContainer && leftControlContainer.getBoundingClientRect) {
+        leftBottom = Math.max(top, leftControlContainer.getBoundingClientRect().bottom);
       }
-
-      if (rightControlContainer) {
-        rightControlContainer.style.top = topPosition;
-      }
-
-      if (leftControlContainer) {
-        leftControlContainer.style.top = topPosition;
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'MAP_CONTROLS_LAYOUT', hasRoute: !!hasRoute,
+          expanded: !!directionsExpanded, clearance: summaryClearance,
+          top: top, leftBottom: leftBottom
+        }));
       }
     }
 
-    window.updateDirectionsExpanded = function(
-      expanded,
-      hasRoute
-    ) {
-      directionsExpanded = expanded;
+    window.updateDirectionsExpanded = function(expanded, hasRoute, clearance) {
+      directionsExpanded = !!expanded;
+      summaryClearance = Number.isFinite(clearance) ? Math.max(0, clearance) : 0;
       updateControlPositions(hasRoute);
     };
   </script>

@@ -33,9 +33,9 @@ import {
   formatDirectionInstruction,
   formatDistance,
   formatDuration,
+  formatArrivalTime,
   formatInstructionWithDistance,
   getDistanceToStepPoint,
-  getSegmentDistance,
   useMapNavigation,
 } from "../utils/map-logic";
 import { initRoutingGraph } from "../utils/routing";
@@ -44,10 +44,13 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
-  useKeepAwake();
+  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, height: windowHeight } = useWindowDimensions();
+  const [viewportHeight, setViewportHeight] = useState(windowHeight);
   const [textRefresh, setTextRefresh] = useState(0);
+  const [summaryBottom, setSummaryBottom] = useState(0);
+  const [plannerHeight, setPlannerHeight] = useState(160);
 
   // --- Dynamic Map Data State & Hooks (Must be called unconditionally) ---
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -189,14 +192,17 @@ export default function Home() {
   const emphasizedText = accessibilityPreferences.emphasizedTextEnabled;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
       {route && (
         <View
+          onLayout={(event) => setSummaryBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
           style={[
             styles.topRouteSummary,
             increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
             reduceTransparencyEnabled && { backgroundColor: "#fff" },
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
+            directionsExpanded && { height: Math.min(viewportHeight * 0.65,
+              Math.max(120, viewportHeight - plannerHeight - keyboardHeight - (showRecenter ? 72 : 16) - 248)) },
           ]}
         >
           {/* Header Row containing Route Info and a dedicated Cancel Button */}
@@ -239,7 +245,7 @@ export default function Home() {
                 >
                   {formatDistance(route.distance, distanceUnits)}
                   {" total • "}
-                  {formatDuration(route.duration)}
+                  {formatDuration(route.duration)}{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
                 </Text>
               </CurrentNavigationSummary>
             </View>
@@ -270,16 +276,13 @@ export default function Home() {
                 showsVerticalScrollIndicator
               >
                 {upcomingSteps.map((step, index) => {
-                  const distance =
-                    index === 0
-                      ? getDistanceToStepPoint(
-                          route.geometry,
-                          currentRouteIndex,
-                          step.pointIndex,
-                          coordinates?.latitude,
-                          coordinates?.longitude
-                        )
-                      : getSegmentDistance(route.geometry, upcomingSteps[index - 1].pointIndex, step.pointIndex);
+                  const distance = getDistanceToStepPoint(
+                    route.geometry,
+                    currentRouteIndex,
+                    step.pointIndex,
+                    coordinates?.latitude,
+                    coordinates?.longitude
+                  );
 
                   return (
                     <View
@@ -291,7 +294,7 @@ export default function Home() {
                         maxFontSizeMultiplier={2.5}
                         style={[styles.directionInstruction, { fontSize: 19 * fontSize, fontWeight: boldTextEnabled ? "600" : "500" }]}
                       >
-                        {formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits)}
+                        {formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits, index === 0)}
                       </Text>
                     </View>
                   );
@@ -326,7 +329,7 @@ export default function Home() {
                 >
                   {formatDistance(route.distance, distanceUnits)}
                   {" • "}
-                  {formatDuration(route.duration)} left
+                  {formatDuration(route.duration)} left{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -382,6 +385,8 @@ export default function Home() {
             heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
+            controlsTop={route ? summaryBottom + 12 : 132}
+            controlsBottom={plannerHeight + keyboardHeight + (showRecenter ? 72 : 16)}
             accessibilityMode
             recenterSignal={recenterSignal}
             onUserDragged={() => setShowRecenter(true)}
@@ -400,6 +405,7 @@ export default function Home() {
 
       {/* Destination picker */}
       <Animated.View
+        onLayout={(event) => setPlannerHeight(event.nativeEvent.layout.height)}
         style={[
           styles.plannerPanel,
           increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
