@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mapqpApp",
-    "slug": "mapqpApp",
+    "name": "mapQP",
+    "slug": "mapQP",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/mapqp-logo.png",
