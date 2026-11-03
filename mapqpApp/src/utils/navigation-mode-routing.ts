@@ -39,7 +39,7 @@ export function createNavigationModeRouting(
       const source = state.routes[state.index - 1];
       if (!source || !isNavigationRoute(source.name)) {
         pending = null;
-      } else if (pending?.settingsKey !== active.key || pending.stackKey !== state.key) {
+      } else if (pending?.settingsKey !== active.key || pending.stackKey !== state.key || pending.sourceKey !== source.key) {
         pending = {
           stackKey: state.key,
           settingsKey: active.key,

@@ -1,5 +1,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
+import * as Speech from "expo-speech";
+import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
 import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -58,7 +60,7 @@ export default React.memo(function BuildingPicker({
   accessibilityControls = false,
   onOpenSettings,
 }: BuildingPickerProps) {
-  const { fontSize, deviceAccessibility } = useSettings();
+  const { fontSize, deviceAccessibility, configureRoutingPreferences } = useSettings();
   const {
     reduceMotionEnabled,
     boldTextEnabled,
@@ -194,10 +196,48 @@ export default React.memo(function BuildingPicker({
     [onChange, saveRecentSearch, isBuildingSelectorOpen]
   );
 
+  const voiceCommandHandled = useRef(false);
+
   // Speech recognition
   useSpeechRecognitionEvent("result", (event: any) => {
     const spokenText = event.results[0]?.transcript;
-    if (!spokenText) return;
+    if (!spokenText || voiceCommandHandled.current) return;
+    // Wait for the complete phrase so partial commands cannot match a building.
+    if (accessibilityControls && !event.isFinal) return;
+    const command = spokenText.toLowerCase().replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, " ");
+    if (accessibilityControls && /^(?:please )?(?:cancel|stop|end)(?: (?:the|my|current))? (?:route|navigation)(?: please)?$/.test(command)) {
+      voiceCommandHandled.current = true;
+      pendingModalSelection.current = null;
+      ExpoSpeechRecognitionModule?.stop?.();
+      setIsListening(false);
+      setQuery("");
+      setIsOpen(false);
+      setShowSavedOnly(false);
+      setIsBuildingSelectorOpen(false);
+      setIsInputFocused(false);
+      Keyboard.dismiss();
+      onCancel();
+      return;
+    }
+
+    const routingCommand = accessibilityControls ? parseVoiceRoutingCommand(spokenText) : null;
+    if (routingCommand) {
+      voiceCommandHandled.current = true;
+      ExpoSpeechRecognitionModule?.stop?.();
+      setIsListening(false);
+      setQuery("");
+      setIsOpen(false);
+      const labels = { avoidStairs: "Avoid stairs", avoidIndoorRoutes: "Avoid indoor routes",
+        avoidInaccessibleCrosswalks: "Avoid inaccessible road crossings" };
+      void configureRoutingPreferences({ [routingCommand.preference]: routingCommand.enabled })
+        .then(() => {
+          Speech.speak(`${labels[routingCommand.preference]} turned ${routingCommand.enabled ? "on" : "off"}. Changes apply when you start a new route.`);
+        })
+        .catch(() => {
+          Speech.speak("Could not save the routing preference. Please try again.");
+        });
+      return;
+    }
 
     setQuery(spokenText);
     setIsOpen(true);
@@ -340,6 +380,7 @@ export default React.memo(function BuildingPicker({
 
       setQuery("");
       setIsOpen(false);
+      voiceCommandHandled.current = false;
       setIsListening(true);
 
       ExpoSpeechRecognitionModule.start({
@@ -487,6 +528,7 @@ export default React.memo(function BuildingPicker({
                 ? "Stop voice destination search"
                 : "Search destinations by voice"
             }
+            accessibilityHint="Say a building name to navigate, say cancel route to stop navigation, or say avoid stairs, allow indoor routes, or turn on crosswalk avoidance to change routing preferences."
             activeOpacity={0.8}
           >
             <Ionicons

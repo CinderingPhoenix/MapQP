@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Slider from "@react-native-community/slider";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
@@ -148,6 +148,7 @@ function GuidanceRepetitionSettings() {
 }
 
 const KEYS_TO_DELETE = [
+  "mapqp_tutorial_shown_once",
   "mapqp_microsoft_session",
   "mapqp_temp_code_session",
   "mapqp_temp_code_expires_at",
@@ -227,6 +228,7 @@ function SettingIcon({ name }: {
 }
 
 export default function SettingsPage() {
+  const navigation = useNavigation();
   useAuthGuard();
   const { fontScale, width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<"general" | "routing">("general");
@@ -324,9 +326,30 @@ export default function SettingsPage() {
     ];
   };
 
+  // Mount the selected map behind Settings; the stack's eventual replace reuses
+  // this preloaded route, including its WebView, instead of starting it on exit.
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    router.prefetch(navigationMode === "accessibility"
+      ? "/accessibility-navigation" : "/standard-navigation");
+  }, [navigationMode, settingsLoaded]);
+
   const changeNavigationMode = (mode: "standard" | "accessibility") => {
     Speech.stop();
     setNavigationMode(mode);
+    const state = navigation.getState();
+    if (!state) return;
+    const settingsIndex = state.index;
+    const source = state.routes[settingsIndex - 1];
+    const target = mode === "standard" ? "standard-navigation" : "accessibility-navigation";
+    if (state.routes[settingsIndex]?.name === "settings" && source &&
+        (source.name === "standard-navigation" || source.name === "accessibility-navigation") &&
+        source.name !== target) {
+      navigation.dispatch({
+        type: "REPLACE", target: state.key, source: source.key,
+        payload: { name: target },
+      });
+    }
   };
 
   const { from } = useLocalSearchParams<{ from?: string }>();

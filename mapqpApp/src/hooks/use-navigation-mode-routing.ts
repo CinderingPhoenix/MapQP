@@ -40,7 +40,25 @@ export function useNavigationModeRouting(mode: NavigationMode, ready: boolean) {
   useLayoutEffect(() => {
     latestMode.current = ready ? mode : null;
     const navigation = lastNavigation.current;
-    if (navigation) apply(navigation, routing.stateChanged(navigation.getState()));
+    if (!navigation) return;
+    const state = navigation.getState();
+    const active = state.routes[state.index];
+    const source = state.routes[state.index - 1];
+    const target = mode === "standard" ? "standard-navigation" : "accessibility-navigation";
+    if (ready && active?.name === "settings" && source &&
+        (source.name === "standard-navigation" || source.name === "accessibility-navigation") &&
+        source.name !== target) {
+      // Replace only the covered map route. Settings retains its native screen
+      // and focus; every back mechanism now reveals the selected map directly.
+      navigation.dispatch({
+        type: "REPLACE",
+        target: state.key,
+        source: source.key,
+        payload: { name: target },
+      });
+      return;
+    }
+    apply(navigation, routing.stateChanged(state));
   }, [mode, ready, routing, apply]);
 
   useLayoutEffect(() => () => {

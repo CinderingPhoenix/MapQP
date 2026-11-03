@@ -46,15 +46,20 @@ export default function LandingPage() {
   const tutorialClosing = useRef(false);
   useEffect(() => {
     mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  useFocusEffect(useCallback(() => {
     let active = true;
+    setTutorialReady(false);
+    setTutorialReadSucceeded(false);
+    setPromptPhase("waiting");
     async function checkFirstLaunch() {
       try {
         const hasShown = await SecureStore.getItemAsync(TUTORIAL_SHOWN_KEY);
         if (!active) return;
-        if (hasShown !== "true") {
-          setTutorialDismissed(false);
-          setShowTutorial(true);
-        }
+        setTutorialDismissed(hasShown === "true");
+        setShowTutorial(hasShown !== "true");
         setTutorialReadSucceeded(true);
       } catch (error) {
         // Skip new onboarding after an unverified read; keep landing usable.
@@ -64,8 +69,8 @@ export default function LandingPage() {
       }
     }
     void checkFirstLaunch();
-    return () => { active = false; mounted.current = false; };
-  }, []);
+    return () => { active = false; };
+  }, []));
 
   const handleDismissTutorial = async () => {
     if (tutorialClosing.current) return;
