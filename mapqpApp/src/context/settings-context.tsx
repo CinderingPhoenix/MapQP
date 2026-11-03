@@ -12,6 +12,7 @@ import { useDeviceAccessibility, type DeviceAccessibilitySettings } from "../hoo
 
 export type DistanceUnits = "imperial" | "metric";
 export type DirectionStyle = "natural" | "degrees";
+export type SettingsAppearance = "standard" | "accessible";
 export type NavigationMode = "standard" | "accessibility";
 export type AccessibilityNeed = "visual" | "motor";
 
@@ -73,6 +74,7 @@ export function restoreAccessibilitySettings(value: unknown): AccessibilitySetti
 }
 
 type AppSettings = AccessibilitySettings & RoutingPreferences & {
+  settingsAppearance: SettingsAppearance;
   navigationMode: NavigationMode;
   accessibilityNeed: AccessibilityNeed | null;
   hasSelectedMode: boolean;
@@ -85,6 +87,7 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
 };
 
 type SettingsContextType = AppSettings & {
+  setSettingsAppearance: (appearance: SettingsAppearance) => void;
   setNavigationMode: (mode: NavigationMode) => void;
   setAccessibilityNeed: (need: AccessibilityNeed) => void;
   setHasSelectedMode: (selected: boolean) => void;
@@ -105,6 +108,7 @@ type SettingsContextType = AppSettings & {
 const SETTINGS_STORAGE_KEY = "mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
+  settingsAppearance: "standard",
   navigationMode: "standard",
   accessibilityNeed: null,
   hasSelectedMode: false,
@@ -145,9 +149,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     setSettingsReadSucceeded(true);
   };
-  const [navigationMode, setNavigationMode] = useState<NavigationMode>(
+  const [settingsAppearance, setSettingsAppearance] = useState<SettingsAppearance>(DEFAULT_SETTINGS.settingsAppearance);
+  const [navigationMode, setNavigationModeState] = useState<NavigationMode>(
     DEFAULT_SETTINGS.navigationMode
   );
+  // Public calls represent an explicit choice, including reselecting the same mode.
+  // Restoration below uses the raw state setter to preserve manual appearance overrides.
+  const setNavigationMode = (mode: NavigationMode) => {
+    setNavigationModeState(mode);
+    if (mode === "accessibility") setSettingsAppearance("accessible");
+  };
 
   const [accessibilityNeed, setAccessibilityNeed] = useState<AccessibilityNeed | null>(null);
 
@@ -207,6 +218,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const parsedSettings: Partial<AppSettings> =
             JSON.parse(savedSettings) ?? {};
 
+          if (parsedSettings.settingsAppearance === "standard" || parsedSettings.settingsAppearance === "accessible") {
+            setSettingsAppearance(parsedSettings.settingsAppearance);
+          }
+
           const accessibility = restoreAccessibilitySettings(parsedSettings);
           setAccessibilitySettings({
             customAccessibilityPreferences: {
@@ -218,7 +233,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             parsedSettings.navigationMode === "standard" ||
             parsedSettings.navigationMode === "accessibility"
           ) {
-            setNavigationMode(parsedSettings.navigationMode);
+            setNavigationModeState(parsedSettings.navigationMode);
           }
 
           if (parsedSettings.accessibilityNeed === "visual" || parsedSettings.accessibilityNeed === "motor") {
@@ -286,6 +301,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     const settings: AppSettings = {
+      settingsAppearance,
       navigationMode,
       accessibilityNeed,
       hasSelectedMode,
@@ -341,6 +357,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
     });
   }, [
+    settingsAppearance,
     navigationMode,
     accessibilityNeed,
     hasSelectedMode,
@@ -357,6 +374,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsContext.Provider
       value={{
+        settingsAppearance,
+        setSettingsAppearance,
         navigationMode,
         accessibilityNeed,
         setAccessibilityNeed,

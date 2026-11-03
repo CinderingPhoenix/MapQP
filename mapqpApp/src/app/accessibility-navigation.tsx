@@ -24,6 +24,7 @@ import { File, Paths } from "expo-file-system";
 import BuildingPicker from "../components/building-picker";
 import { RouteAlternativePrompt } from "../components/route-alternative-prompt";
 import LocationMap from "../components/location-map";
+import RecenterOverlay from "../components/recenter-overlay";
 import CurrentNavigationSummary from "../components/current-navigation-summary";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
@@ -52,6 +53,9 @@ export default function Home() {
   const [textRefresh, setTextRefresh] = useState(0);
   const [summaryBottom, setSummaryBottom] = useState(0);
   const [plannerHeight, setPlannerHeight] = useState(160);
+  const [recenterHeight, setRecenterHeight] = useState(0);
+  // Reserve the measured button plus the same gap even while it is hidden.
+  const recenterClearance = recenterHeight + 16;
 
   // --- Dynamic Map Data State & Hooks (Must be called unconditionally) ---
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -205,7 +209,7 @@ export default function Home() {
             reduceTransparencyEnabled && { backgroundColor: "#fff" },
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
             directionsExpanded && { height: Math.min(viewportHeight * 0.65,
-              Math.max(120, viewportHeight - plannerHeight - keyboardHeight - (showRecenter ? 72 : 16) - 248)) },
+              Math.max(120, viewportHeight - plannerHeight - keyboardHeight - recenterClearance - 248)) },
           ]}
         >
           {/* Header Row containing Route Info and a dedicated Cancel Button */}
@@ -389,7 +393,7 @@ export default function Home() {
             route={route}
             directionsExpanded={directionsExpanded}
             controlsTop={route ? summaryBottom + 12 : 132}
-            controlsBottom={plannerHeight + keyboardHeight + (showRecenter ? 72 : 16)}
+            controlsBottom={plannerHeight + keyboardHeight + recenterClearance}
             accessibilityMode
             recenterSignal={recenterSignal}
             onUserDragged={() => setShowRecenter(true)}
@@ -419,11 +423,12 @@ export default function Home() {
           },
         ]}
       >
-        {showRecenter && (
+        <RecenterOverlay visible={showRecenter} measuredHeight={recenterHeight}
+          plannerBorderWidth={increasedContrast ? 2 : styles.plannerPanel.borderWidth} onHeightChange={setRecenterHeight}>
           <TouchableOpacity
             style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: "#1d5962" }]}
-            onPress={handleRecenter}
-            accessible
+            onPress={() => { if (showRecenter) handleRecenter(); }}
+            disabled={!showRecenter} accessible={showRecenter}
             accessibilityRole="button"
             accessibilityLabel="Recenter map"
             accessibilityHint="Moves the map back to your current location"
@@ -437,7 +442,7 @@ export default function Home() {
               Recenter
             </Text>
           </TouchableOpacity>
-        )}
+        </RecenterOverlay>
 
         <BuildingPicker
           buildings={buildings}
@@ -591,9 +596,6 @@ const styles = StyleSheet.create({
     minWidth: 48,
     alignItems: "center",
     justifyContent: "center",
-    position: "absolute",
-    top: -56,
-    right: 0,
     backgroundColor: "white",
     padding: 12,
     borderRadius: 8,

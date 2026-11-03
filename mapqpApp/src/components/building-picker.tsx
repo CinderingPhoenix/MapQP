@@ -336,8 +336,6 @@ export default React.memo(function BuildingPicker({
         return;
       }
 
-      if (value) onCancel();
-
       setQuery("");
       setIsOpen(false);
       setIsListening(true);
