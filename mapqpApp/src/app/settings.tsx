@@ -6,7 +6,6 @@ import {
   Alert,
   Platform,
   ScrollView,
-  Switch,
   type SwitchProps,
   StyleSheet,
   Text,
@@ -40,33 +39,55 @@ const ACCESSIBILITY_CONTROLS: {
   { label: "Reduce Transparency", preference: "reduceTransparencyEnabled", devicePreference: "reduceTransparencyEnabled", icon: "layers-outline", description: "Uses opaque backgrounds in supported interface elements to improve readability." },
 ];
 
-// Disabled native switches are not consistently discoverable by assistive
-// navigation. Keep one read-only target with the same semantics in that case.
+// Each appearance exposes one switch target; decoration never becomes a focus stop.
 function SettingsSwitch({ style, disabled, ...props }: SwitchProps) {
   const { settingsAppearance, fontSize } = useSettings();
   const accessibleAppearance = settingsAppearance === "accessible";
-  return <View style={[style, accessibleAppearance && accessibleStyles.switchControl,
-    accessibleAppearance && disabled && accessibleStyles.switchControlReadOnly]} accessible={!!disabled}
-    importantForAccessibility={disabled ? "yes" : "auto"}
-    accessibilityRole={disabled ? "switch" : undefined}
-    accessibilityLabel={disabled ? props.accessibilityLabel : undefined}
-    accessibilityValue={disabled ? props.accessibilityValue : undefined}
-    accessibilityState={disabled ? props.accessibilityState : undefined}
-    accessibilityHint={disabled ? props.accessibilityHint : undefined}>
-    <Switch {...props}
-      trackColor={accessibleAppearance
-        ? { false: "#425466", true: disabled ? "#425466" : "#65101D" } : props.trackColor}
-      thumbColor={accessibleAppearance ? (disabled ? "#E5E7EB" : "#FFFFFF") : props.thumbColor}
-      ios_backgroundColor={accessibleAppearance ? "#425466" : props.ios_backgroundColor}
-      hitSlop={accessibleAppearance ? 12 : undefined} disabled={disabled} accessible={!disabled}
-      accessibilityElementsHidden={!!disabled}
-      importantForAccessibility={disabled ? "no-hide-descendants" : "yes"} />
-    {accessibleAppearance && <Text accessible={false} accessibilityElementsHidden
+  const { boldTextEnabled } = useAccessibilityPreferences();
+  if (accessibleAppearance) {
+    const activate = () => {
+      if (!disabled) props.onValueChange?.(!props.value);
+    };
+    // A single pressable switch target owns both touch and assistive activation.
+    // Draw the visual ourselves so native disabled opacity cannot wash out the track.
+    return <TouchableOpacity accessible accessibilityRole="switch"
+      accessibilityLabel={props.accessibilityLabel}
+      accessibilityHint={props.accessibilityHint}
+      accessibilityValue={props.accessibilityValue}
+      accessibilityState={{ ...props.accessibilityState, checked: !!props.value, disabled: !!disabled }}
+      disabled={disabled} onPress={activate} activeOpacity={1}
+      style={[style, accessibleStyles.switchControl, disabled && accessibleStyles.switchControlReadOnly]}>
+      <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        pointerEvents="none" style={[accessibleStyles.switchTrack,
+          props.value ? accessibleStyles.switchTrackOn : accessibleStyles.switchTrackOff]}>
+        <View style={accessibleStyles.switchThumb} />
+      </View>
+      <Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        pointerEvents="none" style={[accessibleStyles.switchStateLabel, { fontSize: 16.25 * fontSize }]}>
+        {`${props.value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}
+      </Text>
+    </TouchableOpacity>;
+  }
+  return <TouchableOpacity accessible accessibilityRole="switch"
+    accessibilityLabel={props.accessibilityLabel}
+    accessibilityHint={props.accessibilityHint}
+    accessibilityValue={props.accessibilityValue}
+    accessibilityState={{ ...props.accessibilityState, checked: !!props.value, disabled: !!disabled }}
+    disabled={disabled} activeOpacity={1}
+    onPress={() => { if (!disabled) props.onValueChange?.(!props.value); }}
+    style={[style, standardSwitchStyles.control]}>
+    <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+      pointerEvents="none" style={[standardSwitchStyles.track,
+        props.value ? standardSwitchStyles.on : standardSwitchStyles.off,
+        disabled && standardSwitchStyles.readOnly]}>
+      <View style={standardSwitchStyles.thumb} />
+    </View>
+    <AccessibleText boldTextEnabled={boldTextEnabled} accessible={false} accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants" pointerEvents="none"
-      style={[accessibleStyles.switchStateLabel, { fontSize: 16.25 * fontSize }]}>
+      style={[standardSwitchStyles.label, { fontSize: 14 * fontSize }]}>
       {`${props.value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}
-    </Text>}
-  </View>;
+    </AccessibleText>
+  </TouchableOpacity>;
 }
 
 const KEYS_TO_DELETE = [
@@ -1511,6 +1532,12 @@ const accessibleStyles = StyleSheet.create({
     flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12, padding: 12,
     borderWidth: 2, borderColor: "#111827", borderRadius: 12, backgroundColor: "#FFFFFF" },
   switchControlReadOnly: { borderStyle: "dashed", backgroundColor: "#F0F1F3" },
+  switchTrack: { width: 64, height: 36, borderRadius: 18, borderWidth: 2,
+    borderColor: "#111827", padding: 4, justifyContent: "center", flexShrink: 0 },
+  switchTrackOff: { backgroundColor: "#4B5563", alignItems: "flex-start" },
+  switchTrackOn: { backgroundColor: "#65101D", alignItems: "flex-end" },
+  switchThumb: { width: 24, height: 24, borderRadius: 12, borderWidth: 1,
+    borderColor: "#111827", backgroundColor: "#FFFFFF" },
   switchStateLabel: { color: "#111827", fontWeight: "900", flexShrink: 1 },
   // Match Settings' existing Bold Text override, the strongest numeric weight.
   // Use the native system font so the platform can resolve its heavy face.
@@ -1558,4 +1585,18 @@ const accessibleStyles = StyleSheet.create({
   deleteStorageButton: { ...standardStyles.deleteStorageButton, minHeight: 60, paddingVertical: 20, borderWidth: 2, borderColor: "#801A12" },
   deleteStorageText: { ...standardStyles.deleteStorageText, color: "#801A12", fontWeight: "900" },
   divider: { ...standardStyles.divider, backgroundColor: "#111827", height: 2 },
+});
+
+// Compact control styling for Standard; its cards, rows and typography stay unchanged.
+const standardSwitchStyles = StyleSheet.create({
+  control: { minWidth: 56, minHeight: 48, maxWidth: "100%", flexShrink: 1, alignSelf: "flex-start",
+    flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, paddingVertical: 6 },
+  track: { width: 56, height: 32, flexShrink: 0, borderRadius: 16, borderWidth: 2,
+    borderColor: "#111827", padding: 3, justifyContent: "center" },
+  off: { backgroundColor: "#4B5563", alignItems: "flex-start" },
+  on: { backgroundColor: "#166534", alignItems: "flex-end" },
+  readOnly: { borderStyle: "dashed" },
+  thumb: { width: 22, height: 22, borderRadius: 11, borderWidth: 1,
+    borderColor: "#111827", backgroundColor: "#FFFFFF" },
+  label: { color: "#111827", fontWeight: "700", flexShrink: 1 },
 });
