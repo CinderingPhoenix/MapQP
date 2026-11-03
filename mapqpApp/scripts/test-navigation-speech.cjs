@@ -106,13 +106,16 @@ test('a new route waits for native stop completion and cannot be canceled by an 
 
 // Execute the real map hook and formatting/direction-generation code. Inject
 // processed GPS state at the speech boundary; filtering and routing are separate.
-function navigationHarness({ mode = 'standard', reader = false } = {}) {
+function navigationHarness({ mode = 'standard', reader = false, saver = false } = {}) {
   const h = engineHarness();
   const slots = [];
   const stateSlots = new Map();
   let cursor = 0;
   let stateCursor = 0;
   let dirty = true;
+  let appActive = true;
+  const positions = [];
+  const headings = [];
   let result;
   let now = 100000;
   const effects = [];
@@ -157,20 +160,30 @@ function navigationHarness({ mode = 'standard', reader = false } = {}) {
   const module = compile('utils/map-logic.ts', {
     react,
     'expo-router': { useFocusEffect: (callback) => react.useEffect(callback, [callback]) },
-    '@/context/settings-context': { useSettings: () => ({ distanceUnits: 'metric', directionStyle: 'natural', navigationMode: mode, deviceAccessibility: { screenReaderEnabled: reader } }) },
+    '@/context/settings-context': { useSettings: () => ({ batterySaverEnabled: saver, distanceUnits: 'metric', directionStyle: 'natural', navigationMode: mode, deviceAccessibility: { screenReaderEnabled: reader } }) },
+    '../hooks/use-app-active': { useAppActive: () => appActive },
     // Kept as a trap if a VoiceOver-specific speech branch is reintroduced.
     '@/hooks/use-device-accessibility': { useDeviceAccessibility: () => ({ screenReaderEnabled: reader }) },
     'expo-speech': h.engine,
     'expo-secure-store': { getItemAsync: async () => null, setItemAsync: async () => {} },
     'expo-haptics': { impactAsync: async () => {}, ImpactFeedbackStyle: { Medium: 'Medium' } },
     'expo-location': {
-      Accuracy: { BestForNavigation: 1 }, requestForegroundPermissionsAsync: async () => ({ status: 'granted' }),
-      watchPositionAsync: async () => ({ remove() {} }), watchHeadingAsync: async () => ({ remove() {} }),
+      Accuracy: { BestForNavigation: 1, High: 2, Balanced: 3 }, requestForegroundPermissionsAsync: async () => ({ status: 'granted' }),
+      watchPositionAsync: async (options, callback) => {
+        const subscription = { options, callback, removed: false, remove() { this.removed = true; } };
+        positions.push(subscription);
+        return subscription;
+      },
+      watchHeadingAsync: async (callback) => {
+        const subscription = { callback, removed: false, remove() { this.removed = true; } };
+        headings.push(subscription);
+        return subscription;
+      },
     },
     'react-native': { Platform: { OS: 'ios' }, Vibration: { vibrate() {} }, AccessibilityInfo: {
       announceForAccessibility() { accessibilityCalls++; }, announceForAccessibilityWithOptions() { accessibilityCalls++; },
     } },
-    './routing': { routeBetween: async () => plan },
+    './routing': { ...compile('utils/routing.ts', {}), routeBetween: async () => plan },
     './navigation-speech': speechModule,
   }, {
     setInterval(callback, ms) { const id = nextTimer++; intervals.set(id, { callback, ms }); return id; },
@@ -193,7 +206,9 @@ function navigationHarness({ mode = 'standard', reader = false } = {}) {
   function inject(name, value) { slots[stateSlots.get(name)].value = value; dirty = true; }
   render();
   return {
-    h, module, intervals, flush,
+    h, module, intervals, flush, positions, headings,
+    async setSaver(value) { saver = value; dirty = true; await flush(); },
+    async setAppActive(value) { appActive = value; dirty = true; await flush(); },
     get result() { return result; },
     get accessibilityCalls() { return accessibilityCalls; },
     async start(latitude = 0, longitude = 0) {
@@ -211,6 +226,48 @@ function navigationHarness({ mode = 'standard', reader = false } = {}) {
     async finish() { h.spoken.at(-1).options.onDone(); await flush(); },
   };
 }
+
+test('battery saver adapts GPS, stops standard compass, and restores normal tracking live', async () => {
+  const n = navigationHarness({ saver: true });
+  await n.flush();
+  assert.equal(n.positions.at(-1).options.accuracy, 2, 'first fix remains precise');
+  assert.equal(n.headings.length, 0);
+  await n.position(0, 0);
+  assert.equal(n.positions.at(-1).options.accuracy, 3, 'idle tracking uses balanced accuracy');
+  assert.equal(n.positions.at(-1).options.timeInterval, 10000);
+  await n.start();
+  assert.equal(n.positions.at(-1).options.accuracy, 2);
+  assert.equal(n.positions.at(-1).options.timeInterval, 2000);
+  assert.equal(n.positions.at(-1).options.distanceInterval, 2);
+  assert.equal(n.h.spoken.length, 1, 'startup guidance is preserved');
+  const activeWatch = n.positions.at(-1);
+  await n.setAppActive(false);
+  assert.equal(activeWatch.removed, true);
+  const count = n.positions.length;
+  await n.flush();
+  assert.equal(n.positions.length, count, 'background tracking stays stopped');
+  await n.setAppActive(true);
+  assert.equal(n.positions.at(-1).removed, false);
+  await n.setSaver(false);
+  assert.equal(n.positions.at(-1).options.accuracy, 1);
+  assert.equal(n.positions.at(-1).options.timeInterval, 250);
+  assert.equal(n.headings.at(-1).removed, false);
+});
+
+test('battery saver preserves accessibility orientation only while navigating', async () => {
+  const n = navigationHarness({ saver: true, mode: 'accessibility' });
+  await n.flush();
+  assert.equal(n.headings.length, 0);
+  await n.start();
+  assert.equal(n.headings.length, 1);
+  n.headings[0].callback({ trueHeading: 90, magHeading: 90 });
+  await n.flush();
+  assert.equal(n.result.currentHeading, 90);
+  n.result.handleCancelRoute();
+  await n.flush();
+  assert.equal(n.headings[0].removed, true);
+  assert.equal(n.h.spoken.length, 1);
+});
 
 for (const mode of ['standard', 'accessibility']) for (const reader of [false, true]) {
   test(`${mode}, VoiceOver ${reader}: Expo startup uses generated instruction/distance; GPS, maneuvers, arrival`, async () => {

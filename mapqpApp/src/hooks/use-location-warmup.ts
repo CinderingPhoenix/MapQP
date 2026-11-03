@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import * as Location from "expo-location";
 import * as SecureStore from "expo-secure-store";
+import { useSettings } from "../context/settings-context";
 
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
@@ -13,7 +14,9 @@ try {
 }
 
 export function useLocationWarmup(): void {
+  const { batterySaverEnabled } = useSettings();
   useEffect(() => {
+    if (batterySaverEnabled) return;
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
@@ -21,7 +24,7 @@ export function useLocationWarmup(): void {
       try {
         const permissions = await Location.requestForegroundPermissionsAsync();
         if (permissions.status === "granted" && isMounted) {
-          subscription = await Location.watchPositionAsync(
+          const nextSubscription = await Location.watchPositionAsync(
             {
               accuracy: Location.Accuracy.Balanced,
               timeInterval: 250,
@@ -39,6 +42,8 @@ export function useLocationWarmup(): void {
               ).catch((error) => console.error("Failed to save warmup location", error));
             },
           );
+          if (isMounted) subscription = nextSubscription;
+          else nextSubscription.remove();
         }
       } finally {
         if (ExpoSpeechRecognitionModule?.requestPermissionsAsync) {
@@ -59,5 +64,5 @@ export function useLocationWarmup(): void {
       isMounted = false;
       subscription?.remove();
     };
-  }, []);
+  }, [batterySaverEnabled]);
 }

@@ -3,7 +3,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
-import { useKeepAwake } from "expo-keep-awake";
+import { NavigationKeepAwake } from "../components/navigation-keep-awake";
 import {
   Animated,
   Dimensions,
@@ -44,7 +44,6 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
-  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(windowHeight);
@@ -461,6 +460,7 @@ export default function Home() {
           </Text>
         )}
       </Animated.View>
+      <NavigationKeepAwake />
     </SafeAreaView>
   );
 }

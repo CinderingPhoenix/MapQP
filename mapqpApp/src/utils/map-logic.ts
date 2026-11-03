@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Vibration } from "react-native";
 import { getRoutingPreferences, NavigationPoint, routeBetween, WalkingRoute } from "./routing";
 import { useFocusEffect } from "expo-router";
+import { useAppActive } from "../hooks/use-app-active";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
 
@@ -377,7 +378,15 @@ export function useMapNavigation(buildings: Building[]) {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle, navigationMode, avoidIndoorRoutes, avoidInaccessibleCrosswalks, avoidStairs = false } = useSettings();
+  const { distanceUnits, directionStyle, navigationMode, avoidIndoorRoutes, avoidInaccessibleCrosswalks, avoidStairs = false, batterySaverEnabled = false } = useSettings();
+  const appActive = useAppActive();
+  const trackingEnabled = !batterySaverEnabled || (isFocused && appActive);
+  const hasActiveRoute = route !== null;
+  const needsPreciseLocation = hasActiveRoute || coordinates === null;
+  const lastLocationSaveRef = useRef(0);
+  useEffect(() => {
+    navigationSpeech.setEnabled(!isAudioMuted && isFocused && trackingEnabled);
+  }, [navigationSpeech, isAudioMuted, isFocused, trackingEnabled]);
   const routingPreferencesRef = useRef({ navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks });
   routingPreferencesRef.current = { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
   const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean; avoidIndoorRoutes: boolean; avoidInaccessibleCrosswalks: boolean } | null>(null);
@@ -446,8 +455,8 @@ export function useMapNavigation(buildings: Building[]) {
       const progress = Math.min((Date.now() - startTime) / 4000, 1);
       setRouteLoadingProgress(progress);
       if (progress >= 1 && progressAnimationRef.current) clearInterval(progressAnimationRef.current);
-    }, 50);
-  }, []);
+    }, batterySaverEnabled ? 500 : 50);
+  }, [batterySaverEnabled]);
 
   const planRoute = useCallback(async (currentCoords?: Coordinates, newRoute = false) => {
     const targetBuilding = destinationBuildingRef.current;
@@ -572,12 +581,19 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => { currentRouteIndexRef.current = currentRouteIndex; }, [currentRouteIndex]);
 
   useEffect(() => {
+    if (!trackingEnabled) return;
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
     const initializeLocation = async () => {
       const permissions = await Location.requestForegroundPermissionsAsync();
+      if (!isMounted) return;
       if (permissions.status !== "granted") { if (isMounted) setError("Location permission is required to plan a route."); return; }
-      subscription = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 250, distanceInterval: 0, mayShowUserSettingsDialog: true }, (location) => {
+      const nextSubscription = await Location.watchPositionAsync({
+        accuracy: batterySaverEnabled ? (needsPreciseLocation ? Location.Accuracy.High : Location.Accuracy.Balanced) : Location.Accuracy.BestForNavigation,
+        timeInterval: batterySaverEnabled ? (needsPreciseLocation ? 2000 : 10000) : 250,
+        distanceInterval: batterySaverEnabled ? (needsPreciseLocation ? 2 : 10) : 0,
+        mayShowUserSettingsDialog: true,
+      }, (location) => {
         if (!isMounted) return;
         const processed = processAdvancedCoordinates({ ...location.coords, accuracy: location.coords.accuracy || 0, timestamp: location.timestamp } as Coordinates, kalmanStateRef);
         if (!processed) return;
@@ -591,9 +607,15 @@ export function useMapNavigation(buildings: Building[]) {
           newRouteIndex = snapped.index;
         }
         const displayedCoordinates = { ...processed, latitude: displayLat, longitude: displayLng };
+        // GPS course supplies heading while moving without keeping the compass on.
+        if (batterySaverEnabled && navigationMode !== "accessibility" && processed.heading !== null && processed.heading >= 0 &&
+            processed.speed !== null && processed.speed >= 0.5) setCurrentHeading(processed.heading);
         setCoordinates(displayedCoordinates);
         if (!showRecenterRef.current) setMapCenter({ latitude: displayLat, longitude: displayLng });
-        SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        if (!batterySaverEnabled || Date.now() - lastLocationSaveRef.current >= 30000) {
+          lastLocationSaveRef.current = Date.now();
+          SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        }
         if (newRouteIndex !== currentRouteIndexRef.current) setCurrentRouteIndex(newRouteIndex);
         if (!initialLocationSet.current) { setMapCenter({ latitude: displayLat, longitude: displayLng }); initialLocationSet.current = true; }
         if (routeGeometryRef.current && !isReroutingRef.current && destinationBuildingRef.current) {
@@ -604,19 +626,29 @@ export function useMapNavigation(buildings: Building[]) {
         }
         setError("");
       });
+      if (isMounted) subscription = nextSubscription;
+      else nextSubscription.remove();
     };
     initializeLocation().catch((locationError) => { if (isMounted) setError(locationError instanceof Error ? locationError.message : "Unable to access your location."); });
     return () => { isMounted = false; subscription?.remove(); };
-  }, []);
+  }, [batterySaverEnabled, trackingEnabled, batterySaverEnabled && needsPreciseLocation, batterySaverEnabled && navigationMode]);
 
   useEffect(() => {
+    // Stationary orientation cues are essential in accessibility navigation.
+    if (!trackingEnabled || (batterySaverEnabled && (navigationMode !== "accessibility" || !hasActiveRoute))) {
+      setCurrentHeading(null);
+      return;
+    }
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
+    let lastHeadingUpdate = 0;
 
     Location.watchHeadingAsync((headingData) => {
       if (!isMounted) return;
       const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
       if (Number.isFinite(heading) && heading >= 0) {
+        if (batterySaverEnabled && Date.now() - lastHeadingUpdate < 1000) return;
+        lastHeadingUpdate = Date.now();
         setCurrentHeading(heading % 360);
       }
     }).then((nextSubscription) => {
@@ -630,7 +662,7 @@ export function useMapNavigation(buildings: Building[]) {
       isMounted = false;
       subscription?.remove();
     };
-  }, []);
+  }, [trackingEnabled, batterySaverEnabled, batterySaverEnabled && navigationMode, batterySaverEnabled && hasActiveRoute]);
 
   useEffect(() => {
     if (!destinationBuilding || !coordinates) return;
@@ -664,7 +696,7 @@ export function useMapNavigation(buildings: Building[]) {
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   useEffect(() => {
-    if (!isFocused || navigationMode !== "accessibility") {
+    if (!isFocused || !trackingEnabled || navigationMode !== "accessibility") {
       return;
     }
 
@@ -718,7 +750,7 @@ export function useMapNavigation(buildings: Building[]) {
     if (navigationSpeech.request(orientationMessage, "optional")) {
       orientationPromptRef.current = { direction: promptDir, timestamp: now };
     }
-  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, navigationMode, isFocused, nextStep, distToNextStepMeters, navigationSpeech]);
+  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, navigationMode, isFocused, trackingEnabled, nextStep, distToNextStepMeters, navigationSpeech]);
 
   const repeatGuidanceRef = useRef({ nextStep, distToNextStepMeters, distanceUnits, directionStyle });
   useEffect(() => {
@@ -727,7 +759,7 @@ export function useMapNavigation(buildings: Building[]) {
 
   // Repeat only while idle; a stable interval reads the latest GPS distance.
   useEffect(() => {
-    if (!isFocused || navigationMode !== "accessibility" || !route || isAudioMuted) return;
+    if (!isFocused || !trackingEnabled || navigationMode !== "accessibility" || !route || isAudioMuted) return;
     const intervalId = setInterval(() => {
       if (isRouteCancelledRef.current) return;
       const current = repeatGuidanceRef.current;
@@ -739,10 +771,10 @@ export function useMapNavigation(buildings: Building[]) {
       ), "optional");
     }, 9000);
     return () => clearInterval(intervalId);
-  }, [isFocused, navigationMode, route, isAudioMuted, navigationSpeech]);
+  }, [isFocused, trackingEnabled, navigationMode, route, isAudioMuted, navigationSpeech]);
 
   useEffect(() => {
-    if (!isFocused || !route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
+    if (!isFocused || !trackingEnabled || !route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
     const stages = spokenStagesRef.current[nextStep.pointIndex] ?? {};
     spokenStagesRef.current[nextStep.pointIndex] = stages;
     
@@ -779,7 +811,7 @@ export function useMapNavigation(buildings: Building[]) {
     } else if (distToNextStepMeters <= 2 && !stages.turn) {
       if (speakPrompt(`${nextStepInstruction} now`)) stages.turn = true;
     }
-  }, [isFocused, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech]);
+  }, [isFocused, trackingEnabled, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech]);
 
   return { 
     coordinates, 

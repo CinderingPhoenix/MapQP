@@ -138,6 +138,8 @@ export default function SettingsPage() {
     settingsReadSucceeded,
     fontSize,
     setFontSize,
+    batterySaverEnabled,
+    setBatterySaverEnabled,
     deviceAccessibility,
     customAccessibilityPreferences: savedAccessibilityPreferences,
     settingsLoaded,
@@ -247,6 +249,7 @@ export default function SettingsPage() {
                 setDirectionStyle("natural");
                 resetAvoidStairsPreference();
                 setFontSize(1);
+                setBatterySaverEnabled(false);
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -332,6 +335,33 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {activeTab === "general" ? <>
+        <Text accessibilityRole="header" style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>BATTERY</Text>
+        <View style={[styles.settingsCard, increasedContrast && styles.settingsCardHighContrast]}>
+          <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
+            stackControls && styles.accessibilitySourceRowStacked]}>
+            <View style={styles.accessibilitySourceLabel} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View style={styles.settingLabelRow}>
+                <SettingIcon name="battery-heart-outline" highContrast={increasedContrast} />
+                <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                  style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 18 * fontSize }]}>Battery Saver</AccessibleText>
+              </View>
+            </View>
+            <SettingsSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled}
+              disabled={!settingsLoaded || !settingsReadSucceeded}
+              style={stackControls ? styles.stackedSwitch : undefined}
+              accessibilityRole="switch" accessibilityLabel="Battery Saver"
+              accessibilityState={{ checked: batterySaverEnabled, disabled: !settingsLoaded || !settingsReadSucceeded }}
+              accessibilityHint="Reduces location updates, sensor use, animations, and location saves. Allows your screen to sleep. Navigation may pause when your screen locks." />
+          </View>
+          <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+            style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast, { fontSize: 15 * fontSize }]}>
+            Uses less power with fewer location updates, less sensor activity, and reduced animations. Turn guidance and accessibility cues stay on.
+          </AccessibleText>
+          <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+            style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast, { fontSize: 15 * fontSize }]}>
+            Location updates may be slower. Your screen can sleep, and navigation may pause while the screen is locked or the app is in the background.
+          </AccessibleText>
+        </View>
         {/* Navigation Mode */}
         <AccessibleText
           boldTextEnabled={accessibilityPreferences.boldTextEnabled}

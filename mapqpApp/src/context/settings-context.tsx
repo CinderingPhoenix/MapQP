@@ -81,6 +81,7 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
   avoidStairs: boolean;
   hasAnsweredAvoidStairsPrompt: boolean;
   fontSize: number;
+  batterySaverEnabled: boolean;
   accessibilitySettingsVersion: 5;
 };
 
@@ -91,6 +92,7 @@ type SettingsContextType = AppSettings & {
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
+  setBatterySaverEnabled: (enabled: boolean) => void;
   setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
   settingsReadSucceeded: boolean;
@@ -115,6 +117,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   avoidInaccessibleCrosswalks: false,
   hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
+  batterySaverEnabled: false,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
 };
@@ -191,6 +194,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
   };
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
+  const [batterySaverEnabled, setBatterySaverEnabled] = useState(DEFAULT_SETTINGS.batterySaverEnabled);
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
@@ -206,6 +210,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (savedSettings) {
           const parsedSettings: Partial<AppSettings> =
             JSON.parse(savedSettings) ?? {};
+          if (typeof parsedSettings.batterySaverEnabled === "boolean") {
+            setBatterySaverEnabled(parsedSettings.batterySaverEnabled);
+          }
 
           const accessibility = restoreAccessibilitySettings(parsedSettings);
           setAccessibilitySettings({
@@ -296,6 +303,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       avoidInaccessibleCrosswalks,
       hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
+      batterySaverEnabled,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
@@ -349,6 +357,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairs,
     routingPreference,
     fontSize,
+    batterySaverEnabled,
     settingsLoaded,
     settingsReadSucceeded,
     accessibilitySettings,
@@ -373,6 +382,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         resetAvoidStairsPreference,
         settingsReadSucceeded,
         fontSize,
+        batterySaverEnabled,
+        setBatterySaverEnabled,
         setNavigationMode,
         setHasSelectedMode,
         setDistanceUnits,
