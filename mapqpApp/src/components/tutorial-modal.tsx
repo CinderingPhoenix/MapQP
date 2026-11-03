@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useModalDismissal } from "./avoid-stairs-prompt";
-import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle, useWindowDimensions } from "react-native";
 
 interface HighlightItem {
   top: string;
@@ -18,6 +18,7 @@ interface TutorialPage {
   subtitle: string;
   description: string;
   image: any;
+  section?: string;
   highlights?: HighlightItem[];
 }
 
@@ -70,12 +71,21 @@ const standardTutorialPages: TutorialPage[] = [
     ],
   },
   {
+    title: "Voice Search",
+    subtitle: "Find a destination by speaking",
+    description: "Tap the microphone beside the destination search bar and say a campus building name. The app starts a route directly to the recognized building.",
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
+    highlights: [
+      { top: "92%", left: "83%", width: "12%", height: "6%", label: "Voice Search", tagPosition: "top" },
+    ],
+  },
+  {
     title: "Recent Searches",
     subtitle: "Return to a previous destination",
     description: "Open the destination search to see your recent searches. Tap a building in the list to start a new route there.",
     image: require("../../assets/tutorial/standard/routing.png"),
     highlights: [
-      { top: "66%", left: "6%", width: "87%", height: "32%", label: "Recent Searches", tagPosition: "top" },
+      { top: "30%", left: "6%", width: "87%", height: "34%", label: "Recent Searches", tagPosition: "top" },
     ],
   },
   {
@@ -84,7 +94,7 @@ const standardTutorialPages: TutorialPage[] = [
     description: "Open the building chooser from the search panel to browse campus buildings instead of typing a name.",
     image: require("../../assets/tutorial/standard/routing.png"),
     highlights: [
-      { top: "59%", left: "6%", width: "87%", height: "6%", label: "Building Chooser", tagPosition: "top" },
+      { top: "23%", left: "6%", width: "87%", height: "6%", label: "Building Chooser", tagPosition: "top" },
     ],
   },
   {
@@ -124,21 +134,6 @@ const standardTutorialPages: TutorialPage[] = [
     ],
   },
   {
-    title: "Open Settings",
-    subtitle: "Find navigation preferences",
-    description: "Tap the settings button at the top left of the map to open your navigation preferences.",
-    image: require("../../assets/tutorial/standard/standard-navigation.png"),
-    highlights: [
-      { top: "7%", left: "2%", width: "13%", height: "6%", label: "Settings", tagPosition: "top" },
-    ],
-  },
-  {
-    title: "Customize Navigation",
-    subtitle: "Adjust the app to your preferences",
-    description: "In Settings, choose your navigation mode, distance units, direction style, and text size.",
-    image: require("../../assets/tutorial/standard/settings.png"),
-  },
-  {
     title: "Next Direction",
     subtitle: "Follow the upcoming instruction",
     description: "Once a route starts, read the instruction at the top of the screen to see your next navigation step.",
@@ -162,45 +157,170 @@ const standardTutorialPages: TutorialPage[] = [
       { top: "93%", left: "80%", width: "12%", height: "5%", label: "Cancel Route", tagPosition: "top" },
     ],
   },
+  {
+    title: "Recenter the Map",
+    subtitle: "Return to your current position",
+    description: "The Recenter button appears at the bottom right when the map is no longer focused on your position, such as after moving around the map. Tap it to bring the map back to your current position.",
+    image: require("../../assets/tutorial/standard/recenter.png"),
+    highlights: [
+      { top: "84%", left: "78%", width: "19%", height: "5%", label: "Recenter", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Open Settings",
+    subtitle: "Find navigation preferences",
+    description: "Tap the settings button at the top left of the map to open your navigation preferences.",
+    image: require("../../assets/tutorial/standard/standard-navigation.png"),
+    highlights: [
+      { top: "7%", left: "2%", width: "13%", height: "6%", label: "Settings", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Customize Navigation",
+    subtitle: "Adjust the app to your preferences",
+    description: "In Settings, choose your navigation mode, distance units, direction style, and text size.",
+    image: require("../../assets/tutorial/standard/settings.png"),
+    section: "standard-settings",
+  },
+  {
+    title: "Routing Settings",
+    subtitle: "Choose your route preferences",
+    description: "Open the Routing tab in Settings to choose whether to avoid stairs, indoor walkways, or inaccessible road crossings. These choices apply when you start a new route. You can also adjust spoken instruction repetition under Accessibility.",
+    image: require("../../assets/tutorial/standard/settings-routing.png"),
+    section: "standard-settings",
+  },
+
 ];
 
 const accessibilityTutorialPages: TutorialPage[] = [
   {
     title: "Accessibility Mode",
-    subtitle: "Find your destination with accessible controls",
-    description: "Choose Accessibility Mode on the landing page. Use the destination search or Voice Search to find a campus building, then select it to start navigation.",
+    subtitle: "Start accessible campus navigation",
+    description: "Tap Accessibility Mode on the landing page to open the accessibility support options. Choose the option that matches your needs, then continue to the navigation screen.",
+    image: require("../../assets/tutorial/landing-page.png"),
+    highlights: [
+      { top: "75%", left: "51%", width: "45%", height: "20%", label: "Accessibility Mode", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Accessibility Support",
+    subtitle: "Choose the support that matches your needs",
+    description: "Choose Accessibility Mode on the landing page, select Visual impairment or Motor impairment, and tap Continue. Routing preferences are selected separately.",
+    image: require("../../assets/tutorial/accessibility/accessibility-support.png"),
+    highlights: [
+      { top: "39%", left: "9%", width: "82%", height: "16%", label: "Support Options", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Voice Search",
+    subtitle: "Say your destination",
+    description: "Tap Speak and say a campus building name. The app starts a route directly to the recognized building. Microphone and speech recognition permissions are requested on the loading screen.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
-      { top: "89%" as any, left: "40%" as any, width: "20%" as any, height: "9%" as any, label: "Voice Search", tagPosition: "top" },
-
+      { top: "88%", left: "38%", width: "25%", height: "9%", label: "Speak", tagPosition: "top" },
     ],
   },
   {
     title: "Saved Destinations",
-    subtitle: "Open your favorite places from the bottom controls",
-    description: "Tap Saved to open your saved destinations. Select a building to navigate there, or use the star beside a building in the chooser to save or remove it.",
+    subtitle: "Return to your favorite places",
+    description: "Tap Saved to open your saved buildings. Choose a building to start a route. Use the star in the building list to save or remove a favorite.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
-      { top: "89%", left: "69%", width: "15%", height: "7%", label: "Saved Destinations", tagPosition: "top" },
+      { top: "87%", left: "70%", width: "19%", height: "10%", label: "Saved", tagPosition: "top" },
     ],
   },
   {
-    title: "Accessible Directions",
-    subtitle: "Follow the route summary at the top",
-    description: "After choosing a destination, read the next instruction in the top route summary. Tap the summary to expand upcoming directions. Use Cancel at the top to stop navigation.",
+    title: "Move and Zoom the Map",
+    subtitle: "Explore without dragging or pinching",
+    description: "Use the arrow buttons to move around the map. Tap plus to zoom in or minus to zoom out. Recenter returns the map to your location when available.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
-      { top: "6%", left: "76%", width: "20%", height: "7%", label: "Cancel Route", tagPosition: "top" },
+      { top: "66%", left: "3%", width: "36%", height: "12%", label: "Map Controls", tagPosition: "top" },
     ],
   },
   {
-    title: "Accessibility Settings",
-    subtitle: "Customize your navigation experience",
-    description: "Open Settings from the bottom controls to adjust text size, distance units, and direction style. Screen reader, contrast, and reduced motion preferences are controlled in your device settings.",
+    title: "Map Orientation",
+    subtitle: "Change how the map faces",
+    description: "Tap the compass at the top right to change the map orientation.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
     highlights: [
-      { top: "89%", left: "14%", width: "20%", height: "9%", label: "Settings", tagPosition: "top" },
+      { top: "7%", left: "79%", width: "16%", height: "7%", label: "Orientation", tagPosition: "top" },
     ],
+  },
+  {
+    title: "Spoken Directions",
+    subtitle: "Control navigation audio",
+    description: "Tap the speaker button to mute or unmute spoken directions. During a route, the top summary shows the next instruction; tap it to expand the directions. Instruction repetition can be adjusted in Settings.",
+    image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
+    highlights: [
+      { top: "15%", left: "81%", width: "13%", height: "6%", label: "Audio", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Follow Your Route",
+    subtitle: "See your next direction at a glance",
+    description: "After choosing a destination, follow the highlighted route on the map. The summary at the top shows your next instruction, total distance, travel time, and arrival time. Tap the summary to expand your directions.",
+    image: require("../../assets/tutorial/accessibility/routing.png"),
+    highlights: [
+      { top: "6%", left: "4%", width: "92%", height: "8%", label: "Next Direction", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Expanded Directions",
+    subtitle: "Review the upcoming steps",
+    description: "Tap the route summary to open Upcoming Directions. Scroll through the list to review your route, then tap the summary again to collapse it.",
+    image: require("../../assets/tutorial/accessibility/direction-list.png"),
+    highlights: [
+      { top: "14%", left: "5%", width: "90%", height: "40%", label: "Upcoming Directions", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Cancel a Route",
+    subtitle: "Cancel with the button or your voice",
+    description: "Tap Cancel in the top route summary to stop navigation. You can also tap Speak and say \"cancel route\" to stop the current route using your voice. Then speak a new destination or choose another saved building.",
+    image: require("../../assets/tutorial/accessibility/routing.png"),
+    highlights: [
+      { top: "8%", left: "77%", width: "16%", height: "4%", label: "Cancel Route", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Recenter the Map",
+    subtitle: "Return to your current position",
+    description: "The Recenter button appears at the bottom right when the map is no longer focused on your position, such as after moving around the map. Tap it to bring the map back to your current position.",
+    image: require("../../assets/tutorial/accessibility/recenter.png"),
+    highlights: [
+      { top: "79%", left: "78%", width: "19%", height: "5%", label: "Recenter", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "Open Settings",
+    subtitle: "Adjust your navigation experience",
+    description: "Tap Settings in the bottom controls to open your preferences.",
+    image: require("../../assets/tutorial/accessibility/accessibility-navigation.png"),
+    highlights: [
+      { top: "87%", left: "14%", width: "20%", height: "10%", label: "Settings", tagPosition: "top" },
+    ],
+  },
+  {
+    title: "General Settings",
+    subtitle: "Personalize the display and directions",
+    description: "Use the General tab to change navigation mode, Settings appearance, distance units, direction style, and text size. Scroll down for accessibility preferences and spoken instruction repetition.",
+    image: require("../../assets/tutorial/accessibility/settings.png"),
+    section: "accessibility-settings",
+  },
+  {
+    title: "Routing Settings",
+    subtitle: "Choose which paths to allow",
+    description: "Use the Routing tab to choose whether to avoid stairs, indoor walkways, or inaccessible road crossings. Each restriction follows its own switch and applies when you start a new route.",
+    image: require("../../assets/tutorial/accessibility/settings-routing.png"),
+    section: "accessibility-settings",
+  },
+  {
+    title: "Instruction Repetition",
+    subtitle: "Choose how often directions repeat",
+    description: "Scroll to Accessibility in the Routing tab to turn repetition on or off and select its frequency. Turning repetition off still allows new directions to be spoken. The same controls are available under Accessibility in General.",
+    image: require("../../assets/tutorial/accessibility/settings-routing-repetition.png"),
+    section: "accessibility-settings",
   },
 ];
 
@@ -209,11 +329,11 @@ const tutorialPagesByMode: Record<TutorialMode, TutorialPage[]> = {
   accessibility: accessibilityTutorialPages,
 };
 
-// Consecutive slides using the same screenshot are parts of one tutorial page.
+// Consecutive slides sharing a section or screenshot form one tutorial page.
 function getTutorialPageGroups(pages: TutorialPage[]) {
   const groups: { start: number; count: number }[] = [];
   pages.forEach((page, index) => {
-    if (index === 0 || page.image !== pages[index - 1].image) {
+    if (index === 0 || (page.section ?? page.image) !== (pages[index - 1].section ?? pages[index - 1].image)) {
       groups.push({ start: index, count: 1 });
     } else {
       groups[groups.length - 1].count += 1;
@@ -235,6 +355,10 @@ interface TutorialModalProps {
 
 export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProps) {
   const nativeDismiss = useModalDismissal(visible, onDismiss);
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const previewHeight = Math.min(360, screenHeight * 0.38, Math.max(120, screenWidth - 128) * 2.22);
+  const previewWidth = previewHeight / 2.22;
+  const tagWidth = Math.min(160, previewWidth);
   const [mode, setMode] = useState<TutorialMode>("standard");
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -309,8 +433,9 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
             ))}
           </View>
 
-          <ScrollView key={`${mode}-${currentPage}`} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.imageContainer}>
+          <ScrollView key={`${mode}-${currentPage}`} style={styles.scrollArea}
+            contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+            <View style={[styles.imageContainer, { width: previewWidth, height: previewHeight }]}>
               <Image source={current.image} style={styles.previewImage} resizeMode="cover" />
               {current.highlights?.map((box, idx) => {
                 let tagStyle: ViewStyle = styles.tagTop;
@@ -330,7 +455,12 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                       },
                     ]}
                   >
-                    <View style={[styles.highlightTag, tagStyle]}>
+                    <View style={[styles.highlightTag, tagStyle, {
+                      // Keep the larger label inside the screenshot's horizontal bounds.
+                      width: tagWidth,
+                      left: Math.min(previewWidth - tagWidth, parseFloat(box.left) * previewWidth / 100)
+                        - parseFloat(box.left) * previewWidth / 100,
+                    }]}>
                       <Text style={styles.highlightTagText}>
                         {box.label}
                       </Text>
@@ -466,10 +596,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#64748B",
   },
+  scrollArea: {
+    flexShrink: 1,
+    minHeight: 0,
+  },
   content: {
     paddingHorizontal: 24,
     alignItems: "center",
-    paddingBottom: 20,
+    paddingBottom: 48,
   },
   imageContainer: {
     width: 200,
@@ -477,6 +611,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#F1F5F9",
     overflow: "visible",
+    marginTop: 36,
     marginBottom: 20,
     position: "relative",
     borderWidth: 1,
@@ -495,10 +630,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   highlightTag: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#713F12",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
@@ -507,24 +644,25 @@ const styles = StyleSheet.create({
   },
   tagTop: {
     position: "absolute",
-    top: -28,
-    left: -20,
-    width: 85,
+    bottom: "100%",
+    marginBottom: 6,
+    width: 160,
   },
   tagBottom: {
     position: "absolute",
-    bottom: -28,
-    left: -20,
-    width: 85,
+    top: "100%",
+    marginTop: 6,
+    width: 160,
   },
   tagSide: {
     position: "absolute",
-    left: -88,
-    top: 0,
-    width: 82,
+    bottom: "100%",
+    marginBottom: 6,
+    width: 160,
   },
   highlightTagText: {
-    fontSize: 8.5,
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: "800",
     color: "#713F12",
     textAlign: "center",
@@ -550,6 +688,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   footer: {
+    flexShrink: 0,
     padding: 20,
     alignItems: "center",
     gap: 16,
