@@ -23,6 +23,7 @@ import { File, Paths } from "expo-file-system";
 
 import BuildingPicker from "../components/building-picker";
 import LocationMap from "../components/location-map";
+import RecenterOverlay from "../components/recenter-overlay";
 import CurrentNavigationSummary from "../components/current-navigation-summary";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
@@ -419,11 +420,8 @@ export default function Home() {
           },
         ]}
       >
-        <View onLayout={(event) => setRecenterHeight(event.nativeEvent.layout.height)}
-          pointerEvents={showRecenter ? "box-none" : "none"}
-          accessibilityElementsHidden={!showRecenter}
-          importantForAccessibility={showRecenter ? "auto" : "no-hide-descendants"}
-          style={[styles.recenterSlot, { opacity: showRecenter ? 1 : 0 }]}>
+        <RecenterOverlay visible={showRecenter} measuredHeight={recenterHeight}
+          plannerBorderWidth={increasedContrast ? 2 : styles.plannerPanel.borderWidth} onHeightChange={setRecenterHeight}>
           <TouchableOpacity
             style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: "#1d5962" }]}
             onPress={() => { if (showRecenter) handleRecenter(); }}
@@ -441,7 +439,7 @@ export default function Home() {
               Recenter
             </Text>
           </TouchableOpacity>
-        </View>
+        </RecenterOverlay>
 
         <BuildingPicker
           buildings={buildings}
@@ -589,8 +587,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderColor: "#e0e0e0",
   },
-  recenterSlot: { position: "absolute", bottom: "100%", right: 0, marginBottom: 8,
-    maxWidth: "100%", zIndex: 20 },
   recenterButton: {
     minHeight: 48,
     minWidth: 48,
