@@ -83,6 +83,8 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
   avoidStairs: boolean;
   hasAnsweredAvoidStairsPrompt: boolean;
   fontSize: number;
+  repeatGuidanceEnabled: boolean;
+  repeatGuidanceSeconds: number;
   accessibilitySettingsVersion: 5;
 };
 
@@ -94,6 +96,8 @@ type SettingsContextType = AppSettings & {
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
+  setRepeatGuidanceEnabled: (enabled: boolean) => void;
+  setRepeatGuidanceSeconds: (seconds: number) => void;
   setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
   settingsReadSucceeded: boolean;
@@ -119,6 +123,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   avoidInaccessibleCrosswalks: false,
   hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
+  repeatGuidanceEnabled: true,
+  repeatGuidanceSeconds: 9,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
 };
@@ -201,6 +207,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairsEdit.current = false;
     setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
   };
+  const [repeatGuidanceEnabled, setRepeatGuidanceEnabled] = useState(DEFAULT_SETTINGS.repeatGuidanceEnabled);
+  const [repeatGuidanceSeconds, setRepeatGuidanceSeconds] = useState(DEFAULT_SETTINGS.repeatGuidanceSeconds);
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -222,6 +230,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setSettingsAppearance(parsedSettings.settingsAppearance);
           }
 
+          if (typeof parsedSettings.repeatGuidanceEnabled === "boolean") {
+            setRepeatGuidanceEnabled(parsedSettings.repeatGuidanceEnabled);
+          }
+          if ([5, 9, 15, 30, 60].includes(parsedSettings.repeatGuidanceSeconds ?? 0)) {
+            setRepeatGuidanceSeconds(parsedSettings.repeatGuidanceSeconds!);
+          }
           const accessibility = restoreAccessibilitySettings(parsedSettings);
           setAccessibilitySettings({
             customAccessibilityPreferences: {
@@ -312,6 +326,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       avoidInaccessibleCrosswalks,
       hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
+      repeatGuidanceEnabled,
+      repeatGuidanceSeconds,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
@@ -366,6 +382,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairs,
     routingPreference,
     fontSize,
+    repeatGuidanceEnabled,
+    repeatGuidanceSeconds,
     settingsLoaded,
     settingsReadSucceeded,
     accessibilitySettings,
@@ -392,11 +410,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         resetAvoidStairsPreference,
         settingsReadSucceeded,
         fontSize,
+      repeatGuidanceEnabled,
+      repeatGuidanceSeconds,
         setNavigationMode,
         setHasSelectedMode,
         setDistanceUnits,
         setDirectionStyle,
         setFontSize,
+        setRepeatGuidanceEnabled,
+        setRepeatGuidanceSeconds,
         settingsLoaded,
         accessibilitySettingsVersion: 5,
         ...accessibilitySettings,

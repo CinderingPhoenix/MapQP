@@ -90,6 +90,63 @@ function SettingsSwitch({ style, disabled, ...props }: SwitchProps) {
   </TouchableOpacity>;
 }
 
+// Both tabs edit the same persisted spoken-guidance preferences.
+function GuidanceRepetitionSettings() {
+  const { settingsAppearance, fontSize, settingsLoaded, settingsReadSucceeded,
+    repeatGuidanceEnabled, repeatGuidanceSeconds,
+    setRepeatGuidanceEnabled, setRepeatGuidanceSeconds } = useSettings();
+  const preferences = useAccessibilityPreferences();
+  const accessible = settingsAppearance === "accessible";
+  const styles = accessible ? accessibleStyles : standardStyles;
+  const size = fontSize * (accessible ? 1.25 : 1);
+  const disabled = !settingsLoaded || !settingsReadSucceeded;
+  return <View style={{ marginTop: 12, width: "100%", minWidth: 0 }}>
+    <View style={[styles.deviceSettingRow, { flexDirection: "column", flexWrap: "nowrap", alignItems: "stretch", width: "100%" }]}>
+      <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+        style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repeat spoken instruction</AccessibleText>
+      <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+        style={[styles.deviceSectionDescription, { fontSize: 13 * size, lineHeight: Math.ceil(20 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>
+        Repeats the current instruction during accessibility navigation. New directions are still spoken when repetition is off.
+      </AccessibleText>
+      <SettingsSwitch value={repeatGuidanceEnabled} disabled={disabled}
+        onValueChange={setRepeatGuidanceEnabled} accessibilityLabel="Repeat spoken instruction"
+        accessibilityHint="Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled." />
+    </View>
+    <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+      style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repetition frequency</AccessibleText>
+    <View style={{ width: "100%", gap: 10, marginTop: 8, marginBottom: 12 }}>
+      {[5, 9, 15, 30, 60].map((seconds) => {
+        const selected = repeatGuidanceSeconds === seconds;
+        return <TouchableOpacity key={seconds} disabled={disabled || !repeatGuidanceEnabled}
+          accessibilityRole="button" accessibilityLabel={`Repeat every ${seconds} seconds`}
+          accessibilityState={{ selected, disabled: disabled || !repeatGuidanceEnabled }}
+          onPress={() => setRepeatGuidanceSeconds(seconds)}
+          style={{ width: "100%", minHeight: accessible ? 60 : 48,
+            paddingHorizontal: 16, paddingVertical: 14, borderRadius: 10,
+            borderWidth: 2, borderColor: accessible ? "#16324F" : "#AC2B37",
+            backgroundColor: selected ? (accessible ? "#16324F" : "#AC2B37") : "#FFFFFF",
+            flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+            style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2,
+              borderColor: selected ? "#FFFFFF" : (accessible ? "#16324F" : "#AC2B37"),
+              alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {selected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" }} />}
+          </View>
+          <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible={false}
+            style={{ fontSize: 15 * size, fontWeight: "700", lineHeight: Math.ceil(23 * size),
+              flex: 1, minWidth: 0, color: selected ? "#FFFFFF" : "#101820" }}>
+            Every {seconds} seconds
+          </AccessibleText>
+        </TouchableOpacity>;
+      })}
+    </View>
+    {!repeatGuidanceEnabled && <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+      style={[styles.deviceSectionDescription, { fontSize: 13 * size, lineHeight: Math.ceil(20 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>
+      Enable repetition to change its frequency. Your selected frequency is saved.
+    </AccessibleText>}
+  </View>;
+}
+
 const KEYS_TO_DELETE = [
   "mapqp_microsoft_session",
   "mapqp_temp_code_session",
@@ -406,44 +463,6 @@ export default function SettingsPage() {
         showsVerticalScrollIndicator={false}
       >
         {activeTab === "general" ? <>
-        <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-          accessibilityRole="header" style={[styles.sectionLabel, styles.interactiveSectionLabel,
-            styles.sectionBandRed, { fontSize: 12 * displayFontSize }]}>
-          Appearance
-        </AccessibleText>
-        <View style={[styles.settingsCard, styles.navigationCard,
-          increasedContrast && styles.settingsCardHighContrast]}>
-          <View style={styles.optionRow}>
-            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize }]}>
-              Choose how the Settings page is displayed. This does not affect your navigation mode.
-            </AccessibleText>
-            <View style={[styles.segmentedControl, appearanceStacked && styles.segmentedControlStacked,
-              increasedContrast && styles.segmentedControlHighContrast]}>
-              {(["standard", "accessible"] as const).map((appearance) => {
-                const selected = settingsAppearance === appearance;
-                const label = appearance === "standard" ? "Standard" : "Accessible";
-                const disabled = !settingsLoaded || !settingsReadSucceeded;
-                return <TouchableOpacity key={appearance} accessible accessibilityRole="button"
-                  accessibilityLabel={`${label} Settings appearance`}
-                  accessibilityHint={disabled ? "Settings appearance is unavailable until saved settings load successfully."
-                    : `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`}
-                  accessibilityState={{ selected, disabled }} disabled={disabled}
-                  onPress={() => setSettingsAppearance(appearance)}
-                  style={[styles.segmentButton, appearanceStacked && styles.segmentButtonStacked,
-                    selected && styles.segmentButtonSelected]}>
-                  <SelectionIndicator selected={selected} />
-                  <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
-                    style={[styles.segmentText, increasedContrast && styles.segmentTextHighContrast,
-                      { fontSize: 13 * displayFontSize }, selected && styles.segmentTextSelected,
-                      selected && styles.appearanceSelectionText]}>
-                    {label}
-                  </AccessibleText>
-                </TouchableOpacity>;
-              })}
-            </View>
-          </View>
-        </View>
         {/* Navigation Mode */}
         <AccessibleText
           boldTextEnabled={accessibilityPreferences.boldTextEnabled}
@@ -555,6 +574,45 @@ export default function SettingsPage() {
                   Accessible
                 </AccessibleText>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+          accessibilityRole="header" style={[styles.sectionLabel, styles.interactiveSectionLabel,
+            styles.sectionBandRed, { fontSize: 12 * displayFontSize }]}>
+          Appearance
+        </AccessibleText>
+        <View style={[styles.settingsCard, styles.navigationCard,
+          increasedContrast && styles.settingsCardHighContrast]}>
+          <View style={styles.optionRow}>
+            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+              style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize }]}>
+              Choose how the Settings page is displayed. This does not affect your navigation mode.
+            </AccessibleText>
+            <View style={[styles.segmentedControl, appearanceStacked && styles.segmentedControlStacked,
+              increasedContrast && styles.segmentedControlHighContrast]}>
+              {(["standard", "accessible"] as const).map((appearance) => {
+                const selected = settingsAppearance === appearance;
+                const label = appearance === "standard" ? "Standard" : "Accessible";
+                const disabled = !settingsLoaded || !settingsReadSucceeded;
+                return <TouchableOpacity key={appearance} accessible accessibilityRole="button"
+                  accessibilityLabel={`${label} Settings appearance`}
+                  accessibilityHint={disabled ? "Settings appearance is unavailable until saved settings load successfully."
+                    : `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`}
+                  accessibilityState={{ selected, disabled }} disabled={disabled}
+                  onPress={() => setSettingsAppearance(appearance)}
+                  style={[styles.segmentButton, appearanceStacked && styles.segmentButtonStacked,
+                    selected && styles.segmentButtonSelected]}>
+                  <SelectionIndicator selected={selected} />
+                  <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
+                    style={[styles.segmentText, increasedContrast && styles.segmentTextHighContrast,
+                      { fontSize: 13 * displayFontSize }, selected && styles.segmentTextSelected,
+                      selected && styles.appearanceSelectionText]}>
+                    {label}
+                  </AccessibleText>
+                </TouchableOpacity>;
+              })}
             </View>
           </View>
         </View>
@@ -927,25 +985,40 @@ export default function SettingsPage() {
         </View>
         <View style={[styles.settingsCard, styles.deviceSettingsCard,
           increasedContrast && styles.settingsCardHighContrast]}>
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text"
+          <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
+            stackPreferenceControls && styles.accessibilitySourceRowStacked]}
+            accessible accessibilityRole="text"
             accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
             accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.`}>
-            <View style={[styles.settingLabelRow, styles.deviceSettingTitle]}
+            <View style={[styles.accessibilitySourceLabel,
+              stackPreferenceControls && styles.accessibilitySourceLabelStacked]}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <SettingIcon name="account-voice" highContrast={increasedContrast} />
-              <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                maxFontSizeMultiplier={2.5}
-                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * displayFontSize }]}>
-                Screen Reader
-              </AccessibleText>
-            <SettingDescription>Reads interface elements aloud.</SettingDescription>
+              <View style={styles.settingLabelRow}>
+                <SettingIcon name="account-voice" highContrast={increasedContrast} />
+                <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                  maxFontSizeMultiplier={2.5}
+                  style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * displayFontSize }]}>
+                  Screen Reader
+                </AccessibleText>
+              </View>
+              <SettingDescription>Reads interface elements aloud.</SettingDescription>
             </View>
-            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              maxFontSizeMultiplier={2.5}
-              accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-              style={[...deviceSettingStyles("screenReaderEnabled"), { fontSize: 14 * displayFontSize }]}>
-              {deviceSettingValue("screenReaderEnabled")}
-            </AccessibleText>
+            <View style={[styles.deviceValueBadge, ...deviceSettingStyles("screenReaderEnabled"),
+              stackPreferenceControls && styles.stackedSwitch]}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                maxFontSizeMultiplier={2.5} accessible={false}
+                style={{
+                  fontSize: 14 * displayFontSize,
+                  fontWeight: "700",
+                  textAlign: "center",
+                  color: increasedContrast
+                    ? (deviceSettingValue("screenReaderEnabled") === "On" ? "#FFFFFF" : "#111827")
+                    : (deviceSettingValue("screenReaderEnabled") === "On" ? "#064C52" : "#374151"),
+                }}>
+                {deviceSettingValue("screenReaderEnabled")}
+              </AccessibleText>
+            </View>
           </View>
           <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             maxFontSizeMultiplier={2.5}
@@ -1012,6 +1085,8 @@ export default function SettingsPage() {
               </View>
             );
           })}
+          <View style={styles.divider} accessible={false} />
+          <GuidanceRepetitionSettings />
         </View>
 
         <TouchableOpacity
@@ -1099,7 +1174,6 @@ export default function SettingsPage() {
                   { fontSize: 13 * displayFontSize }]}>
                 Uses paths and building entrances marked accessible in the map data.
                 {"\n"}Changes apply when you start a new route.
-                {navigationMode === "accessibility" && "\nAccessibility mode always uses accessible routing."}
               </AccessibleText>
             </View>
             <SettingsSwitch accessible importantForAccessibility="yes" style={stackPreferenceControls ? styles.stackedSwitch : undefined}
@@ -1107,12 +1181,11 @@ export default function SettingsPage() {
               onValueChange={(enabled) => { if (settingsLoaded && settingsReadSucceeded) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }}
               accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
               accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded || !settingsReadSucceeded }}
-              accessibilityHint={"Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." +
-                (navigationMode === "accessibility" ? " Accessibility mode always uses accessible routing." : "")} />
+              accessibilityHint="Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." />
           </View>
           {([
             { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid Indoor Navigation", value: avoidIndoorRoutes, description: "Excludes indoor walkways." },
-            { key: "avoidInaccessibleCrosswalks", icon: "road-variant", label: "Avoid Inaccessible Road Crossings", value: avoidInaccessibleCrosswalks, description: "Allows road crossings marked accessible. Accessibility mode always enables this restriction." },
+            { key: "avoidInaccessibleCrosswalks", icon: "road-variant", label: "Avoid Inaccessible Road Crossings", value: avoidInaccessibleCrosswalks, description: "Allows only road crossings marked accessible when enabled." },
           ] as const).map(({ key, icon, label, value, description }) => (
             <View key={key} style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
               stackPreferenceControls && styles.accessibilitySourceRowStacked]}>
@@ -1138,6 +1211,15 @@ export default function SettingsPage() {
             </View>
           ))}
         </View>}
+        {activeTab === "routing" && <>
+          <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+            accessibilityRole="header" style={[styles.sectionLabel, styles.sectionBandTeal,
+              { fontSize: 12 * displayFontSize }]}>ACCESSIBILITY</AccessibleText>
+          <View style={[styles.settingsCard, styles.deviceSettingsCard,
+            increasedContrast && styles.settingsCardHighContrast]}>
+            <GuidanceRepetitionSettings />
+          </View>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -1329,7 +1411,9 @@ const standardStyles = StyleSheet.create({
   },
   accessibilitySourceRowStacked: {
     flexDirection: "column",
+    flexWrap: "nowrap",
     alignItems: "stretch",
+    width: "100%",
   },
   accessibilitySourceLabel: {
     flexGrow: 1,
@@ -1351,10 +1435,10 @@ const standardStyles = StyleSheet.create({
     minWidth: 0,
     paddingVertical: 2,
   },
-  deviceSettingTitle: {
-    flex: 1,
-    flexBasis: "50%",
-    flexShrink: 1,
+  deviceValueBadge: {
+    maxWidth: "100%",
+    flexShrink: 0,
+    alignSelf: "center",
   },
   segmentedControl: {
     flexDirection: "row",
@@ -1451,9 +1535,7 @@ const standardStyles = StyleSheet.create({
   deviceValue: {
     fontSize: 14,
     fontWeight: "700",
-    flexShrink: 1,
     maxWidth: "100%",
-    overflow: "hidden",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -1528,6 +1610,11 @@ const standardStyles = StyleSheet.create({
 // One shared component tree and handler set; only these presentation tokens differ.
 const accessibleStyles = StyleSheet.create({
   ...standardStyles,
+  settingsCard: { ...standardStyles.settingsCard, backgroundColor: "#FFFFFF", borderColor: "#16324F" },
+  navigationCard: { ...standardStyles.navigationCard, backgroundColor: "#FFFFFF", borderColor: "#16324F", borderLeftColor: "#16324F" },
+  deviceSettingsCard: { ...standardStyles.deviceSettingsCard, backgroundColor: "#FFFFFF", borderColor: "#16324F", borderLeftColor: "#16324F" },
+  secondaryTextHighContrast: { color: "#101820" },
+
   switchControl: { minWidth: 60, minHeight: 60, maxWidth: "100%", alignSelf: "flex-start",
     flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12, padding: 12,
     borderWidth: 2, borderColor: "#111827", borderRadius: 12, backgroundColor: "#FFFFFF" },

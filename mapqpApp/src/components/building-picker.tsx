@@ -87,7 +87,9 @@ export default React.memo(function BuildingPicker({
   const { fontScale: systemFontScale } = useWindowDimensions();
   // A single-line destination field stays aligned with its action icons.
   // Use a responsive height, but never allow the selected name to wrap under the border.
-  const textBoxHeight = Math.max(48, 20 * fontSize * Math.min(systemFontScale, 2.5) + 24);
+  const searchTextScale = fontSize * Math.min(systemFontScale, 2.5);
+  const stackedSearchActions = searchTextScale >= 1.3;
+  const textBoxHeight = Math.max(48, Math.ceil(26 * searchTextScale) + 24);
   const selectedBuilding = buildings.find(
     (building) => building.id === value
   );
@@ -497,7 +499,7 @@ export default React.memo(function BuildingPicker({
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.voiceControlLabel,
-                { fontSize: 14 * fontSize },
+                { fontSize: 14 * fontSize, lineHeight: Math.ceil(21 * fontSize), paddingVertical: 2 },
                 accessibleLightText,
               ]}
             >
@@ -534,12 +536,15 @@ export default React.memo(function BuildingPicker({
       )}
 
       {!accessibilityControls && (
-        <View style={styles.inputWrapper}>
+        <View style={[styles.inputWrapper, {
+          flexDirection: stackedSearchActions ? "column" : "row",
+          alignItems: stackedSearchActions ? "stretch" : "center",
+        }]}>
           {isListening ? (
             <TouchableOpacity
               style={[
                 styles.listeningActiveContainer,
-                { height: textBoxHeight },
+                { height: textBoxHeight, flex: 1 },
               ]}
               onPress={() => {
                 ExpoSpeechRecognitionModule?.stop?.();
@@ -578,8 +583,11 @@ export default React.memo(function BuildingPicker({
                   {
                     height: textBoxHeight,
                     fontSize: 16 * fontSize,
+                    lineHeight: Math.ceil(24 * fontSize),
+                    paddingVertical: 12,
+                    textAlignVertical: "center",
                   },
-                  styles.inputPadded,
+                  { flex: stackedSearchActions ? 0 : 1, minWidth: 0 },
                   value !== "" && {
                     backgroundColor: "#f9f9f9",
                     color: "#333",
@@ -616,11 +624,12 @@ export default React.memo(function BuildingPicker({
                   }, 150);
                 }}
                 onSubmitEditing={() => setIsOpen(false)}
-                placeholder={placeholder}
+                accessibilityLabel={placeholder}
+                placeholder={stackedSearchActions ? "Search destinations" : placeholder}
               />
 
-              <View style={styles.inputRightActions}>
-                {/* Saved locations */}
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end",
+                flexShrink: 0, marginTop: stackedSearchActions ? 4 : 0 }}>
                 <TouchableOpacity
                   style={styles.actionIconButton}
                   onPress={() => {
@@ -1000,15 +1009,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   secondaryControl: {
-    flex: 1,
+    flex: 1.2,
+    minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 82,
+    minHeight: 96,
+    paddingVertical: 8,
   },
   secondaryControlCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: "#f1f3f4",
     alignItems: "center",
     justifyContent: "center",
@@ -1024,11 +1035,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   voiceControl: {
-    width: 82,
+    flex: 0.85,
+    minWidth: 0,
     minHeight: 82,
+    marginHorizontal: 4,
     paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 41,
+    borderRadius: 16,
     backgroundColor: "#D00000",
     alignItems: "center",
     justifyContent: "center",
