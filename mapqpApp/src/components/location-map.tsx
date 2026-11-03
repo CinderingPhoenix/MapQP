@@ -46,7 +46,7 @@ export default function LocationMap({
   controlsBottom = 160,
 }: LocationMapProps) {
   const insets = useSafeAreaInsets();
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<WebView<{}>>(null);
   const [mapHeight, setMapHeight] = useState(0);
   const [controlLayout, setControlLayout] = useState<{
     hasRoute: boolean; expanded: boolean; clearance: number; top: number; leftBottom: number;
@@ -295,7 +295,7 @@ export default function LocationMap({
 
   return (
     <View style={styles.container} onLayout={(event) => setMapHeight(event.nativeEvent.layout.height)}>
-      <WebView
+      <WebView<{}>
         ref={webViewRef}
         originWhitelist={["*"]}
         source={{ uri: mapUri }}

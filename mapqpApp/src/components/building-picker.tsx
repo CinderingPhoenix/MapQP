@@ -1,5 +1,5 @@
 
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Speech from "expo-speech";
 import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
 import * as SecureStore from "expo-secure-store";

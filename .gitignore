@@ -1,1 +1,4 @@
 mapqpApp/.env
+
+# Local Android native build staging
+/.cxx/
