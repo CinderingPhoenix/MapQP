@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";
 
 import BuildingPicker from "../components/building-picker";
+import { RouteAlternativePrompt } from "../components/route-alternative-prompt";
 import LocationMap from "../components/location-map";
 import CurrentNavigationSummary from "../components/current-navigation-summary";
 import { useSettings } from "../context/settings-context";
@@ -80,6 +81,8 @@ export default function Home() {
     route,
     routeDestinationBuilding,
     routeError,
+    routeAlternative,
+    answerRouteAlternative,
     currentRouteIndex,
     showRecenter,
     recenterSignal,
@@ -461,6 +464,7 @@ export default function Home() {
           </Text>
         )}
       </Animated.View>
+      {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
   );
 }

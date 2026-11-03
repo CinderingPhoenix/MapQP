@@ -8,6 +8,17 @@ export function getRoutingPreferences(settings: Partial<RoutingPreferences> = {}
   return { avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, ...settings };
 }
 
+export function getRelaxedRoutingPreferences(preferences: RoutingPreferences) {
+  const enabled = (Object.keys(preferences) as (keyof RoutingPreferences)[])
+    .filter((key) => preferences[key]);
+  return Array.from({ length: (1 << enabled.length) - 1 }, (_, index) => {
+    const relaxed = enabled.filter((_, bit) => (index + 1) & (1 << bit));
+    const options = { ...preferences };
+    for (const key of relaxed) options[key] = false;
+    return { options, relaxed };
+  }).sort((a, b) => a.relaxed.length - b.relaxed.length);
+}
+
 // --- Types ---
 
 export type RoutePoint = {
