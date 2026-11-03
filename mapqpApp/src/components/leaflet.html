@@ -338,7 +338,7 @@
       beginManualExploration();
       if (command === 'zoom-in' || command === 'zoom-out') {
         var delta = command === 'zoom-in' ? 1 : -1;
-        map.setZoom(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + delta)), { animate: false });
+        map.setZoom(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + delta)), { animate: !window.reduceMotionEnabled });
       } else {
         var size = map.getSize();
         var target = L.point(size.x / 2, size.y / 2);
@@ -347,7 +347,11 @@
         if (command === 'pan-left') target.x -= size.x / 4;
         if (command === 'pan-right') target.x += size.x / 4;
         // The rotation plugin converts screen coordinates to geographic coordinates.
-        map.panTo(map.containerPointToLatLng(target), { animate: false });
+        map.panTo(map.containerPointToLatLng(target), {
+          animate: !window.reduceMotionEnabled,
+          duration: 0.35,
+          easeLinearity: 0.25
+        });
       }
       reportCamera('CAMERA_COMMAND_COMPLETE', command);
     };

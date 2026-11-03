@@ -6,7 +6,6 @@ import {
   Alert,
   Platform,
   ScrollView,
-  Switch,
   type SwitchProps,
   StyleSheet,
   Text,
@@ -40,19 +39,111 @@ const ACCESSIBILITY_CONTROLS: {
   { label: "Reduce Transparency", preference: "reduceTransparencyEnabled", devicePreference: "reduceTransparencyEnabled", icon: "layers-outline", description: "Uses opaque backgrounds in supported interface elements to improve readability." },
 ];
 
-// Disabled native switches are not consistently discoverable by assistive
-// navigation. Keep one read-only target with the same semantics in that case.
+// Each appearance exposes one switch target; decoration never becomes a focus stop.
 function SettingsSwitch({ style, disabled, ...props }: SwitchProps) {
-  return <View style={style} accessible={!!disabled}
-    importantForAccessibility={disabled ? "yes" : "auto"}
-    accessibilityRole={disabled ? "switch" : undefined}
-    accessibilityLabel={disabled ? props.accessibilityLabel : undefined}
-    accessibilityValue={disabled ? props.accessibilityValue : undefined}
-    accessibilityState={disabled ? props.accessibilityState : undefined}
-    accessibilityHint={disabled ? props.accessibilityHint : undefined}>
-    <Switch {...props} disabled={disabled} accessible={!disabled}
-      accessibilityElementsHidden={!!disabled}
-      importantForAccessibility={disabled ? "no-hide-descendants" : "yes"} />
+  const { settingsAppearance, fontSize } = useSettings();
+  const accessibleAppearance = settingsAppearance === "accessible";
+  const { boldTextEnabled } = useAccessibilityPreferences();
+  if (accessibleAppearance) {
+    const activate = () => {
+      if (!disabled) props.onValueChange?.(!props.value);
+    };
+    // A single pressable switch target owns both touch and assistive activation.
+    // Draw the visual ourselves so native disabled opacity cannot wash out the track.
+    return <TouchableOpacity accessible accessibilityRole="switch"
+      accessibilityLabel={props.accessibilityLabel}
+      accessibilityHint={props.accessibilityHint}
+      accessibilityValue={props.accessibilityValue}
+      accessibilityState={{ ...props.accessibilityState, checked: !!props.value, disabled: !!disabled }}
+      disabled={disabled} onPress={activate} activeOpacity={1}
+      style={[style, accessibleStyles.switchControl, disabled && accessibleStyles.switchControlReadOnly]}>
+      <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        pointerEvents="none" style={[accessibleStyles.switchTrack,
+          props.value ? accessibleStyles.switchTrackOn : accessibleStyles.switchTrackOff]}>
+        <View style={accessibleStyles.switchThumb} />
+      </View>
+      <Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        pointerEvents="none" style={[accessibleStyles.switchStateLabel, { fontSize: 16.25 * fontSize }]}>
+        {`${props.value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}
+      </Text>
+    </TouchableOpacity>;
+  }
+  return <TouchableOpacity accessible accessibilityRole="switch"
+    accessibilityLabel={props.accessibilityLabel}
+    accessibilityHint={props.accessibilityHint}
+    accessibilityValue={props.accessibilityValue}
+    accessibilityState={{ ...props.accessibilityState, checked: !!props.value, disabled: !!disabled }}
+    disabled={disabled} activeOpacity={1}
+    onPress={() => { if (!disabled) props.onValueChange?.(!props.value); }}
+    style={[style, standardSwitchStyles.control]}>
+    <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+      pointerEvents="none" style={[standardSwitchStyles.track,
+        props.value ? standardSwitchStyles.on : standardSwitchStyles.off,
+        disabled && standardSwitchStyles.readOnly]}>
+      <View style={standardSwitchStyles.thumb} />
+    </View>
+    <AccessibleText boldTextEnabled={boldTextEnabled} accessible={false} accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants" pointerEvents="none"
+      style={[standardSwitchStyles.label, { fontSize: 14 * fontSize }]}>
+      {`${props.value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}
+    </AccessibleText>
+  </TouchableOpacity>;
+}
+
+// Both tabs edit the same persisted spoken-guidance preferences.
+function GuidanceRepetitionSettings() {
+  const { settingsAppearance, fontSize, settingsLoaded, settingsReadSucceeded,
+    repeatGuidanceEnabled, repeatGuidanceSeconds,
+    setRepeatGuidanceEnabled, setRepeatGuidanceSeconds } = useSettings();
+  const preferences = useAccessibilityPreferences();
+  const accessible = settingsAppearance === "accessible";
+  const styles = accessible ? accessibleStyles : standardStyles;
+  const size = fontSize * (accessible ? 1.25 : 1);
+  const disabled = !settingsLoaded || !settingsReadSucceeded;
+  return <View style={{ marginTop: 12, width: "100%", minWidth: 0 }}>
+    <View style={[styles.deviceSettingRow, { flexDirection: "column", flexWrap: "nowrap", alignItems: "stretch", width: "100%" }]}>
+      <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+        style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repeat spoken instruction</AccessibleText>
+      <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+        style={[styles.deviceSectionDescription, { fontSize: 13 * size, lineHeight: Math.ceil(20 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>
+        Repeats the current instruction during accessibility navigation. New directions are still spoken when repetition is off.
+      </AccessibleText>
+      <SettingsSwitch value={repeatGuidanceEnabled} disabled={disabled}
+        onValueChange={setRepeatGuidanceEnabled} accessibilityLabel="Repeat spoken instruction"
+        accessibilityHint="Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled." />
+    </View>
+    <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+      style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repetition frequency</AccessibleText>
+    <View style={{ width: "100%", gap: 10, marginTop: 8, marginBottom: 12 }}>
+      {[5, 9, 15, 30, 60].map((seconds) => {
+        const selected = repeatGuidanceSeconds === seconds;
+        return <TouchableOpacity key={seconds} disabled={disabled || !repeatGuidanceEnabled}
+          accessibilityRole="button" accessibilityLabel={`Repeat every ${seconds} seconds`}
+          accessibilityState={{ selected, disabled: disabled || !repeatGuidanceEnabled }}
+          onPress={() => setRepeatGuidanceSeconds(seconds)}
+          style={{ width: "100%", minHeight: accessible ? 60 : 48,
+            paddingHorizontal: 16, paddingVertical: 14, borderRadius: 10,
+            borderWidth: 2, borderColor: accessible ? "#16324F" : "#AC2B37",
+            backgroundColor: selected ? (accessible ? "#16324F" : "#AC2B37") : "#FFFFFF",
+            flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+            style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2,
+              borderColor: selected ? "#FFFFFF" : (accessible ? "#16324F" : "#AC2B37"),
+              alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {selected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" }} />}
+          </View>
+          <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible={false}
+            style={{ fontSize: 15 * size, fontWeight: "700", lineHeight: Math.ceil(23 * size),
+              flex: 1, minWidth: 0, color: selected ? "#FFFFFF" : "#101820" }}>
+            Every {seconds} seconds
+          </AccessibleText>
+        </TouchableOpacity>;
+      })}
+    </View>
+    {!repeatGuidanceEnabled && <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
+      style={[styles.deviceSectionDescription, { fontSize: 13 * size, lineHeight: Math.ceil(20 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>
+      Enable repetition to change its frequency. Your selected frequency is saved.
+    </AccessibleText>}
   </View>;
 }
 
@@ -65,7 +156,31 @@ const KEYS_TO_DELETE = [
 
 // Keep the component type stable when accessibility preferences change.
 function AccessibleText({ boldTextEnabled, style, ...props }: TextProps & { boldTextEnabled: boolean }) {
-  return <Text {...props} style={[style, boldTextEnabled && styles.boldTextOverride]} />;
+  return <Text {...props} style={[style, boldTextEnabled && standardStyles.boldTextOverride]} />;
+}
+
+// Hints already describe these controls to screen readers. This copy is visual only.
+function SettingDescription({ children }: { children: string }) {
+  const { settingsAppearance, fontSize } = useSettings();
+  const preferences = useAccessibilityPreferences();
+  if (settingsAppearance !== "accessible") return null;
+  const size = 13 * fontSize * 1.25;
+  return <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible={false}
+    accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+    style={[accessibleStyles.description, { fontSize: size, lineHeight: Math.ceil(size * 1.5) }]}>
+    {children}
+  </AccessibleText>;
+}
+
+function SelectionIndicator({ selected }: { selected: boolean }) {
+  const { settingsAppearance } = useSettings();
+  if (settingsAppearance !== "accessible") return null;
+  // Reserve the same space on both options to avoid shifts when selection changes.
+  return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+    style={accessibleStyles.selectionIndicator}>
+    <MaterialCommunityIcons name="check" size={24} color="#FFFFFF" allowFontScaling={false}
+      accessible={false} style={{ opacity: selected ? 1 : 0 }} />
+  </View>;
 }
 
 // Icons supplement the labels and must not become assistive-navigation targets.
@@ -78,28 +193,28 @@ function SettingIcon({ name }: {
   const circleRadius = iconSize * 0.25;
   const dotSize = iconSize * 0.06;
   const circleDiameter = circleRadius * 2 + stroke;
-  return <View style={[styles.settingIcon, { width: iconSize + 2, height: iconSize + 2 }]}
+  return <View style={[standardStyles.settingIcon, { width: iconSize + 2, height: iconSize + 2 }]}
     accessible={false} pointerEvents="none"
     accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
     {name === "reduce-motion" ? (
-      <View style={[styles.reduceMotionTile, { width: iconSize, height: iconSize, borderRadius: iconSize * 0.22 }]}>
+      <View style={[standardStyles.reduceMotionTile, { width: iconSize, height: iconSize, borderRadius: iconSize * 0.22 }]}>
         {/* Equal angular steps place identical dots on a circular centerline. */}
         {Array.from({ length: 16 }, (_, index) => {
           const angle = index * Math.PI * 2 / 16;
-          return <View key={index} style={[styles.reduceMotionDot, {
+          return <View key={index} style={[standardStyles.reduceMotionDot, {
             width: dotSize, height: dotSize, borderRadius: dotSize / 2,
             left: iconSize * 0.35 + circleRadius * Math.cos(angle) - dotSize / 2,
             top: iconSize * 0.5 + circleRadius * Math.sin(angle) - dotSize / 2,
           }]} />;
         })}
-        <View style={[styles.reduceMotionCircle, {
+        <View style={[standardStyles.reduceMotionCircle, {
           width: circleDiameter, height: circleDiameter,
           left: iconSize * 0.65 - circleDiameter / 2, top: (iconSize - circleDiameter) / 2,
           borderRadius: circleDiameter / 2, borderWidth: stroke,
         }]} />
       </View>
     ) : (
-      <View style={[styles.accessibilityIconTile, {
+      <View style={[standardStyles.accessibilityIconTile, {
         width: iconSize, height: iconSize, borderRadius: iconSize * 0.22,
         backgroundColor: name === "stairs" ? "#C45100" : name === "compass" ? "#B32635" : name === "navigation" ? "#7950B2"
           : name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF",
@@ -122,6 +237,8 @@ export default function SettingsPage() {
   );
 
   const {
+    settingsAppearance,
+    setSettingsAppearance,
     navigationMode,
     setNavigationMode,
     setHasSelectedMode,
@@ -168,11 +285,24 @@ export default function SettingsPage() {
   }, []);
 
   const accessibilityPreferences = useAccessibilityPreferences();
-  const increasedContrast =
+  const accessibleAppearance = settingsAppearance === "accessible";
+  const styles = accessibleAppearance ? accessibleStyles : standardStyles;
+  const displayFontSize = fontSize * (accessibleAppearance ? 1.25 : 1);
+  const increasedContrast = accessibleAppearance ||
     accessibilityPreferences.darkerSystemColorsEnabled ||
     accessibilityPreferences.highTextContrastEnabled;
 
-  const stackControls = width < 360 || fontSize * Math.min(fontScale, 2.5) >= 1.35;
+  const stackControls = width < 360 || displayFontSize * Math.min(fontScale, 2.5) >= 1.35;
+  const stackPreferenceControls = accessibleAppearance || stackControls;
+  // Estimate space for each label, the reserved icon, padding, and the option gap.
+  // Short labels can stay side by side on wider screens even at larger text sizes.
+  const selectorStacked = (longestLabel: number) => accessibleAppearance
+    ? (width - 88) / 2 < longestLabel * 13 * displayFontSize * fontScale * 0.55 + 56
+    : stackControls;
+  const appearanceStacked = selectorStacked(10);
+  const navigationStacked = selectorStacked(10);
+  const distanceStacked = selectorStacked(7);
+  const directionStacked = selectorStacked(7);
   const deviceSettingValue = (preference: DeviceAccessibilityPreference) => {
     const status = deviceAccessibility.detectionStatus[preference];
     if (status === "loading") return "Loading";
@@ -247,6 +377,7 @@ export default function SettingsPage() {
                 setDirectionStyle("natural");
                 resetAvoidStairsPreference();
                 setFontSize(1);
+                setSettingsAppearance("standard");
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -302,7 +433,7 @@ export default function SettingsPage() {
           key={`settings-text-1-${fontScale}`}
           accessibilityRole="header"
           maxFontSizeMultiplier={2.5}
-          style={[styles.headerTitle, { fontSize: 21 * fontSize }]}
+          style={[styles.headerTitle, { fontSize: 21 * displayFontSize }]}
         >
           Settings
         </AccessibleText>
@@ -318,7 +449,7 @@ export default function SettingsPage() {
             accessibilityState={{ selected }} onPress={() => setActiveTab(tab)}
             style={[styles.settingsTab, selected && styles.settingsTabSelected]}>
             <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
-              style={[styles.settingsTabLabel, { fontSize: 17 * fontSize },
+              style={[styles.settingsTabLabel, { fontSize: 17 * displayFontSize },
                 selected && styles.settingsTabLabelSelected]}>
               {label}
             </AccessibleText>
@@ -343,7 +474,7 @@ export default function SettingsPage() {
             styles.interactiveSectionLabel,
             styles.sectionBandRed,
             increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
+            { fontSize: 12 * displayFontSize },
           ]}
         >
           NAVIGATION MODE
@@ -363,16 +494,17 @@ export default function SettingsPage() {
                 boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 key={`settings-text-3-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
-                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * fontSize }]}
+                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * displayFontSize }]}
               >
                 Navigation mode
               </AccessibleText>
             </View>
+            <SettingDescription>Choose how MapQP guides you around campus.</SettingDescription>
 
             <View
               style={[
                 styles.segmentedControl,
-                stackControls && styles.segmentedControlStacked,
+                navigationStacked && styles.segmentedControlStacked,
                 styles.redSegmentTrack,
                 increasedContrast && styles.segmentedControlHighContrast,
               ]}
@@ -380,7 +512,7 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
+                  navigationStacked && styles.segmentButtonStacked,
                   navigationMode === "standard" &&
                     styles.segmentButtonSelected,
                 ]}
@@ -393,6 +525,7 @@ export default function SettingsPage() {
                   selected: navigationMode === "standard",
                 }}
               >
+                <SelectionIndicator selected={navigationMode === "standard"} />
                 <AccessibleText
                   boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   key={`settings-text-4-${fontScale}`}
@@ -400,7 +533,7 @@ export default function SettingsPage() {
                   style={[
                     styles.segmentText,
                     increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
+                    { fontSize: 13 * displayFontSize },
                     navigationMode === "standard" &&
                       styles.segmentTextSelected,
                   ]}
@@ -412,7 +545,7 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
+                  navigationStacked && styles.segmentButtonStacked,
                   navigationMode === "accessibility" &&
                     styles.segmentButtonSelected,
                 ]}
@@ -425,6 +558,7 @@ export default function SettingsPage() {
                   selected: navigationMode === "accessibility",
                 }}
               >
+                <SelectionIndicator selected={navigationMode === "accessibility"} />
                 <AccessibleText
                   boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   key={`settings-text-5-${fontScale}`}
@@ -432,7 +566,7 @@ export default function SettingsPage() {
                   style={[
                     styles.segmentText,
                     increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
+                    { fontSize: 13 * displayFontSize },
                     navigationMode === "accessibility" &&
                       styles.segmentTextSelected,
                   ]}
@@ -440,6 +574,45 @@ export default function SettingsPage() {
                   Accessible
                 </AccessibleText>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+          accessibilityRole="header" style={[styles.sectionLabel, styles.interactiveSectionLabel,
+            styles.sectionBandRed, { fontSize: 12 * displayFontSize }]}>
+          Appearance
+        </AccessibleText>
+        <View style={[styles.settingsCard, styles.navigationCard,
+          increasedContrast && styles.settingsCardHighContrast]}>
+          <View style={styles.optionRow}>
+            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+              style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize }]}>
+              Choose how the Settings page is displayed. This does not affect your navigation mode.
+            </AccessibleText>
+            <View style={[styles.segmentedControl, appearanceStacked && styles.segmentedControlStacked,
+              increasedContrast && styles.segmentedControlHighContrast]}>
+              {(["standard", "accessible"] as const).map((appearance) => {
+                const selected = settingsAppearance === appearance;
+                const label = appearance === "standard" ? "Standard" : "Accessible";
+                const disabled = !settingsLoaded || !settingsReadSucceeded;
+                return <TouchableOpacity key={appearance} accessible accessibilityRole="button"
+                  accessibilityLabel={`${label} Settings appearance`}
+                  accessibilityHint={disabled ? "Settings appearance is unavailable until saved settings load successfully."
+                    : `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`}
+                  accessibilityState={{ selected, disabled }} disabled={disabled}
+                  onPress={() => setSettingsAppearance(appearance)}
+                  style={[styles.segmentButton, appearanceStacked && styles.segmentButtonStacked,
+                    selected && styles.segmentButtonSelected]}>
+                  <SelectionIndicator selected={selected} />
+                  <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
+                    style={[styles.segmentText, increasedContrast && styles.segmentTextHighContrast,
+                      { fontSize: 13 * displayFontSize }, selected && styles.segmentTextSelected,
+                      selected && styles.appearanceSelectionText]}>
+                    {label}
+                  </AccessibleText>
+                </TouchableOpacity>;
+              })}
             </View>
           </View>
         </View>
@@ -455,7 +628,7 @@ export default function SettingsPage() {
             styles.interactiveSectionLabel,
             styles.sectionBandRed,
             increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
+            { fontSize: 12 * displayFontSize },
           ]}
         >
           NAVIGATION PREFERENCES
@@ -475,16 +648,17 @@ export default function SettingsPage() {
                 boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 key={`settings-text-7-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
-                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * fontSize }]}
+                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * displayFontSize }]}
               >
                 Distance units
               </AccessibleText>
             </View>
+            <SettingDescription>Choose feet and miles or meters and kilometers.</SettingDescription>
 
             <View
               style={[
                 styles.segmentedControl,
-                stackControls && styles.segmentedControlStacked,
+                distanceStacked && styles.segmentedControlStacked,
                 styles.redSegmentTrack,
                 increasedContrast && styles.segmentedControlHighContrast,
               ]}
@@ -492,7 +666,7 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
+                  distanceStacked && styles.segmentButtonStacked,
                   distanceUnits === "imperial" &&
                     styles.segmentButtonSelected,
                 ]}
@@ -505,6 +679,7 @@ export default function SettingsPage() {
                   selected: distanceUnits === "imperial",
                 }}
               >
+                <SelectionIndicator selected={distanceUnits === "imperial"} />
                 <AccessibleText
                   boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   key={`settings-text-8-${fontScale}`}
@@ -512,7 +687,7 @@ export default function SettingsPage() {
                   style={[
                     styles.segmentText,
                     increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
+                    { fontSize: 13 * displayFontSize },
                     distanceUnits === "imperial" &&
                       styles.segmentTextSelected,
                   ]}
@@ -524,7 +699,7 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
+                  distanceStacked && styles.segmentButtonStacked,
                   distanceUnits === "metric" &&
                     styles.segmentButtonSelected,
                 ]}
@@ -537,6 +712,7 @@ export default function SettingsPage() {
                   selected: distanceUnits === "metric",
                 }}
               >
+                <SelectionIndicator selected={distanceUnits === "metric"} />
                 <AccessibleText
                   boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   key={`settings-text-9-${fontScale}`}
@@ -544,7 +720,7 @@ export default function SettingsPage() {
                   style={[
                     styles.segmentText,
                     increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
+                    { fontSize: 13 * displayFontSize },
                     distanceUnits === "metric" &&
                       styles.segmentTextSelected,
                   ]}
@@ -555,7 +731,7 @@ export default function SettingsPage() {
             </View>
           </View>
 
-          <Divider />
+          <View style={styles.divider} accessible={false} />
 
           <View style={styles.optionRow}>
             <View style={styles.settingLabelRow}>
@@ -564,16 +740,17 @@ export default function SettingsPage() {
                 boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 key={`settings-text-10-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
-                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * fontSize }]}
+                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * displayFontSize }]}
               >
                 Direction style
               </AccessibleText>
             </View>
+            <SettingDescription>Choose turn directions or turning angles in degrees.</SettingDescription>
 
             <View
               style={[
                 styles.segmentedControl,
-                stackControls && styles.segmentedControlStacked,
+                directionStacked && styles.segmentedControlStacked,
                 styles.redSegmentTrack,
                 increasedContrast && styles.segmentedControlHighContrast,
               ]}
@@ -581,7 +758,7 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
+                  directionStacked && styles.segmentButtonStacked,
                   directionStyle === "natural" &&
                     styles.segmentButtonSelected,
                 ]}
@@ -594,6 +771,7 @@ export default function SettingsPage() {
                   selected: directionStyle === "natural",
                 }}
               >
+                <SelectionIndicator selected={directionStyle === "natural"} />
                 <AccessibleText
                   boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   key={`settings-text-11-${fontScale}`}
@@ -601,7 +779,7 @@ export default function SettingsPage() {
                   style={[
                     styles.segmentText,
                     increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
+                    { fontSize: 13 * displayFontSize },
                     directionStyle === "natural" &&
                       styles.segmentTextSelected,
                   ]}
@@ -613,7 +791,7 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
+                  directionStacked && styles.segmentButtonStacked,
                   directionStyle === "degrees" &&
                     styles.segmentButtonSelected,
                 ]}
@@ -626,6 +804,7 @@ export default function SettingsPage() {
                   selected: directionStyle === "degrees",
                 }}
               >
+                <SelectionIndicator selected={directionStyle === "degrees"} />
                 <AccessibleText
                   boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   key={`settings-text-12-${fontScale}`}
@@ -633,7 +812,7 @@ export default function SettingsPage() {
                   style={[
                     styles.segmentText,
                     increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
+                    { fontSize: 13 * displayFontSize },
                     directionStyle === "degrees" &&
                       styles.segmentTextSelected,
                   ]}
@@ -657,7 +836,7 @@ export default function SettingsPage() {
             styles.displaySectionLabel,
             styles.sectionBandPurple,
             increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
+            { fontSize: 12 * displayFontSize },
           ]}
         >
           DISPLAY
@@ -677,12 +856,13 @@ export default function SettingsPage() {
                 boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 key={`settings-text-14-${fontScale}`}
                 maxFontSizeMultiplier={2.5}
-                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * fontSize }]}
+                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * displayFontSize }]}
               >
                 Text size
               </AccessibleText>
 
             </View>
+            <SettingDescription>Adjust the size of text displayed in MapQP.</SettingDescription>
 
             <View style={styles.sliderContainer}>
               <AccessibleText
@@ -695,7 +875,7 @@ export default function SettingsPage() {
                 style={[
                   styles.smallA,
                   increasedContrast && styles.secondaryTextHighContrast,
-                  { fontSize: 14 * fontSize },
+                  { fontSize: 14 * displayFontSize },
                 ]}
               >
                 A
@@ -724,7 +904,7 @@ export default function SettingsPage() {
                 onAccessibilityAction={handleFontSizeAccessibilityAction}
               >
                 <Slider
-                  style={{ flex: 1, height: 40 }}
+                  style={{ flex: 1, height: accessibleAppearance ? 60 : 40 }}
                   minimumValue={0.8}
                   maximumValue={1.8}
                   step={0.1}
@@ -749,7 +929,7 @@ export default function SettingsPage() {
                 style={[
                   styles.largeA,
                   increasedContrast && styles.secondaryTextHighContrast,
-                  { fontSize: 24 * fontSize },
+                  { fontSize: 24 * displayFontSize },
                 ]}
               >
                 A
@@ -766,7 +946,7 @@ export default function SettingsPage() {
               style={[
                 styles.fontSizeValue,
                 increasedContrast && styles.secondaryTextHighContrast,
-                { fontSize: 12 * fontSize },
+                { fontSize: 12 * displayFontSize },
               ]}
             >
               {Math.round(fontSize * 100)}%
@@ -785,7 +965,7 @@ export default function SettingsPage() {
             styles.deviceSectionLabel,
             styles.sectionBandTeal,
             increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
+            { fontSize: 12 * displayFontSize },
           ]}
         >
           ACCESSIBILITY
@@ -793,11 +973,11 @@ export default function SettingsPage() {
         <View key={`device-description-${fontScale}`} style={styles.deviceDescriptionContainer}>
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            allowFontScaling={false}
+            allowFontScaling={accessibleAppearance ? undefined : false}
             style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
               {
-                fontSize: 13 * fontSize * fontScale,
-                lineHeight: Math.ceil(19 * fontSize * fontScale),
+                fontSize: 13 * displayFontSize * (accessibleAppearance ? 1 : fontScale),
+                lineHeight: Math.ceil(19 * displayFontSize * (accessibleAppearance ? 1 : fontScale)),
               }]}
           >
             Enabled device preferences always apply. You can enable additional preferences in MapQP. Your choices are saved independently.
@@ -805,29 +985,45 @@ export default function SettingsPage() {
         </View>
         <View style={[styles.settingsCard, styles.deviceSettingsCard,
           increasedContrast && styles.settingsCardHighContrast]}>
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text"
+          <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
+            stackPreferenceControls && styles.accessibilitySourceRowStacked]}
+            accessible accessibilityRole="text"
             accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
             accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.`}>
-            <View style={[styles.settingLabelRow, styles.deviceSettingTitle]}
+            <View style={[styles.accessibilitySourceLabel,
+              stackPreferenceControls && styles.accessibilitySourceLabelStacked]}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <SettingIcon name="account-voice" highContrast={increasedContrast} />
+              <View style={styles.settingLabelRow}>
+                <SettingIcon name="account-voice" highContrast={increasedContrast} />
+                <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                  maxFontSizeMultiplier={2.5}
+                  style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * displayFontSize }]}>
+                  Screen Reader
+                </AccessibleText>
+              </View>
+              <SettingDescription>Reads interface elements aloud.</SettingDescription>
+            </View>
+            <View style={[styles.deviceValueBadge, ...deviceSettingStyles("screenReaderEnabled"),
+              stackPreferenceControls && styles.stackedSwitch]}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                maxFontSizeMultiplier={2.5}
-                style={[styles.settingTitle, styles.iconLabelText, { fontSize: 16 * fontSize }]}>
-                Screen Reader
+                maxFontSizeMultiplier={2.5} accessible={false}
+                style={{
+                  fontSize: 14 * displayFontSize,
+                  fontWeight: "700",
+                  textAlign: "center",
+                  color: increasedContrast
+                    ? (deviceSettingValue("screenReaderEnabled") === "On" ? "#FFFFFF" : "#111827")
+                    : (deviceSettingValue("screenReaderEnabled") === "On" ? "#064C52" : "#374151"),
+                }}>
+                {deviceSettingValue("screenReaderEnabled")}
               </AccessibleText>
             </View>
-            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              maxFontSizeMultiplier={2.5}
-              accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-              style={[...deviceSettingStyles("screenReaderEnabled"), { fontSize: 14 * fontSize }]}>
-              {deviceSettingValue("screenReaderEnabled")}
-            </AccessibleText>
           </View>
           <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             maxFontSizeMultiplier={2.5}
             style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
-              { fontSize: 13 * fontSize }]}>
+              { fontSize: 13 * displayFontSize }]}>
             VoiceOver and TalkBack are controlled in device settings. MapQP always keeps screen-reader support active.
           </AccessibleText>
           {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, icon, description }) => {
@@ -847,30 +1043,31 @@ export default function SettingsPage() {
               : "Saved MapQP preference.";
             return (
               <View key={preference}>
-                <Divider />
+                <View style={styles.divider} accessible={false} />
                 <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
-                  stackControls && styles.accessibilitySourceRowStacked]}>
+                  stackPreferenceControls && styles.accessibilitySourceRowStacked]}>
                   <View style={[styles.accessibilitySourceLabel,
-                    stackControls && styles.accessibilitySourceLabelStacked]} accessible={false}
+                    stackPreferenceControls && styles.accessibilitySourceLabelStacked]} accessible={false}
                     accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <View style={styles.settingLabelRow}>
                       <SettingIcon name={icon} highContrast={increasedContrast} />
                       <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                         maxFontSizeMultiplier={2.5} accessible={false}
-                        style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * fontSize }]}>
+                        style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * displayFontSize }]}>
                         {label}
                       </AccessibleText>
                     </View>
+                    <SettingDescription>{description}</SettingDescription>
                     <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                       maxFontSizeMultiplier={2.5} accessible={false}
                       style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
-                        { fontSize: 13 * fontSize }]}>
+                        { fontSize: 13 * displayFontSize }]}>
                       {control.explanation}
                     </AccessibleText>
                   </View>
                   <SettingsSwitch
                     accessible importantForAccessibility="yes"
-                    style={stackControls ? styles.stackedSwitch : undefined}
+                    style={stackPreferenceControls ? styles.stackedSwitch : undefined}
                     value={control.enabled}
                     disabled={control.disabled}
                     onValueChange={(enabled) => {
@@ -888,6 +1085,8 @@ export default function SettingsPage() {
               </View>
             );
           })}
+          <View style={styles.divider} accessible={false} />
+          <GuidanceRepetitionSettings />
         </View>
 
         <TouchableOpacity
@@ -899,23 +1098,23 @@ export default function SettingsPage() {
         >
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
+            style={[styles.landingButtonText, { fontSize: 15 * displayFontSize }]}
           >
             Report a Bug
           </AccessibleText>
         </TouchableOpacity>
 
         {/* About / Route Version Info */}
-        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>
+        <Text style={[styles.sectionLabel, { fontSize: 12 * displayFontSize }]}>
           ABOUT
         </Text>
 
         <View style={styles.settingsCard}>
           <View style={styles.infoRow}>
-            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>
+            <Text style={[styles.settingTitle, { fontSize: 16 * displayFontSize }]}>
               Route Data Version
             </Text>
-            <Text style={[styles.infoValue, { fontSize: 15 * fontSize }]}>
+            <Text style={[styles.infoValue, { fontSize: 15 * displayFontSize }]}>
               v{mapVersion}
             </Text>
           </View>
@@ -932,7 +1131,7 @@ export default function SettingsPage() {
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             key={`settings-text-31-${fontScale}`}
             maxFontSizeMultiplier={2.5}
-            style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
+            style={[styles.landingButtonText, { fontSize: 15 * displayFontSize }]}
           >
             Back to Home
           </AccessibleText>
@@ -948,7 +1147,7 @@ export default function SettingsPage() {
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             key={`settings-text-32-${fontScale}`}
-            style={[styles.deleteStorageText, { fontSize: 15 * fontSize }]}
+            style={[styles.deleteStorageText, { fontSize: 15 * displayFontSize }]}
           >
             Delete all local data
           </AccessibleText>
@@ -956,53 +1155,55 @@ export default function SettingsPage() {
         </> : <View style={[styles.settingsCard, styles.preferencesCard,
           increasedContrast && styles.settingsCardHighContrast]}>
           <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
-            stackControls && styles.accessibilitySourceRowStacked]}>
+            stackPreferenceControls && styles.accessibilitySourceRowStacked]}>
             <View style={[styles.accessibilitySourceLabel,
-              stackControls && styles.accessibilitySourceLabelStacked]} accessible={false}>
+              stackPreferenceControls && styles.accessibilitySourceLabelStacked]} accessible={false}
+              accessibilityElementsHidden={accessibleAppearance}
+              importantForAccessibility={accessibleAppearance ? "no-hide-descendants" : "auto"}>
               <View style={styles.settingLabelRow}>
                 <SettingIcon name="stairs" highContrast={increasedContrast} />
                 <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                   maxFontSizeMultiplier={2.5} accessible={false}
-                  style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * fontSize }]}>
+                  style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * displayFontSize }]}>
                   Avoid Stairs &amp; Use Accessible Entrances
                 </AccessibleText>
               </View>
               <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 maxFontSizeMultiplier={2.5} accessible={false}
                 style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
-                  { fontSize: 13 * fontSize }]}>
+                  { fontSize: 13 * displayFontSize }]}>
                 Uses paths and building entrances marked accessible in the map data.
                 {"\n"}Changes apply when you start a new route.
-                {navigationMode === "accessibility" && "\nAccessibility mode always uses accessible routing."}
               </AccessibleText>
             </View>
-            <SettingsSwitch accessible importantForAccessibility="yes" style={stackControls ? styles.stackedSwitch : undefined}
+            <SettingsSwitch accessible importantForAccessibility="yes" style={stackPreferenceControls ? styles.stackedSwitch : undefined}
               value={avoidStairs} disabled={!settingsLoaded || !settingsReadSucceeded}
               onValueChange={(enabled) => { if (settingsLoaded && settingsReadSucceeded) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }}
               accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
               accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded || !settingsReadSucceeded }}
-              accessibilityHint={"Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." +
-                (navigationMode === "accessibility" ? " Accessibility mode always uses accessible routing." : "")} />
+              accessibilityHint="Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." />
           </View>
           {([
             { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid Indoor Navigation", value: avoidIndoorRoutes, description: "Excludes indoor walkways." },
-            { key: "avoidInaccessibleCrosswalks", icon: "road-variant", label: "Avoid Inaccessible Road Crossings", value: avoidInaccessibleCrosswalks, description: "Allows road crossings marked accessible. Accessibility mode always enables this restriction." },
+            { key: "avoidInaccessibleCrosswalks", icon: "road-variant", label: "Avoid Inaccessible Road Crossings", value: avoidInaccessibleCrosswalks, description: "Allows only road crossings marked accessible when enabled." },
           ] as const).map(({ key, icon, label, value, description }) => (
             <View key={key} style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
-              stackControls && styles.accessibilitySourceRowStacked]}>
-              <View style={[styles.accessibilitySourceLabel, stackControls && styles.accessibilitySourceLabelStacked]}>
+              stackPreferenceControls && styles.accessibilitySourceRowStacked]}>
+              <View style={[styles.accessibilitySourceLabel, stackPreferenceControls && styles.accessibilitySourceLabelStacked]}
+                accessibilityElementsHidden={accessibleAppearance}
+                importantForAccessibility={accessibleAppearance ? "no-hide-descendants" : "auto"}>
                 <View style={styles.settingLabelRow}>
                   <SettingIcon name={icon} highContrast={increasedContrast} />
                   <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                    style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * fontSize }]}>{label}</AccessibleText>
+                    style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * displayFontSize }]}>{label}</AccessibleText>
                 </View>
                 <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  style={[styles.deviceSectionDescription, { fontSize: 13 * fontSize }]}>
+                  style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize }]}>
                   {description}{"\n"}Changes apply when you start a new route.
                 </AccessibleText>
               </View>
               <SettingsSwitch value={value} disabled={!settingsLoaded || !settingsReadSucceeded}
-                style={stackControls ? styles.stackedSwitch : undefined}
+                style={stackPreferenceControls ? styles.stackedSwitch : undefined}
                 accessibilityRole="switch" accessibilityLabel={label} accessibilityHint={description}
                 accessibilityState={{ checked: value, disabled: !settingsLoaded || !settingsReadSucceeded }}
                 onValueChange={(enabled) => { void configureRoutingPreferences({ [key]: enabled }).catch(() =>
@@ -1010,16 +1211,22 @@ export default function SettingsPage() {
             </View>
           ))}
         </View>}
+        {activeTab === "routing" && <>
+          <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+            accessibilityRole="header" style={[styles.sectionLabel, styles.sectionBandTeal,
+              { fontSize: 12 * displayFontSize }]}>ACCESSIBILITY</AccessibleText>
+          <View style={[styles.settingsCard, styles.deviceSettingsCard,
+            increasedContrast && styles.settingsCardHighContrast]}>
+            <GuidanceRepetitionSettings />
+          </View>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Divider() {
-  return <View style={styles.divider} accessible={false} />;
-}
-
-const styles = StyleSheet.create({
+const standardStyles = StyleSheet.create({
+  appearanceSelectionText: { textDecorationLine: "underline" },
   settingsTabs: { flexDirection: "row", marginHorizontal: 18, marginTop: 16, padding: 4,
     gap: 4, borderWidth: 2, borderColor: "#761723", borderRadius: 12, backgroundColor: "#F9E5E7" },
   settingsTab: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 12, paddingHorizontal: 8,
@@ -1204,7 +1411,9 @@ const styles = StyleSheet.create({
   },
   accessibilitySourceRowStacked: {
     flexDirection: "column",
+    flexWrap: "nowrap",
     alignItems: "stretch",
+    width: "100%",
   },
   accessibilitySourceLabel: {
     flexGrow: 1,
@@ -1226,10 +1435,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingVertical: 2,
   },
-  deviceSettingTitle: {
-    flex: 1,
-    flexBasis: "50%",
-    flexShrink: 1,
+  deviceValueBadge: {
+    maxWidth: "100%",
+    flexShrink: 0,
+    alignSelf: "center",
   },
   segmentedControl: {
     flexDirection: "row",
@@ -1326,9 +1535,7 @@ const styles = StyleSheet.create({
   deviceValue: {
     fontSize: 14,
     fontWeight: "700",
-    flexShrink: 1,
     maxWidth: "100%",
-    overflow: "hidden",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -1398,4 +1605,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
+});
+
+// One shared component tree and handler set; only these presentation tokens differ.
+const accessibleStyles = StyleSheet.create({
+  ...standardStyles,
+  settingsCard: { ...standardStyles.settingsCard, backgroundColor: "#FFFFFF", borderColor: "#16324F" },
+  navigationCard: { ...standardStyles.navigationCard, backgroundColor: "#FFFFFF", borderColor: "#16324F", borderLeftColor: "#16324F" },
+  deviceSettingsCard: { ...standardStyles.deviceSettingsCard, backgroundColor: "#FFFFFF", borderColor: "#16324F", borderLeftColor: "#16324F" },
+  secondaryTextHighContrast: { color: "#101820" },
+
+  switchControl: { minWidth: 60, minHeight: 60, maxWidth: "100%", alignSelf: "flex-start",
+    flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12, padding: 12,
+    borderWidth: 2, borderColor: "#111827", borderRadius: 12, backgroundColor: "#FFFFFF" },
+  switchControlReadOnly: { borderStyle: "dashed", backgroundColor: "#F0F1F3" },
+  switchTrack: { width: 64, height: 36, borderRadius: 18, borderWidth: 2,
+    borderColor: "#111827", padding: 4, justifyContent: "center", flexShrink: 0 },
+  switchTrackOff: { backgroundColor: "#4B5563", alignItems: "flex-start" },
+  switchTrackOn: { backgroundColor: "#65101D", alignItems: "flex-end" },
+  switchThumb: { width: 24, height: 24, borderRadius: 12, borderWidth: 1,
+    borderColor: "#111827", backgroundColor: "#FFFFFF" },
+  switchStateLabel: { color: "#111827", fontWeight: "900", flexShrink: 1 },
+  // Match Settings' existing Bold Text override, the strongest numeric weight.
+  // Use the native system font so the platform can resolve its heavy face.
+  headerTitle: { ...standardStyles.headerTitle, fontWeight: "900" },
+  backArrow: { ...standardStyles.backArrow, fontWeight: "900" },
+  settingsTabLabelSelected: { ...standardStyles.settingsTabLabelSelected, fontWeight: "900" },
+  deviceValue: { ...standardStyles.deviceValue, fontWeight: "900" },
+  smallA: { ...standardStyles.smallA, fontWeight: "900" },
+  largeA: { ...standardStyles.largeA, fontWeight: "900" },
+  description: { color: "#111827", fontWeight: "900", width: "100%", marginTop: 6, marginBottom: 8, flexShrink: 1 },
+  selectionIndicator: { width: 24, height: 24, flexShrink: 0 },
+  // Keep one card outline; section bands and option outlines establish the hierarchy.
+  settingsCardHighContrast: { ...standardStyles.settingsCardHighContrast, borderWidth: 1, borderLeftWidth: 1 },
+  segmentedControlHighContrast: { ...standardStyles.segmentedControlHighContrast,
+    backgroundColor: "transparent", borderWidth: 0 },
+  sectionBandRed: { ...standardStyles.sectionBandRed, borderLeftWidth: 0 },
+  sectionBandPurple: { ...standardStyles.sectionBandPurple, borderLeftWidth: 0 },
+  sectionBandTeal: { ...standardStyles.sectionBandTeal, borderLeftWidth: 0 },
+  container: { ...standardStyles.container, backgroundColor: "#FFFFFF" },
+  header: { ...standardStyles.header, backgroundColor: "#65101D", paddingVertical: 18 },
+  scrollContent: { ...standardStyles.scrollContent, paddingTop: 12, paddingBottom: 40 },
+  sectionLabel: { ...standardStyles.sectionLabel, color: "#111827", fontWeight: "900", marginTop: 16, marginBottom: 8 },
+  settingTitle: { ...standardStyles.settingTitle, color: "#111827", fontWeight: "900", marginBottom: 8 },
+  deviceSectionDescription: { ...standardStyles.deviceSectionDescription, color: "#111827", fontWeight: "900", marginTop: 4 },
+  infoValue: { ...standardStyles.infoValue, color: "#111827", fontWeight: "900" },
+  fontSizeValue: { ...standardStyles.fontSizeValue, color: "#111827", fontWeight: "900" },
+  optionRow: { ...standardStyles.optionRow, paddingVertical: 16 },
+  infoRow: { ...standardStyles.infoRow, paddingVertical: 16, flexWrap: "wrap", gap: 12 },
+  accessibilitySourceRow: { ...standardStyles.accessibilitySourceRow, paddingVertical: 16 },
+  deviceSettingRow: { ...standardStyles.deviceSettingRow, minHeight: 72, paddingVertical: 16, gap: 10 },
+  segmentedControl: { ...standardStyles.segmentedControl, marginTop: 12, gap: 12, padding: 0, backgroundColor: "transparent" },
+  segmentButton: { ...standardStyles.segmentButton, flexDirection: "row", gap: 8, minHeight: 60, paddingVertical: 18, paddingHorizontal: 12,
+    borderWidth: 2, borderColor: "#65101D" },
+  segmentButtonSelected: { ...standardStyles.segmentButtonSelected, backgroundColor: "#65101D" },
+  segmentText: { ...standardStyles.segmentText, color: "#111827", fontWeight: "900", width: "auto", flexShrink: 1 },
+  segmentTextSelected: { ...standardStyles.segmentTextSelected, textDecorationLine: "underline" },
+  settingsTabs: { ...standardStyles.settingsTabs, backgroundColor: "#FFFFFF", borderWidth: 0, gap: 12 },
+  settingsTab: { ...standardStyles.settingsTab, minHeight: 60, paddingVertical: 18, borderColor: "#65101D" },
+  settingsTabSelected: { ...standardStyles.settingsTabSelected, backgroundColor: "#65101D", borderColor: "#111827" },
+  settingsTabLabel: { ...standardStyles.settingsTabLabel, color: "#65101D", fontWeight: "900" },
+  sliderRow: { ...standardStyles.sliderRow, paddingVertical: 18 },
+  slider: { ...standardStyles.slider, height: 60 },
+  landingButton: { ...standardStyles.landingButton, minHeight: 60, paddingVertical: 20, borderWidth: 2, borderColor: "#65101D" },
+  landingButtonText: { ...standardStyles.landingButtonText, color: "#65101D", fontWeight: "900" },
+  deleteStorageButton: { ...standardStyles.deleteStorageButton, minHeight: 60, paddingVertical: 20, borderWidth: 2, borderColor: "#801A12" },
+  deleteStorageText: { ...standardStyles.deleteStorageText, color: "#801A12", fontWeight: "900" },
+  divider: { ...standardStyles.divider, backgroundColor: "#111827", height: 2 },
+});
+
+// Compact control styling for Standard; its cards, rows and typography stay unchanged.
+const standardSwitchStyles = StyleSheet.create({
+  control: { minWidth: 56, minHeight: 48, maxWidth: "100%", flexShrink: 1, alignSelf: "flex-start",
+    flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, paddingVertical: 6 },
+  track: { width: 56, height: 32, flexShrink: 0, borderRadius: 16, borderWidth: 2,
+    borderColor: "#111827", padding: 3, justifyContent: "center" },
+  off: { backgroundColor: "#4B5563", alignItems: "flex-start" },
+  on: { backgroundColor: "#166534", alignItems: "flex-end" },
+  readOnly: { borderStyle: "dashed" },
+  thumb: { width: 22, height: 22, borderRadius: 11, borderWidth: 1,
+    borderColor: "#111827", backgroundColor: "#FFFFFF" },
+  label: { color: "#111827", fontWeight: "700", flexShrink: 1 },
 });

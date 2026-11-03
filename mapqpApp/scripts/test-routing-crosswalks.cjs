@@ -23,6 +23,23 @@ function initialize(detours = true) {
   }, []);
 }
 const visits = (route, longitude) => route.navigationPath.some(p => p.coordinate[0] === 0.001 && p.coordinate[1] === longitude);
+
+test('fallback searches relax the fewest enabled settings and preserve the original policy', async () => {
+  initialize(false);
+  const preferences = { avoidStairs: true, avoidIndoorRoutes: true, avoidInaccessibleCrosswalks: true };
+  const alternatives = context.exports.getRelaxedRoutingPreferences(preferences);
+  assert.equal(alternatives.length, 7);
+  assert.equal(Array.from(alternatives, item => item.relaxed.length).join(','), '1,1,1,2,2,2,3');
+  for (const alternative of alternatives.slice(0, -1)) {
+    await assert.rejects(routeBetween(origin, destination, alternative.options), /No local walking route/);
+  }
+  assert.ok((await routeBetween(origin, destination, alternatives[6].options)).distance > 0);
+  assert.deepEqual(preferences, { avoidStairs: true, avoidIndoorRoutes: true, avoidInaccessibleCrosswalks: true });
+  const indoorOnly = context.exports.getRelaxedRoutingPreferences({ ...preferences, avoidStairs: false, avoidInaccessibleCrosswalks: false });
+  assert.equal(indoorOnly.length, 1);
+  assert.equal(indoorOnly[0].relaxed.join(','), 'avoidIndoorRoutes');
+  assert.equal(context.exports.getRelaxedRoutingPreferences({ avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false }).length, 0);
+});
 test('all eight preference combinations apply together and have distinct cached routes', async () => {
   initialize();
   for (let mask = 0; mask < 8; mask++) {

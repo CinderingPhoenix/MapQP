@@ -1,8 +1,9 @@
 import { Asset } from "expo-asset";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
-import MapControls, { type CameraAction, type CameraState } from "./map-controls";
+import MapControls, { MAP_CONTROLS_HEIGHT, MAP_CONTROLS_WIDTH, MAP_ZOOM_CONTROLS_WIDTH, type CameraAction, type CameraState } from "./map-controls";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 
 type LocationMapProps = {
@@ -44,6 +45,7 @@ export default function LocationMap({
   controlsTop = 132,
   controlsBottom = 160,
 }: LocationMapProps) {
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const [mapHeight, setMapHeight] = useState(0);
   const [controlLayout, setControlLayout] = useState<{
@@ -137,9 +139,15 @@ export default function LocationMap({
 
   const layoutCurrent = controlLayout?.hasRoute === hasRoute &&
     controlLayout?.expanded === directionsExpanded && controlLayout?.clearance === summaryClearance;
-  const panelTop = Math.max(hasRoute ? Math.max(150, controlsTop) : 132,
-    layoutCurrent ? (accessibilityMode ? controlLayout.top : controlLayout.leftBottom + 8) : 0);
-  const availableControlsHeight = mapHeight > 0 ? Math.max(0, mapHeight - panelTop - controlsBottom) : 164;
+  // Both screens supply measured planner + keyboard + recenter clearance.
+  // Use max rather than adding the bottom inset again to that measured clearance.
+  const panelBottom = Math.max(controlsBottom, insets.bottom + 12);
+  const upperBoundary = Math.max(insets.top + 12, hasRoute ? Math.max(150, controlsTop) : 132,
+    layoutCurrent ? controlLayout.leftBottom + 8 : 0);
+  const availableControlsHeight = mapHeight > 0
+    ? Math.max(0, mapHeight - upperBoundary - panelBottom) : MAP_CONTROLS_HEIGHT;
+  const controlsHeight = Math.min(MAP_CONTROLS_HEIGHT, availableControlsHeight);
+
 
   const handleLoadEnd = () => {
     webViewRef.current?.injectJavaScript(visualPreferencesScript);
@@ -337,11 +345,13 @@ export default function LocationMap({
           }
         }}
       />
-      <View pointerEvents="box-none" style={[styles.controls, { top: panelTop, bottom: controlsBottom, width: accessibilityMode ? 164 : 60 }]}>
+      <View pointerEvents="box-none" style={[styles.controls,
+        { left: insets.left + 12, bottom: panelBottom, width: accessibilityMode ? MAP_CONTROLS_WIDTH : MAP_ZOOM_CONTROLS_WIDTH, height: controlsHeight }]}>
         <ScrollView style={styles.controlsViewport} contentContainerStyle={styles.controlsContent}
+          scrollEnabled={availableControlsHeight < MAP_CONTROLS_HEIGHT}
+          showsVerticalScrollIndicator={availableControlsHeight < MAP_CONTROLS_HEIGHT}
           keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-          <MapControls accessibilityMode={accessibilityMode} camera={camera} onCommand={sendCameraCommand}
-            availableHeight={availableControlsHeight} />
+          <MapControls accessibilityMode={accessibilityMode} camera={camera} onCommand={sendCameraCommand} />
         </ScrollView>
       </View>
     </View>
@@ -351,7 +361,7 @@ export default function LocationMap({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
-  controlsViewport: { flexGrow: 0 },
+  controlsViewport: { flex: 1 },
   controlsContent: { alignItems: "flex-start" },
-  controls: { position: "absolute", left: 12, maxWidth: "94%" },
+  controls: { position: "absolute", maxWidth: "94%" },
 });

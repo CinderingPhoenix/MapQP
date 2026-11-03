@@ -106,7 +106,7 @@ test('a new route waits for native stop completion and cannot be canceled by an 
 
 // Execute the real map hook and formatting/direction-generation code. Inject
 // processed GPS state at the speech boundary; filtering and routing are separate.
-function navigationHarness({ mode = 'standard', reader = false } = {}) {
+function navigationHarness({ mode = 'standard', reader = false, routing, alert } = {}) {
   const h = engineHarness();
   const slots = [];
   const stateSlots = new Map();
@@ -167,10 +167,13 @@ function navigationHarness({ mode = 'standard', reader = false } = {}) {
       Accuracy: { BestForNavigation: 1 }, requestForegroundPermissionsAsync: async () => ({ status: 'granted' }),
       watchPositionAsync: async () => ({ remove() {} }), watchHeadingAsync: async () => ({ remove() {} }),
     },
-    'react-native': { Platform: { OS: 'ios' }, Vibration: { vibrate() {} }, AccessibilityInfo: {
+    'react-native': { Alert: { alert: alert || (() => {}) }, Platform: { OS: 'ios' }, Vibration: { vibrate() {} }, AccessibilityInfo: {
       announceForAccessibility() { accessibilityCalls++; }, announceForAccessibilityWithOptions() { accessibilityCalls++; },
     } },
-    './routing': { routeBetween: async () => plan },
+    './routing': { ...compile('utils/routing.ts', {}), routeBetween: async (...args) => {
+      if (routing) await routing(...args);
+      return plan;
+    } },
     './navigation-speech': speechModule,
   }, {
     setInterval(callback, ms) { const id = nextTimer++; intervals.set(id, { callback, ms }); return id; },
@@ -211,6 +214,23 @@ function navigationHarness({ mode = 'standard', reader = false } = {}) {
     async finish() { h.spoken.at(-1).options.onDone(); await flush(); },
   };
 }
+
+for (const accept of [true, false]) test(`fallback route requires consent: ${accept ? 'accept' : 'cancel'}`, async () => {
+  const n = navigationHarness({ mode: 'accessibility',
+    routing: async (_origin, _destination, options) => {
+      if (options.avoidInaccessibleCrosswalks) throw new Error('No route');
+    },
+  });
+  await n.start();
+  assert.equal(n.result.routeAlternative.join(','), 'avoidInaccessibleCrosswalks');
+  assert.equal(n.result.route, null);
+  assert.equal(n.h.spoken.length, 0);
+  n.result.answerRouteAlternative(accept);
+  await n.flush();
+  assert.equal(n.result.routeAlternative, null);
+  assert.equal(!!n.result.route, accept);
+  assert.equal(n.h.spoken.length, accept ? 1 : 0);
+});
 
 for (const mode of ['standard', 'accessibility']) for (const reader of [false, true]) {
   test(`${mode}, VoiceOver ${reader}: Expo startup uses generated instruction/distance; GPS, maneuvers, arrival`, async () => {

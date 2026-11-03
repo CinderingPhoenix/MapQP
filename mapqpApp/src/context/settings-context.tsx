@@ -12,6 +12,7 @@ import { useDeviceAccessibility, type DeviceAccessibilitySettings } from "../hoo
 
 export type DistanceUnits = "imperial" | "metric";
 export type DirectionStyle = "natural" | "degrees";
+export type SettingsAppearance = "standard" | "accessible";
 export type NavigationMode = "standard" | "accessibility";
 export type AccessibilityNeed = "visual" | "motor";
 
@@ -73,6 +74,7 @@ export function restoreAccessibilitySettings(value: unknown): AccessibilitySetti
 }
 
 type AppSettings = AccessibilitySettings & RoutingPreferences & {
+  settingsAppearance: SettingsAppearance;
   navigationMode: NavigationMode;
   accessibilityNeed: AccessibilityNeed | null;
   hasSelectedMode: boolean;
@@ -81,16 +83,21 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
   avoidStairs: boolean;
   hasAnsweredAvoidStairsPrompt: boolean;
   fontSize: number;
+  repeatGuidanceEnabled: boolean;
+  repeatGuidanceSeconds: number;
   accessibilitySettingsVersion: 5;
 };
 
 type SettingsContextType = AppSettings & {
+  setSettingsAppearance: (appearance: SettingsAppearance) => void;
   setNavigationMode: (mode: NavigationMode) => void;
   setAccessibilityNeed: (need: AccessibilityNeed) => void;
   setHasSelectedMode: (selected: boolean) => void;
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
+  setRepeatGuidanceEnabled: (enabled: boolean) => void;
+  setRepeatGuidanceSeconds: (seconds: number) => void;
   setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
   settingsReadSucceeded: boolean;
@@ -105,6 +112,7 @@ type SettingsContextType = AppSettings & {
 const SETTINGS_STORAGE_KEY = "mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
+  settingsAppearance: "standard",
   navigationMode: "standard",
   accessibilityNeed: null,
   hasSelectedMode: false,
@@ -115,6 +123,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   avoidInaccessibleCrosswalks: false,
   hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
+  repeatGuidanceEnabled: true,
+  repeatGuidanceSeconds: 9,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
 };
@@ -145,9 +155,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     setSettingsReadSucceeded(true);
   };
-  const [navigationMode, setNavigationMode] = useState<NavigationMode>(
+  const [settingsAppearance, setSettingsAppearance] = useState<SettingsAppearance>(DEFAULT_SETTINGS.settingsAppearance);
+  const [navigationMode, setNavigationModeState] = useState<NavigationMode>(
     DEFAULT_SETTINGS.navigationMode
   );
+  // Public calls represent an explicit choice, including reselecting the same mode.
+  // Restoration below uses the raw state setter to preserve manual appearance overrides.
+  const setNavigationMode = (mode: NavigationMode) => {
+    setNavigationModeState(mode);
+    if (mode === "accessibility") setSettingsAppearance("accessible");
+  };
 
   const [accessibilityNeed, setAccessibilityNeed] = useState<AccessibilityNeed | null>(null);
 
@@ -190,6 +207,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairsEdit.current = false;
     setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, hasAnsweredAvoidStairsPrompt: false, revision: ++choiceRevision.current });
   };
+  const [repeatGuidanceEnabled, setRepeatGuidanceEnabled] = useState(DEFAULT_SETTINGS.repeatGuidanceEnabled);
+  const [repeatGuidanceSeconds, setRepeatGuidanceSeconds] = useState(DEFAULT_SETTINGS.repeatGuidanceSeconds);
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -207,6 +226,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const parsedSettings: Partial<AppSettings> =
             JSON.parse(savedSettings) ?? {};
 
+          if (parsedSettings.settingsAppearance === "standard" || parsedSettings.settingsAppearance === "accessible") {
+            setSettingsAppearance(parsedSettings.settingsAppearance);
+          }
+
+          if (typeof parsedSettings.repeatGuidanceEnabled === "boolean") {
+            setRepeatGuidanceEnabled(parsedSettings.repeatGuidanceEnabled);
+          }
+          if ([5, 9, 15, 30, 60].includes(parsedSettings.repeatGuidanceSeconds ?? 0)) {
+            setRepeatGuidanceSeconds(parsedSettings.repeatGuidanceSeconds!);
+          }
           const accessibility = restoreAccessibilitySettings(parsedSettings);
           setAccessibilitySettings({
             customAccessibilityPreferences: {
@@ -218,7 +247,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             parsedSettings.navigationMode === "standard" ||
             parsedSettings.navigationMode === "accessibility"
           ) {
-            setNavigationMode(parsedSettings.navigationMode);
+            setNavigationModeState(parsedSettings.navigationMode);
           }
 
           if (parsedSettings.accessibilityNeed === "visual" || parsedSettings.accessibilityNeed === "motor") {
@@ -286,6 +315,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     const settings: AppSettings = {
+      settingsAppearance,
       navigationMode,
       accessibilityNeed,
       hasSelectedMode,
@@ -296,6 +326,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       avoidInaccessibleCrosswalks,
       hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
+      repeatGuidanceEnabled,
+      repeatGuidanceSeconds,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
@@ -341,6 +373,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
     });
   }, [
+    settingsAppearance,
     navigationMode,
     accessibilityNeed,
     hasSelectedMode,
@@ -349,6 +382,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairs,
     routingPreference,
     fontSize,
+    repeatGuidanceEnabled,
+    repeatGuidanceSeconds,
     settingsLoaded,
     settingsReadSucceeded,
     accessibilitySettings,
@@ -357,6 +392,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsContext.Provider
       value={{
+        settingsAppearance,
+        setSettingsAppearance,
         navigationMode,
         accessibilityNeed,
         setAccessibilityNeed,
@@ -373,11 +410,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         resetAvoidStairsPreference,
         settingsReadSucceeded,
         fontSize,
+      repeatGuidanceEnabled,
+      repeatGuidanceSeconds,
         setNavigationMode,
         setHasSelectedMode,
         setDistanceUnits,
         setDirectionStyle,
         setFontSize,
+        setRepeatGuidanceEnabled,
+        setRepeatGuidanceSeconds,
         settingsLoaded,
         accessibilitySettingsVersion: 5,
         ...accessibilitySettings,
