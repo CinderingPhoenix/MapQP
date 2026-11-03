@@ -48,7 +48,10 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableBundleCompression": true
           }
         }
       ],
@@ -66,7 +69,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your precise location for campus routing."
         }
-      ]
+      ],
+      "./plugins/with-short-cmake-paths"
     ],
     "experiments": {
       "typedRoutes": true,

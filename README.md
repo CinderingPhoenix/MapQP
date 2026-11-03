@@ -1,11 +1,15 @@
 # MapQP
 
 .env file variables
+
 SERVER_IP=...
+
 PORT=...
 
 AUTHORITY=...
+
 CLIENT_ID=...
+
 
 # Commands
 
@@ -37,3 +41,18 @@ cd android
 ./gradlew assembleRelease
 ```
 Compiles the code into an apk
+
+```
+npm run build:android:phone
+```
+optimized release APK for ARM64 phones.
+
+```
+npm run build:android:emulator
+```
+optimized release APK for x86_64 emulators.
+
+```
+npm run build:android:bundle
+```
+release AAB for Google Play, retaining all configured architectures.

@@ -182,7 +182,7 @@ export default function LandingPage() {
         accessibilityElementsHidden={onboardingBlocksFocus}
         importantForAccessibility={onboardingBlocksFocus ? "no-hide-descendants" : "auto"}>
         <ExpoImage
-          source={require("../../assets/images/campus-map.png")}
+          source={require("../../assets/images/campus-map.webp")}
           style={[StyleSheet.absoluteFill, styles.mapImage]}
           contentFit="cover"
           cachePolicy="memory-disk"

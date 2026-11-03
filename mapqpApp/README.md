@@ -54,3 +54,25 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+### Smaller Android builds
+
+- `npm run build:android:phone`: optimized release APK for ARM64 phones.
+- `npm run build:android:emulator`: optimized release APK for x86_64 emulators.
+- `npm run build:android:bundle`: release AAB for Google Play, retaining all configured architectures.
+- EAS equivalents: `eas build -p android --profile preview`, `--profile preview-emulator`, or `--profile production`.
+
+Phone and emulator release APKs run independently of Metro. Keep the development profile for debugging.
+The ARM64 APK does not support 32-bit phones or x86 emulators. The production AAB lets Play deliver device-specific libraries.
+Release builds enable R8, resource shrinking, and JavaScript bundle compression. These settings live in app.json for prebuild and in the existing Android Gradle properties for local builds.
+Original tutorial PNGs are retained as source artwork; tutorial code references resized WebP files only.
+After installing dependencies, rebuild the native app to remove unused native modules. Test sign-in, speech, location, maps, and tutorials on the release build.
+Local release signing uses the existing project signing configuration; use EAS-managed production signing for distribution.
+
+The local Android wrapper was updated to Gradle 9.4.1 for the installed Expo 58 Android plugin. Fresh native projects should be generated with the matching Expo version.
+
+The Windows Ninja object-path failure is addressed by `plugins/with-short-cmake-paths.js`, which sets CMAKE_OBJECT_PATH_MAX=240 for Android library modules. The formerly failing ARM64 Worklets native task now passes. The complete APK size has not yet been measured.
+The existing local Android project also needed `android.builtInKotlin=false` and `android.newDsl=false` for its legacy Kotlin plugin setup with AGP 9. These local native files are gitignored; fresh EAS native projects use the Expo template.
+
+The CMake path plugin also covers the app module and registers before Expo finalizes Android modules. App CMake intermediates use the shorter workspace-root `.cxx` directory (gitignored). Both the Worklets and app ARM64 native build tasks have been verified successfully.
