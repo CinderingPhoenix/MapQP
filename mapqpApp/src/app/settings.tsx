@@ -26,6 +26,24 @@ import { useAuthGuard } from "../hooks/use-auth-guard";
 import defaultRoutePoints from "../data/route-points.json";
 import { useFocusEffect } from "expo-router";
 
+// Color overrides are opt-in for Accessibility sections in Accessible appearance.
+const ACCESSIBILITY_PALETTE = {
+  header: "#DDF3EB",
+  card: "#F2FAF6",
+  accent: "#26785C",
+  heading: "#175E49",
+} as const;
+
+// Scoped to the Navigation Mode and Appearance sections in Accessible appearance.
+const BURGUNDY_PALETTE = {
+  header: "#F4DDE2",
+  card: "#FBEFF1",
+  border: "#741B2B",
+  heading: "#741B2B",
+  selected: "#64101E",
+  onSelected: "#FFFFFF",
+} as const;
+
 type SettingsIconName = keyof typeof MaterialCommunityIcons.glyphMap | "reduce-motion";
 
 const ACCESSIBILITY_CONTROLS: {
@@ -40,7 +58,8 @@ const ACCESSIBILITY_CONTROLS: {
 ];
 
 // Each appearance exposes one switch target; decoration never becomes a focus stop.
-function SettingsSwitch({ style, disabled, ...props }: SwitchProps) {
+function SettingsSwitch({ style, disabled, accessibilitySection = false, ...props }:
+  SwitchProps & { accessibilitySection?: boolean }) {
   const { settingsAppearance, fontSize } = useSettings();
   const accessibleAppearance = settingsAppearance === "accessible";
   const { boldTextEnabled } = useAccessibilityPreferences();
@@ -56,11 +75,15 @@ function SettingsSwitch({ style, disabled, ...props }: SwitchProps) {
       accessibilityValue={props.accessibilityValue}
       accessibilityState={{ ...props.accessibilityState, checked: !!props.value, disabled: !!disabled }}
       disabled={disabled} onPress={activate} activeOpacity={1}
-      style={[style, accessibleStyles.switchControl, disabled && accessibleStyles.switchControlReadOnly]}>
+      style={[style, accessibleStyles.switchControl, disabled && accessibleStyles.switchControlReadOnly,
+        accessibilitySection && accessibilitySectionStyles.switchControl]}>
       <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
         pointerEvents="none" style={[accessibleStyles.switchTrack,
-          props.value ? accessibleStyles.switchTrackOn : accessibleStyles.switchTrackOff]}>
-        <View style={accessibleStyles.switchThumb} />
+          props.value ? accessibleStyles.switchTrackOn : accessibleStyles.switchTrackOff,
+          accessibilitySection && accessibilitySectionStyles.switchTrack,
+          accessibilitySection && props.value && accessibilitySectionStyles.switchTrackOn]}>
+        <View style={[accessibleStyles.switchThumb,
+          accessibilitySection && accessibilitySectionStyles.switchThumb]} />
       </View>
       <Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
         pointerEvents="none" style={[accessibleStyles.switchStateLabel, { fontSize: 16.25 * fontSize }]}>
@@ -108,9 +131,10 @@ function GuidanceRepetitionSettings() {
         style={[styles.deviceSectionDescription, { fontSize: 13 * size, lineHeight: Math.ceil(20 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>
         Repeats the current instruction during accessibility navigation. New directions are still spoken when repetition is off.
       </AccessibleText>
-      <SettingsSwitch value={repeatGuidanceEnabled} disabled={disabled}
+      <SettingsSwitch accessibilitySection value={repeatGuidanceEnabled} disabled={disabled}
         onValueChange={setRepeatGuidanceEnabled} accessibilityLabel="Repeat spoken instruction"
-        accessibilityHint="Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled." />
+        accessibilityHint={accessible ? undefined
+          : "Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled."} />
     </View>
     <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
       style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repetition frequency</AccessibleText>
@@ -123,12 +147,12 @@ function GuidanceRepetitionSettings() {
           onPress={() => setRepeatGuidanceSeconds(seconds)}
           style={{ width: "100%", minHeight: accessible ? 60 : 48,
             paddingHorizontal: 16, paddingVertical: 14, borderRadius: 10,
-            borderWidth: 2, borderColor: accessible ? "#16324F" : "#AC2B37",
-            backgroundColor: selected ? (accessible ? "#16324F" : "#AC2B37") : "#FFFFFF",
+            borderWidth: 2, borderColor: accessible ? ACCESSIBILITY_PALETTE.accent : "#AC2B37",
+            backgroundColor: selected ? (accessible ? ACCESSIBILITY_PALETTE.accent : "#AC2B37") : (accessible ? ACCESSIBILITY_PALETTE.card : "#FFFFFF"),
             flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
             style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2,
-              borderColor: selected ? "#FFFFFF" : (accessible ? "#16324F" : "#AC2B37"),
+              borderColor: selected ? "#FFFFFF" : (accessible ? ACCESSIBILITY_PALETTE.accent : "#AC2B37"),
               alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {selected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" }} />}
           </View>
@@ -160,14 +184,13 @@ function AccessibleText({ boldTextEnabled, style, ...props }: TextProps & { bold
   return <Text {...props} style={[style, boldTextEnabled && standardStyles.boldTextOverride]} />;
 }
 
-// Hints already describe these controls to screen readers. This copy is visual only.
+// Standalone descriptions are read in place. Hidden groups include their copy in the control label.
 function SettingDescription({ children }: { children: string }) {
   const { settingsAppearance, fontSize } = useSettings();
   const preferences = useAccessibilityPreferences();
   if (settingsAppearance !== "accessible") return null;
   const size = 13 * fontSize * 1.25;
-  return <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible={false}
-    accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+  return <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible
     style={[accessibleStyles.description, { fontSize: size, lineHeight: Math.ceil(size * 1.5) }]}>
     {children}
   </AccessibleText>;
@@ -497,6 +520,7 @@ export default function SettingsPage() {
             styles.interactiveSectionLabel,
             styles.sectionBandRed,
             increasedContrast && styles.sectionLabelHighContrast,
+            accessibleAppearance && burgundySectionStyles.header,
             { fontSize: 12 * displayFontSize },
           ]}
         >
@@ -508,6 +532,7 @@ export default function SettingsPage() {
             styles.settingsCard,
             styles.navigationCard,
             increasedContrast && styles.settingsCardHighContrast,
+            accessibleAppearance && burgundySectionStyles.card,
           ]}
         >
           <View style={styles.optionRow}>
@@ -536,8 +561,10 @@ export default function SettingsPage() {
                 style={[
                   styles.segmentButton,
                   navigationStacked && styles.segmentButtonStacked,
+                  accessibleAppearance && burgundySectionStyles.button,
                   navigationMode === "standard" &&
                     styles.segmentButtonSelected,
+                  accessibleAppearance && navigationMode === "standard" && burgundySectionStyles.buttonSelected,
                 ]}
                 onPress={() => changeNavigationMode("standard")}
                 accessible
@@ -559,6 +586,7 @@ export default function SettingsPage() {
                     { fontSize: 13 * displayFontSize },
                     navigationMode === "standard" &&
                       styles.segmentTextSelected,
+                    accessibleAppearance && navigationMode === "standard" && burgundySectionStyles.textSelected,
                   ]}
                 >
                   Standard
@@ -569,8 +597,10 @@ export default function SettingsPage() {
                 style={[
                   styles.segmentButton,
                   navigationStacked && styles.segmentButtonStacked,
+                  accessibleAppearance && burgundySectionStyles.button,
                   navigationMode === "accessibility" &&
                     styles.segmentButtonSelected,
+                  accessibleAppearance && navigationMode === "accessibility" && burgundySectionStyles.buttonSelected,
                 ]}
                 onPress={() => changeNavigationMode("accessibility")}
                 accessible
@@ -592,6 +622,7 @@ export default function SettingsPage() {
                     { fontSize: 13 * displayFontSize },
                     navigationMode === "accessibility" &&
                       styles.segmentTextSelected,
+                    accessibleAppearance && navigationMode === "accessibility" && burgundySectionStyles.textSelected,
                   ]}
                 >
                   Accessible
@@ -603,11 +634,13 @@ export default function SettingsPage() {
 
         <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
           accessibilityRole="header" style={[styles.sectionLabel, styles.interactiveSectionLabel,
-            styles.sectionBandRed, { fontSize: 12 * displayFontSize }]}>
+            styles.sectionBandRed, accessibleAppearance && burgundySectionStyles.header,
+            { fontSize: 12 * displayFontSize }]}>
           Appearance
         </AccessibleText>
         <View style={[styles.settingsCard, styles.navigationCard,
-          increasedContrast && styles.settingsCardHighContrast]}>
+          increasedContrast && styles.settingsCardHighContrast,
+          accessibleAppearance && burgundySectionStyles.card]}>
           <View style={styles.optionRow}>
             <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
               style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize }]}>
@@ -626,12 +659,15 @@ export default function SettingsPage() {
                   accessibilityState={{ selected, disabled }} disabled={disabled}
                   onPress={() => setSettingsAppearance(appearance)}
                   style={[styles.segmentButton, appearanceStacked && styles.segmentButtonStacked,
-                    selected && styles.segmentButtonSelected]}>
+                    accessibleAppearance && burgundySectionStyles.button,
+                    selected && styles.segmentButtonSelected,
+                    accessibleAppearance && selected && burgundySectionStyles.buttonSelected]}>
                   <SelectionIndicator selected={selected} />
                   <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
                     style={[styles.segmentText, increasedContrast && styles.segmentTextHighContrast,
                       { fontSize: 13 * displayFontSize }, selected && styles.segmentTextSelected,
-                      selected && styles.appearanceSelectionText]}>
+                      selected && styles.appearanceSelectionText,
+                      accessibleAppearance && selected && burgundySectionStyles.textSelected]}>
                     {label}
                   </AccessibleText>
                 </TouchableOpacity>;
@@ -910,9 +946,12 @@ export default function SettingsPage() {
                 accessibilityRole="adjustable"
                 accessibilityLabel="Text size"
                 accessibilityHint={
-                  Platform.OS === "ios"
-                    ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
-                    : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"
+                  accessibleAppearance
+                    ? (Platform.OS === "ios" ? "Swipe up or down to adjust text size"
+                      : "Use the increase or decrease accessibility action to adjust text size")
+                    : Platform.OS === "ios"
+                      ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
+                      : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"
                 }
                 accessibilityValue={{
                   min: 80,
@@ -988,6 +1027,7 @@ export default function SettingsPage() {
             styles.deviceSectionLabel,
             styles.sectionBandTeal,
             increasedContrast && styles.sectionLabelHighContrast,
+            accessibleAppearance && accessibilitySectionStyles.header,
             { fontSize: 12 * displayFontSize },
           ]}
         >
@@ -1007,12 +1047,14 @@ export default function SettingsPage() {
           </AccessibleText>
         </View>
         <View style={[styles.settingsCard, styles.deviceSettingsCard,
-          increasedContrast && styles.settingsCardHighContrast]}>
+          increasedContrast && styles.settingsCardHighContrast,
+          accessibleAppearance && accessibilitySectionStyles.card]}>
           <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
             stackPreferenceControls && styles.accessibilitySourceRowStacked]}
             accessible accessibilityRole="text"
-            accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
-            accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.`}>
+            accessibilityHint={accessibleAppearance ? undefined
+              : "Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."}
+            accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.${accessibleAppearance ? " Reads interface elements aloud." : ""}`}>
             <View style={[styles.accessibilitySourceLabel,
               stackPreferenceControls && styles.accessibilitySourceLabelStacked]}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -1027,7 +1069,9 @@ export default function SettingsPage() {
               <SettingDescription>Reads interface elements aloud.</SettingDescription>
             </View>
             <View style={[styles.deviceValueBadge, ...deviceSettingStyles("screenReaderEnabled"),
-              stackPreferenceControls && styles.stackedSwitch]}
+              stackPreferenceControls && styles.stackedSwitch,
+              accessibleAppearance && accessibilitySectionStyles.deviceValue,
+              accessibleAppearance && deviceSettingValue("screenReaderEnabled") === "On" && accessibilitySectionStyles.deviceValueOn]}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
                 maxFontSizeMultiplier={2.5} accessible={false}
@@ -1066,7 +1110,7 @@ export default function SettingsPage() {
               : "Saved MapQP preference.";
             return (
               <View key={preference}>
-                <View style={styles.divider} accessible={false} />
+                <View style={[styles.divider, accessibleAppearance && accessibilitySectionStyles.divider]} accessible={false} />
                 <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
                   stackPreferenceControls && styles.accessibilitySourceRowStacked]}>
                   <View style={[styles.accessibilitySourceLabel,
@@ -1088,7 +1132,7 @@ export default function SettingsPage() {
                       {control.explanation}
                     </AccessibleText>
                   </View>
-                  <SettingsSwitch
+                  <SettingsSwitch accessibilitySection
                     accessible importantForAccessibility="yes"
                     style={stackPreferenceControls ? styles.stackedSwitch : undefined}
                     value={control.enabled}
@@ -1097,10 +1141,12 @@ export default function SettingsPage() {
                       if (!control.disabled) setAccessibilityPreference(preference, enabled);
                     }}
                     accessibilityRole="switch"
-                    accessibilityLabel={label}
+                    accessibilityLabel={accessibleAppearance
+                      ? `${label}. ${description}${sourceDescription.includes(control.explanation) ? "" : ` ${control.explanation}`}`
+                      : label}
                     accessibilityValue={{ text: sourceDescription }}
                     accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
-                    accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
+                    accessibilityHint={`${accessibleAppearance ? "" : `${description} `}${deviceControlled ? "Change this preference in your device settings."
                       : control.disabled ? "This preference cannot be changed while settings are loading."
                       : "Changes only your saved MapQP preference."}`}
                   />
@@ -1108,7 +1154,7 @@ export default function SettingsPage() {
               </View>
             );
           })}
-          <View style={styles.divider} accessible={false} />
+          <View style={[styles.divider, accessibleAppearance && accessibilitySectionStyles.divider]} accessible={false} />
           <GuidanceRepetitionSettings />
         </View>
 
@@ -1202,9 +1248,12 @@ export default function SettingsPage() {
             <SettingsSwitch accessible importantForAccessibility="yes" style={stackPreferenceControls ? styles.stackedSwitch : undefined}
               value={avoidStairs} disabled={!settingsLoaded || !settingsReadSucceeded}
               onValueChange={(enabled) => { if (settingsLoaded && settingsReadSucceeded) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }}
-              accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
+              accessibilityRole="switch" accessibilityLabel={accessibleAppearance
+                ? "Avoid Stairs & Use Accessible Entrances. Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route."
+                : "Avoid Stairs & Use Accessible Entrances"}
               accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded || !settingsReadSucceeded }}
-              accessibilityHint="Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." />
+              accessibilityHint={accessibleAppearance ? undefined
+                : "Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route."} />
           </View>
           {([
             { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid Indoor Navigation", value: avoidIndoorRoutes, description: "Excludes indoor walkways." },
@@ -1227,7 +1276,9 @@ export default function SettingsPage() {
               </View>
               <SettingsSwitch value={value} disabled={!settingsLoaded || !settingsReadSucceeded}
                 style={stackPreferenceControls ? styles.stackedSwitch : undefined}
-                accessibilityRole="switch" accessibilityLabel={label} accessibilityHint={description}
+                accessibilityRole="switch" accessibilityLabel={accessibleAppearance
+                  ? `${label}. ${description} Changes apply when you start a new route.` : label}
+                accessibilityHint={accessibleAppearance ? undefined : description}
                 accessibilityState={{ checked: value, disabled: !settingsLoaded || !settingsReadSucceeded }}
                 onValueChange={(enabled) => { void configureRoutingPreferences({ [key]: enabled }).catch(() =>
                   Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
@@ -1237,9 +1288,11 @@ export default function SettingsPage() {
         {activeTab === "routing" && <>
           <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             accessibilityRole="header" style={[styles.sectionLabel, styles.sectionBandTeal,
+              accessibleAppearance && accessibilitySectionStyles.header,
               { fontSize: 12 * displayFontSize }]}>ACCESSIBILITY</AccessibleText>
           <View style={[styles.settingsCard, styles.deviceSettingsCard,
-            increasedContrast && styles.settingsCardHighContrast]}>
+            increasedContrast && styles.settingsCardHighContrast,
+            accessibleAppearance && accessibilitySectionStyles.card]}>
             <GuidanceRepetitionSettings />
           </View>
         </>}
@@ -1709,4 +1762,28 @@ const standardSwitchStyles = StyleSheet.create({
   thumb: { width: 22, height: 22, borderRadius: 11, borderWidth: 1,
     borderColor: "#111827", backgroundColor: "#FFFFFF" },
   label: { color: "#111827", fontWeight: "700", flexShrink: 1 },
+});
+
+// Color-only overrides leave the shared layout, text, icons and Routing controls intact.
+const accessibilitySectionStyles = StyleSheet.create({
+  header: { backgroundColor: ACCESSIBILITY_PALETTE.header, color: ACCESSIBILITY_PALETTE.heading },
+  card: { backgroundColor: ACCESSIBILITY_PALETTE.card,
+    borderColor: ACCESSIBILITY_PALETTE.accent, borderLeftColor: ACCESSIBILITY_PALETTE.accent },
+  switchControl: { backgroundColor: ACCESSIBILITY_PALETTE.card, borderColor: ACCESSIBILITY_PALETTE.accent },
+  switchTrack: { borderColor: ACCESSIBILITY_PALETTE.accent },
+  switchTrackOn: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
+  switchThumb: { borderColor: ACCESSIBILITY_PALETTE.accent },
+  deviceValue: { backgroundColor: ACCESSIBILITY_PALETTE.card, borderColor: ACCESSIBILITY_PALETTE.accent },
+  deviceValueOn: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
+  divider: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
+});
+
+// Color-only overrides; shared styles and other sections retain their existing themes.
+const burgundySectionStyles = StyleSheet.create({
+  header: { backgroundColor: BURGUNDY_PALETTE.header, color: BURGUNDY_PALETTE.heading },
+  card: { backgroundColor: BURGUNDY_PALETTE.card,
+    borderColor: BURGUNDY_PALETTE.border, borderLeftColor: BURGUNDY_PALETTE.border },
+  button: { borderColor: BURGUNDY_PALETTE.border },
+  buttonSelected: { backgroundColor: BURGUNDY_PALETTE.selected },
+  textSelected: { color: BURGUNDY_PALETTE.onSelected },
 });
