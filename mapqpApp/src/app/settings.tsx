@@ -133,7 +133,8 @@ function GuidanceRepetitionSettings() {
       </AccessibleText>
       <SettingsSwitch accessibilitySection value={repeatGuidanceEnabled} disabled={disabled}
         onValueChange={setRepeatGuidanceEnabled} accessibilityLabel="Repeat spoken instruction"
-        accessibilityHint="Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled." />
+        accessibilityHint={accessible ? undefined
+          : "Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled."} />
     </View>
     <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
       style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repetition frequency</AccessibleText>
@@ -183,14 +184,13 @@ function AccessibleText({ boldTextEnabled, style, ...props }: TextProps & { bold
   return <Text {...props} style={[style, boldTextEnabled && standardStyles.boldTextOverride]} />;
 }
 
-// Hints already describe these controls to screen readers. This copy is visual only.
+// Standalone descriptions are read in place. Hidden groups include their copy in the control label.
 function SettingDescription({ children }: { children: string }) {
   const { settingsAppearance, fontSize } = useSettings();
   const preferences = useAccessibilityPreferences();
   if (settingsAppearance !== "accessible") return null;
   const size = 13 * fontSize * 1.25;
-  return <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible={false}
-    accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+  return <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible
     style={[accessibleStyles.description, { fontSize: size, lineHeight: Math.ceil(size * 1.5) }]}>
     {children}
   </AccessibleText>;
@@ -946,9 +946,12 @@ export default function SettingsPage() {
                 accessibilityRole="adjustable"
                 accessibilityLabel="Text size"
                 accessibilityHint={
-                  Platform.OS === "ios"
-                    ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
-                    : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"
+                  accessibleAppearance
+                    ? (Platform.OS === "ios" ? "Swipe up or down to adjust text size"
+                      : "Use the increase or decrease accessibility action to adjust text size")
+                    : Platform.OS === "ios"
+                      ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
+                      : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"
                 }
                 accessibilityValue={{
                   min: 80,
@@ -1049,8 +1052,9 @@ export default function SettingsPage() {
           <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
             stackPreferenceControls && styles.accessibilitySourceRowStacked]}
             accessible accessibilityRole="text"
-            accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
-            accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.`}>
+            accessibilityHint={accessibleAppearance ? undefined
+              : "Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."}
+            accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.${accessibleAppearance ? " Reads interface elements aloud." : ""}`}>
             <View style={[styles.accessibilitySourceLabel,
               stackPreferenceControls && styles.accessibilitySourceLabelStacked]}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -1137,10 +1141,12 @@ export default function SettingsPage() {
                       if (!control.disabled) setAccessibilityPreference(preference, enabled);
                     }}
                     accessibilityRole="switch"
-                    accessibilityLabel={label}
+                    accessibilityLabel={accessibleAppearance
+                      ? `${label}. ${description}${sourceDescription.includes(control.explanation) ? "" : ` ${control.explanation}`}`
+                      : label}
                     accessibilityValue={{ text: sourceDescription }}
                     accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
-                    accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
+                    accessibilityHint={`${accessibleAppearance ? "" : `${description} `}${deviceControlled ? "Change this preference in your device settings."
                       : control.disabled ? "This preference cannot be changed while settings are loading."
                       : "Changes only your saved MapQP preference."}`}
                   />
@@ -1242,9 +1248,12 @@ export default function SettingsPage() {
             <SettingsSwitch accessible importantForAccessibility="yes" style={stackPreferenceControls ? styles.stackedSwitch : undefined}
               value={avoidStairs} disabled={!settingsLoaded || !settingsReadSucceeded}
               onValueChange={(enabled) => { if (settingsLoaded && settingsReadSucceeded) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }}
-              accessibilityRole="switch" accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
+              accessibilityRole="switch" accessibilityLabel={accessibleAppearance
+                ? "Avoid Stairs & Use Accessible Entrances. Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route."
+                : "Avoid Stairs & Use Accessible Entrances"}
               accessibilityState={{ checked: avoidStairs, disabled: !settingsLoaded || !settingsReadSucceeded }}
-              accessibilityHint="Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route." />
+              accessibilityHint={accessibleAppearance ? undefined
+                : "Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route."} />
           </View>
           {([
             { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid Indoor Navigation", value: avoidIndoorRoutes, description: "Excludes indoor walkways." },
@@ -1267,7 +1276,9 @@ export default function SettingsPage() {
               </View>
               <SettingsSwitch value={value} disabled={!settingsLoaded || !settingsReadSucceeded}
                 style={stackPreferenceControls ? styles.stackedSwitch : undefined}
-                accessibilityRole="switch" accessibilityLabel={label} accessibilityHint={description}
+                accessibilityRole="switch" accessibilityLabel={accessibleAppearance
+                  ? `${label}. ${description} Changes apply when you start a new route.` : label}
+                accessibilityHint={accessibleAppearance ? undefined : description}
                 accessibilityState={{ checked: value, disabled: !settingsLoaded || !settingsReadSucceeded }}
                 onValueChange={(enabled) => { void configureRoutingPreferences({ [key]: enabled }).catch(() =>
                   Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
