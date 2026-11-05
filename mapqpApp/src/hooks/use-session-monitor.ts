@@ -12,17 +12,14 @@ export function useSessionMonitor() {
 
   const checkAndScheduleExpiration = useCallback(async () => {
     try {
-      const expiresAtStr = await SecureStore.getItemAsync(TEMP_CODE_EXPIRES_AT_KEY);
-      if (!expiresAtStr) return;
-
-      let expiresAt = Number.parseInt(expiresAtStr, 10);
-      
-      // Fallback in case ISO string was stored instead of epoch milliseconds
-      if (Number.isNaN(expiresAt)) {
-        expiresAt = new Date(expiresAtStr).getTime();
-      }
-
-      if (Number.isNaN(expiresAt)) return;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      const [code, expiry] = await Promise.all([
+        SecureStore.getItemAsync(TEMP_CODE_STORAGE_KEY),
+        SecureStore.getItemAsync(TEMP_CODE_EXPIRES_AT_KEY),
+      ]);
+      if (!code) return;
+      const expiresAt = Number(expiry);
+      if (!expiry || !Number.isFinite(expiresAt)) { await handleSessionExpired(); return; }
 
       const now = Date.now();
       const timeRemaining = expiresAt - now;
@@ -32,8 +29,8 @@ export function useSessionMonitor() {
       } else {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
-          void handleSessionExpired();
-        }, timeRemaining);
+          void checkAndScheduleExpiration();
+        }, Math.min(timeRemaining, 60_000));
       }
     } catch (error) {
       console.error('Session monitor error:', error);
@@ -42,6 +39,7 @@ export function useSessionMonitor() {
 
   const handleSessionExpired = async () => {
     await Promise.all([
+      SecureStore.deleteItemAsync('mapqp_access_token'),
       SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY),
       SecureStore.deleteItemAsync(TEMP_CODE_EXPIRES_AT_KEY),
     ]);

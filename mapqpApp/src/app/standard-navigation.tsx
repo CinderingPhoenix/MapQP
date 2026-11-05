@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";
 
+import { TemporarySessionNotice } from "../components/temporary-session-notice";
 import BuildingPicker from "../components/building-picker";
 import { RouteAlternativePrompt } from "../components/route-alternative-prompt";
 import LocationMap from "../components/location-map";
@@ -68,21 +69,28 @@ export default function Home() {
       try {
         let routeData = defaultRoutePoints;
         let buildingData = defaultBuildings;
+        try {
 
-        const routeFile = new File(Paths.document, "route-points.json");
-        const buildingsFile = new File(Paths.document, "wpi-buildings.json");
+          const routeFile = new File(Paths.document, "route-points.json");
+          const buildingsFile = new File(Paths.document, "wpi-buildings.json");
 
-        if (routeFile.exists) {
-          const routeContent = await routeFile.text();
-          routeData = JSON.parse(routeContent);
+          if (routeFile.exists) {
+            const routeContent = await routeFile.text();
+            routeData = JSON.parse(routeContent);
+          }
+
+          if (buildingsFile.exists) {
+            const buildingContent = await buildingsFile.text();
+            buildingData = JSON.parse(buildingContent);
+          }
+
+          initRoutingGraph(routeData, buildingData);
+        } catch (cacheError) {
+          console.warn("Cached map data is unusable; using bundled map data.", cacheError);
+          routeData = defaultRoutePoints;
+          buildingData = defaultBuildings;
+          initRoutingGraph(routeData, buildingData);
         }
-
-        if (buildingsFile.exists) {
-          const buildingContent = await buildingsFile.text();
-          buildingData = JSON.parse(buildingContent);
-        }
-
-        initRoutingGraph(routeData, buildingData);
         setBuildings(parseBuildingData(buildingData));
         setIsMapDataLoaded(true);
       } catch (err) {
@@ -90,7 +98,7 @@ export default function Home() {
         console.error("Map Data Load Error:", err);
       }
     }
-    
+
     loadLocalMapData();
   }, []);
 
@@ -399,6 +407,7 @@ export default function Home() {
           },
         ]}
       >
+        <TemporarySessionNotice />
         <RecenterOverlay visible={showRecenter} measuredHeight={recenterHeight}
           plannerBorderWidth={styles.plannerPanel.borderWidth} onHeightChange={setRecenterHeight}>
           <TouchableOpacity style={styles.recenterButton} onPress={() => { if (showRecenter) handleRecenter(); }}
