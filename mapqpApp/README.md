@@ -68,11 +68,20 @@ The ARM64 APK does not support 32-bit phones or x86 emulators. The production AA
 Release builds enable R8, resource shrinking, and JavaScript bundle compression. These settings live in app.json for prebuild and in the existing Android Gradle properties for local builds.
 Original tutorial PNGs are retained as source artwork; tutorial code references resized WebP files only.
 After installing dependencies, rebuild the native app to remove unused native modules. Test sign-in, speech, location, maps, and tutorials on the release build.
-Local release signing uses the existing project signing configuration; use EAS-managed production signing for distribution.
+Local and EAS production builds use the private upload signing credentials described below.
 
 The local Android wrapper was updated to Gradle 9.4.1 for the installed Expo 58 Android plugin. Fresh native projects should be generated with the matching Expo version.
 
-The Windows Ninja object-path failure is addressed by `plugins/with-short-cmake-paths.js`, which sets CMAKE_OBJECT_PATH_MAX=240 for Android library modules. The formerly failing ARM64 Worklets native task now passes. The complete APK size has not yet been measured.
+The Windows Ninja object-path failure is addressed by `plugins/with-short-cmake-paths.js`, which sets CMAKE_OBJECT_PATH_MAX=250 for Android library modules. The formerly failing ARM64 Worklets native task now passes. The complete APK size has not yet been measured.
 The existing local Android project also needed `android.builtInKotlin=false` and `android.newDsl=false` for its legacy Kotlin plugin setup with AGP 9. These local native files are gitignored; fresh EAS native projects use the Expo template.
 
 The CMake path plugin also covers the app module and registers before Expo finalizes Android modules. App CMake intermediates use the shorter workspace-root `.cxx` directory (gitignored). Both the Worklets and app ARM64 native build tasks have been verified successfully.
+
+The staging directory is resolved to its canonical absolute path to avoid extra `..` segments. The app native task has also been verified successfully for armeabi-v7a, which is included in the production bundle.
+
+
+### Android upload signing
+
+Local release builds read `credentials.json` and use the upload key in `.credentials/upload.jks`. Both are ignored by Git. Back up these files securely and keep the same key for future Play Store uploads.
+`npm run signing:android:init` creates a key only for a new app; it refuses to overwrite an existing key. EAS production builds use these same local credentials.
+Rebuild with `npm run build:android:bundle` and upload `android/app/build/outputs/bundle/release/app-release.aab`. Previously generated debug-signed files must not be uploaded.

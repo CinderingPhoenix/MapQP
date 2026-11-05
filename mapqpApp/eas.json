@@ -19,7 +19,8 @@
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "credentialsSource": "local"
     },
     "preview-emulator": {
       "extends": "preview",

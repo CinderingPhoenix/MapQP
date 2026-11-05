@@ -56,7 +56,8 @@
     "lint": "expo lint",
     "build:android:phone": "node scripts/build-android.cjs phone",
     "build:android:emulator": "node scripts/build-android.cjs emulator",
-    "build:android:bundle": "node scripts/build-android.cjs bundle"
+    "build:android:bundle": "node scripts/build-android.cjs bundle",
+    "signing:android:init": "node scripts/init-android-signing.cjs"
   },
   "private": true
 }
