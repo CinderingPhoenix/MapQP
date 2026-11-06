@@ -1,8 +1,10 @@
 // tutorial-modal.tsx
 
 import { useState, useEffect } from "react";
+import { useSettings } from "../context/settings-context";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useModalDismissal } from "./avoid-stairs-prompt";
-import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, Platform, TextStyle, ViewStyle, useWindowDimensions } from "react-native";
 
 interface HighlightItem {
   top: string;
@@ -49,7 +51,7 @@ const standardTutorialPages: TutorialPage[] = [
     description: "Use the orientation control at the top right to change the map orientation while you navigate.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
-      { top: "6%", left: "80%", width: "16%", height: "7%", label: "Map Orientation", tagPosition: "top" },
+      { top: "6%", left: "80%", width: "16%", height: "7%", label: "Map Orientation", tagPosition: "bottom" },
     ],
   },
   {
@@ -244,7 +246,7 @@ const accessibilityTutorialPages: TutorialPage[] = [
     description: "Tap the compass at the top right to change the map orientation.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
-      { top: "7%", left: "79%", width: "16%", height: "7%", label: "Orientation", tagPosition: "top" },
+      { top: "7%", left: "79%", width: "16%", height: "7%", label: "Orientation", tagPosition: "bottom" },
     ],
   },
   {
@@ -356,11 +358,29 @@ interface TutorialModalProps {
 export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProps) {
   const nativeDismiss = useModalDismissal(visible, onDismiss);
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const { fontSize } = useSettings();
+  const preferences = useAccessibilityPreferences();
+  const increasedContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+  const textStyle = (base: TextStyle, treatment: "ordinary" | "accent" | "onControl" | "callout" = "ordinary", baselineScale = 1): TextStyle => ({
+    fontSize: (base.fontSize ?? 14) * baselineScale * fontSize,
+    ...(base.lineHeight !== undefined ? { lineHeight: base.lineHeight * baselineScale * fontSize } : {}),
+    ...(preferences.boldTextEnabled ? {
+      ...(Platform.OS === "ios" ? { fontFamily: "System" } : {}),
+      fontWeight: base.fontWeight === "800" ? "900" : base.fontWeight === "700" ? "800" : "700",
+    } : {}),
+    ...(treatment === "ordinary" && (preferences.boldTextEnabled || increasedContrast)
+      ? { color: "#111827" } : {}),
+    ...(treatment === "accent" && increasedContrast ? { color: "#761723" } : {}),
+    ...(treatment === "onControl" ? { color: "#FFFFFF" } : {}),
+    ...(treatment === "callout" && increasedContrast ? { color: "#111827" } : {}),
+  });
+  const contrastBorder = increasedContrast && styles.contrastBorder;
   const previewHeight = Math.min(360, screenHeight * 0.38, Math.max(120, screenWidth - 128) * 2.22);
   const previewWidth = previewHeight / 2.22;
   const tagWidth = Math.min(160, previewWidth);
   const [mode, setMode] = useState<TutorialMode>("standard");
   const [currentPage, setCurrentPage] = useState(0);
+  const slideTextScale = mode === "accessibility" ? 1.12 : 1;
 
   // Reset to page 0 every time the modal is opened
   useEffect(() => {
@@ -408,11 +428,12 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
       onDismiss={nativeDismiss}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, preferences.reduceTransparencyEnabled && styles.opaqueOverlay]}>
         <View style={styles.tutorialCard}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Skip Tutorial">
-              <Text style={styles.skipText}>Skip</Text>
+            <Text accessibilityRole="header" style={[styles.headerTitle, textStyle(styles.headerTitle)]}>MapQP Tutorial</Text>
+            <TouchableOpacity style={styles.skipButton} onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Skip Tutorial">
+              <Text style={[styles.skipText, textStyle(styles.skipText)]}>Skip Tutorial</Text>
             </TouchableOpacity>
           </View>
 
@@ -420,13 +441,13 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
             {tutorialModes.map((tab) => (
               <TouchableOpacity
                 key={tab.value}
-                style={[styles.tab, mode === tab.value && styles.activeTab]}
+                style={[styles.tab, mode === tab.value && styles.activeTab, contrastBorder]}
                 onPress={() => handleModeChange(tab.value)}
                 accessibilityRole="tab"
                 accessibilityLabel={`${tab.label} tutorial`}
                 accessibilityState={{ selected: mode === tab.value }}
               >
-                <Text style={[styles.tabText, mode === tab.value && styles.activeTabText]}>
+                <Text style={[styles.tabText, mode === tab.value && styles.activeTabText, textStyle(styles.tabText, mode === tab.value ? "onControl" : "ordinary")]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -447,6 +468,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                     key={idx}
                     style={[
                       styles.yellowHighlightBox,
+                      preferences.reduceTransparencyEnabled && { backgroundColor: "transparent" },
                       {
                         top: box.top as any,
                         left: box.left as any,
@@ -461,7 +483,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                       left: Math.min(previewWidth - tagWidth, parseFloat(box.left) * previewWidth / 100)
                         - parseFloat(box.left) * previewWidth / 100,
                     }]}>
-                      <Text style={styles.highlightTagText}>
+                      <Text style={[styles.highlightTagText, textStyle(styles.highlightTagText, "callout")]}>
                         {box.label}
                       </Text>
                     </View>
@@ -470,9 +492,9 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
               })}
             </View>
 
-            <Text style={styles.title}>{current.title}</Text>
-            <Text style={styles.subtitle}>{current.subtitle}</Text>
-            <Text style={styles.description}>{current.description}</Text>
+            <Text style={[styles.title, textStyle(styles.title, "ordinary", slideTextScale)]}>{current.title}</Text>
+            <Text style={[styles.subtitle, textStyle(styles.subtitle, "accent", slideTextScale)]}>{current.subtitle}</Text>
+            <Text style={[styles.description, textStyle(styles.description, "ordinary", slideTextScale)]}>{current.description}</Text>
           </ScrollView>
 
           <View style={styles.footer}>
@@ -488,7 +510,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                     {Array.from({ length: currentGroup.count }, (_, index) => (
                       <View
                         key={index}
-                        style={[styles.progressSegment, index <= partIndex && styles.filledSegment]}
+                        style={[styles.progressSegment, index <= partIndex && styles.filledSegment, contrastBorder]}
                       />
                     ))}
                   </View>
@@ -508,7 +530,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                   {pageGroups.map((group, index) => (
                     <View
                       key={group.start}
-                      style={[styles.progressSegment, index <= pageIndex && styles.filledSegment]}
+                      style={[styles.progressSegment, index <= pageIndex && styles.filledSegment, contrastBorder]}
                     />
                   ))}
                 </View>
@@ -517,12 +539,12 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 
             <View key={`buttons-${currentPage}`} style={styles.buttonRow}>
               {currentPage > 0 && (
-                <TouchableOpacity style={styles.backButton} onPress={handleBack} accessible accessibilityRole="button" accessibilityLabel="Previous slide">
-                  <Text style={styles.backButtonText}>Back</Text>
+                <TouchableOpacity style={[styles.backButton, contrastBorder]} onPress={handleBack} accessible accessibilityRole="button" accessibilityLabel="Previous slide">
+                  <Text style={[styles.backButtonText, textStyle(styles.backButtonText)]}>Back</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Get Started" : "Next slide"}>
-                <Text style={styles.nextButtonText}>
+              <TouchableOpacity style={[currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull, contrastBorder]} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Get Started" : "Next slide"}>
+                <Text style={[styles.nextButtonText, textStyle(styles.nextButtonText, "onControl")]}>
                   {currentPage === tutorialPages.length - 1 ? "Get Started" : "Next"}
                 </Text>
               </TouchableOpacity>
@@ -535,6 +557,10 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 }
 
 const styles = StyleSheet.create({
+  contrastBorder: { borderWidth: 2, borderColor: "#111827" },
+  opaqueOverlay: { backgroundColor: "#262626" },
+  headerTitle: { fontSize: 16, fontWeight: "700", color: "#172033", flex: 1, minWidth: 0, paddingVertical: 2 },
+  skipButton: { flexShrink: 1, minWidth: 0, paddingVertical: 2 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.65)",
@@ -558,7 +584,10 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    alignItems: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   tabs: {
     flexDirection: "row",
@@ -583,6 +612,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#AC2B37",
   },
   tabText: {
+    alignSelf: "stretch",
     fontSize: 14,
     fontWeight: "700",
     color: "#475569",
@@ -727,6 +757,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButtonText: {
+    alignSelf: "stretch",
+    textAlign: "center",
     fontSize: 15,
     fontWeight: "700",
     color: "#475569",
@@ -758,6 +790,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   nextButtonText: {
+    alignSelf: "stretch",
+    textAlign: "center",
     fontSize: 15,
     fontWeight: "700",
     color: "#FFFFFF",
