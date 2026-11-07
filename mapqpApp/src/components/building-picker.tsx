@@ -2,10 +2,14 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Speech from "expo-speech";
 import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
+import { parseVoiceMapCommand, type VoiceMapCommand } from "../utils/voice-map-command";
+import { useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AccessibilityInfo,
+  AppState,
   Keyboard,
   Modal,
   Platform,
@@ -49,6 +53,7 @@ type BuildingPickerProps = {
   placeholder: string;
   accessibilityControls?: boolean;
   onOpenSettings?: () => void;
+  onVoiceMapCommand?: (command: VoiceMapCommand) => Promise<string>;
 };
 
 export default React.memo(function BuildingPicker({
@@ -59,6 +64,7 @@ export default React.memo(function BuildingPicker({
   placeholder,
   accessibilityControls = false,
   onOpenSettings,
+  onVoiceMapCommand,
 }: BuildingPickerProps) {
   const { fontSize, deviceAccessibility, configureRoutingPreferences } = useSettings();
   const {
@@ -197,18 +203,52 @@ export default React.memo(function BuildingPicker({
   );
 
   const voiceCommandHandled = useRef(false);
+  const voiceSession = useRef({ generation: 0, phase: "idle" as "idle" | "starting" | "listening" | "stopping", focused: false });
+  const [voiceStatus, setVoiceStatus] = useState("");
+  const reportVoice = (message: string, generation = voiceSession.current.generation) => {
+    if (!voiceSession.current.focused || AppState.currentState !== "active" || generation !== voiceSession.current.generation) return;
+    setVoiceStatus(message);
+    AccessibilityInfo.announceForAccessibility(message);
+  };
+  const invalidateVoice = useCallback(() => {
+    const session = voiceSession.current;
+    session.generation++;
+    voiceCommandHandled.current = true;
+    const wasListening = session.phase === "listening";
+    session.phase = wasListening ? "stopping" : session.phase === "starting" ? "idle" : session.phase;
+    setIsListening(false);
+    if (wasListening) ExpoSpeechRecognitionModule?.abort?.();
+  }, []);
+  useFocusEffect(useCallback(() => {
+    if (!accessibilityControls) return;
+    voiceSession.current.focused = true;
+    return () => { voiceSession.current.focused = false; invalidateVoice(); };
+  }, [accessibilityControls, invalidateVoice]));
+  useEffect(() => {
+    if (!accessibilityControls) return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") invalidateVoice();
+    });
+    return () => subscription.remove();
+  }, [accessibilityControls, invalidateVoice]);
 
   // Speech recognition
   useSpeechRecognitionEvent("result", (event: any) => {
     const spokenText = event.results[0]?.transcript;
     if (!spokenText || voiceCommandHandled.current) return;
+    if (accessibilityControls && (voiceSession.current.phase !== "listening" || !voiceSession.current.focused || AppState.currentState !== "active")) return;
     // Wait for the complete phrase so partial commands cannot match a building.
     if (accessibilityControls && !event.isFinal) return;
+    if (accessibilityControls) {
+      voiceCommandHandled.current = true;
+      voiceSession.current.phase = "stopping";
+      ExpoSpeechRecognitionModule?.stop?.();
+      setIsListening(false);
+    }
     const command = spokenText.toLowerCase().replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, " ");
     if (accessibilityControls && /^(?:please )?(?:cancel|stop|end)(?: (?:the|my|current))? (?:route|navigation)(?: please)?$/.test(command)) {
       voiceCommandHandled.current = true;
       pendingModalSelection.current = null;
-      ExpoSpeechRecognitionModule?.stop?.();
       setIsListening(false);
       setQuery("");
       setIsOpen(false);
@@ -223,7 +263,6 @@ export default React.memo(function BuildingPicker({
     const routingCommand = accessibilityControls ? parseVoiceRoutingCommand(spokenText) : null;
     if (routingCommand) {
       voiceCommandHandled.current = true;
-      ExpoSpeechRecognitionModule?.stop?.();
       setIsListening(false);
       setQuery("");
       setIsOpen(false);
@@ -237,6 +276,25 @@ export default React.memo(function BuildingPicker({
           Speech.speak("Could not save the routing preference. Please try again.");
         });
       return;
+    }
+
+    if (accessibilityControls && onVoiceMapCommand) {
+      const mapCommand = parseVoiceMapCommand(spokenText);
+      if (mapCommand) {
+        const generation = voiceSession.current.generation;
+        void Promise.resolve().then(() => {
+          if (generation !== voiceSession.current.generation || !voiceSession.current.focused || AppState.currentState !== "active") return null;
+          return onVoiceMapCommand(mapCommand);
+        }).then((message) => { if (message) reportVoice(message, generation); })
+          .catch(() => reportVoice("Could not move the map. Try again.", generation));
+        return;
+      }
+      // Reject command-shaped phrases without consuming ordinary destination names.
+      if (/^(?:please )?(?:zoom|move|recenter)\b/.test(command) &&
+          !buildings.some((building) => building.name.toLowerCase().includes(spokenText.toLowerCase().trim()))) {
+        reportVoice("That map command is not supported. Say zoom in, zoom out, move left, right, up, down, or recenter map.");
+        return;
+      }
     }
 
     setQuery(spokenText);
@@ -271,15 +329,26 @@ export default React.memo(function BuildingPicker({
 
     if (matched) {
       selectBuilding(matched);
+    } else if (accessibilityControls) {
+      reportVoice("No matching destination found. Try a building name or a map command.");
     }
   });
 
   useSpeechRecognitionEvent("end", () => {
+    if (accessibilityControls) {
+      if (voiceSession.current.phase === "listening" && !voiceCommandHandled.current) reportVoice("No command heard. Try again.");
+      voiceSession.current.phase = "idle";
+    }
     setIsListening(false);
   });
 
   useSpeechRecognitionEvent("error", (event: any) => {
     console.error("Speech recognition error:", event.error);
+    if (accessibilityControls) {
+      if (voiceSession.current.phase === "listening") reportVoice("Could not recognize a command. Try again.");
+      voiceCommandHandled.current = true;
+      voiceSession.current.phase = "stopping";
+    }
     setIsListening(false);
   });
 
@@ -341,8 +410,19 @@ export default React.memo(function BuildingPicker({
 
   const handleVoiceSearch = async () => {
     if (value && !accessibilityControls) return;
+    if (accessibilityControls) {
+      if (!voiceSession.current.focused || AppState.currentState !== "active") return;
+      if (voiceSession.current.phase !== "idle") { invalidateVoice(); return; }
+      voiceSession.current.phase = "starting";
+      voiceSession.current.generation++;
+      setVoiceStatus("");
+    }
+    const generation = voiceSession.current.generation;
+    const canStart = () => !accessibilityControls || (generation === voiceSession.current.generation &&
+      voiceSession.current.focused && AppState.currentState === "active" && voiceSession.current.phase === "starting");
 
     if (!ExpoSpeechRecognitionModule?.isRecognitionAvailable) {
+      if (accessibilityControls) voiceSession.current.phase = "idle";
       Alert.alert(
         "Expo Go Limitation",
         "Voice search requires a custom development build and is disabled inside Expo Go."
@@ -354,23 +434,29 @@ export default React.memo(function BuildingPicker({
       if (
         !(await ExpoSpeechRecognitionModule.isRecognitionAvailable())
       ) {
+        if (!canStart()) return;
+        if (accessibilityControls) voiceSession.current.phase = "idle";
         Alert.alert(
           "Unavailable",
           "Speech recognition is not available or supported on this device."
         );
         return;
       }
+      if (!canStart()) return;
 
       if (
         !(await ExpoSpeechRecognitionModule.requestPermissionsAsync())
           .granted
       ) {
+        if (!canStart()) return;
+        if (accessibilityControls) voiceSession.current.phase = "idle";
         Alert.alert(
           "Permission required",
           "Microphone and speech recognition permissions are needed for voice search."
         );
         return;
       }
+      if (!canStart()) return;
 
       if (isListening) {
         ExpoSpeechRecognitionModule.stop();
@@ -381,6 +467,7 @@ export default React.memo(function BuildingPicker({
       setQuery("");
       setIsOpen(false);
       voiceCommandHandled.current = false;
+      if (accessibilityControls) voiceSession.current.phase = "listening";
       setIsListening(true);
 
       ExpoSpeechRecognitionModule.start({
@@ -393,6 +480,10 @@ export default React.memo(function BuildingPicker({
         "Failed to start speech recognition:",
         voiceError
       );
+      if (accessibilityControls) {
+        if (generation !== voiceSession.current.generation) return;
+        voiceSession.current.phase = "idle";
+      }
       setIsListening(false);
       Alert.alert(
         "Error",
@@ -487,6 +578,11 @@ export default React.memo(function BuildingPicker({
           : styles.container
       }
     >
+      {accessibilityControls && voiceStatus !== "" && (
+        <Text style={[{ fontSize: 14 * fontSize, color: "#111827", padding: 8 }, accessibleText]}>
+          {voiceStatus}
+        </Text>
+      )}
       {accessibilityControls && (
         <View style={styles.accessibilityControls}>
           <TouchableOpacity
@@ -525,10 +621,10 @@ export default React.memo(function BuildingPicker({
             accessibilityRole="button"
             accessibilityLabel={
               isListening
-                ? "Stop voice destination search"
-                : "Search destinations by voice"
+                ? "Stop voice command"
+                : "Speak a navigation or map command"
             }
-            accessibilityHint="Say a building name to navigate, say cancel route to stop navigation, or say avoid stairs, allow indoor routes, or turn on crosswalk avoidance to change routing preferences."
+            accessibilityHint={`Say a building name to navigate, say cancel route to stop navigation, or say avoid stairs, allow indoor routes, or turn on crosswalk avoidance to change routing preferences.${onVoiceMapCommand ? " You can also say zoom in, zoom out, move left, right, up, down, or recenter map." : ""}`}
             activeOpacity={0.8}
           >
             <Ionicons
