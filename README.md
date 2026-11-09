@@ -9,6 +9,20 @@ CLIENT_ID=...
 
 # Commands
 
+## Admin page
+
+From the repository root, run:
+
+```sh
+cd mapqpApp/adminPage
+npm install
+npm run dev
+```
+
+Run `npm install` on first setup or when dependencies change. Open the local URL printed by Vite in your browser. To start it again from the admin page directory, run `npm run dev`.
+
+## Mobile app
+
 Expo Go allows scanning the QR code to test the app for testing
 Voice and speech to text does not work on Expo Go
 
