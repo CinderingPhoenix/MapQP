@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useRef, useState, type ComponentRef } from "react";
 import {
   AccessibilityInfo,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,6 +21,9 @@ import {
   BUG_REPORT_CATEGORIES,
   BUG_REPORT_TEXT_LIMIT,
   validateBugReport,
+  collectBugReportMetadata,
+  prepareBugReport,
+  submitBugReport,
   type BugReportDraft,
 } from "../utils/bug-reports";
 
@@ -30,7 +34,7 @@ function ReportText({ bold, style, ...props }: TextProps & { bold: boolean }) {
 
 export default function ReportBugPage() {
   useAuthGuard();
-  const { fontSize } = useSettings();
+  const { fontSize, navigationMode } = useSettings();
   const preferences = useAccessibilityPreferences();
   const contrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -38,8 +42,11 @@ export default function ReportBugPage() {
     category: null, description: "", stepsToReproduce: "",
   });
   const [checked, setChecked] = useState(false);
+  const submitting = useRef(false);
+  const [sending, setSending] = useState(false);
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const errors = validateBugReport(draft);
+  const submitDisabled = sending || Object.keys(errors).length > 0;
   const descriptionError = checked || descriptionTouched ? errors.description : undefined;
   const textStyle = [
     styles.body,
@@ -60,9 +67,38 @@ export default function ReportBugPage() {
     const messages = Object.values(errors);
     AccessibilityInfo.announceForAccessibility(messages.length
       ? messages.join(" ")
-      : "Required fields are complete. Submission is not yet available. Nothing has been sent.");
+      : "Required fields are complete. Your report is ready to submit.");
     if (errors.category) {
       scroll.current?.scrollTo({ y: 0, animated: !preferences.reduceMotionEnabled });
+    }
+  };
+
+  const sendReport = async () => {
+    if (submitting.current) return;
+    checkReport();
+    const report = prepareBugReport(draft, collectBugReportMetadata());
+    if (!report.valid) return;
+    submitting.current = true;
+    setSending(true);
+    try {
+      await submitBugReport(report.payload);
+      setDraft({ category: null, description: "", stepsToReproduce: "" });
+      setChecked(false);
+      setDescriptionTouched(false);
+      Alert.alert(
+        "Report sent",
+        "Your bug report was sent. Thank you.",
+        [{ text: "OK", onPress: () => router.replace(
+          navigationMode === "accessibility" ? "/accessibility-navigation" : "/standard-navigation"
+        ) }],
+        { cancelable: false },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to send your report. Please try again.";
+      Alert.alert("Report not sent", message);
+    } finally {
+      submitting.current = false;
+      setSending(false);
     }
   };
 
@@ -91,11 +127,11 @@ export default function ReportBugPage() {
           automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}>
           <View style={[styles.notice, contrast && styles.highContrastBorder]}>
             <ReportText bold={preferences.boldTextEnabled} accessibilityRole="header" style={labelStyle}>
-              Reporting is not yet available
+              Report a problem
             </ReportText>
             <ReportText bold={preferences.boldTextEnabled} style={textStyle}>
-              You can fill in and check this form, but reports cannot be sent yet. Nothing is uploaded.
-              Your draft stays here while you edit, and is discarded when you leave this page.
+              Submit this form to send a bug report to the mapQP team.
+              Your draft is discarded when you leave this page.
             </ReportText>
           </View>
 
@@ -107,6 +143,7 @@ export default function ReportBugPage() {
             <View accessibilityRole="radiogroup" accessibilityLabel="Problem category, required">
               {BUG_REPORT_CATEGORIES.map(({ value, label }) => (
                 <TouchableOpacity key={value}
+                  disabled={sending}
                   style={[styles.category, contrast && styles.highContrastBorder,
                     draft.category === value && styles.selectedCategory]}
                   onPress={() => setDraft((previous) => ({ ...previous, category: value }))}
@@ -132,6 +169,7 @@ export default function ReportBugPage() {
               Description (required)
             </ReportText>
             <TextInput style={[inputStyle, descriptionError && styles.invalidInput]}
+              editable={!sending}
               value={draft.description}
               onChangeText={(description) => setDraft((previous) => ({ ...previous, description }))}
               onBlur={() => setDescriptionTouched(true)}
@@ -152,6 +190,7 @@ export default function ReportBugPage() {
               Steps to Reproduce (optional)
             </ReportText>
             <TextInput style={inputStyle} value={draft.stepsToReproduce}
+              editable={!sending}
               onChangeText={(stepsToReproduce) => setDraft((previous) => ({ ...previous, stepsToReproduce }))}
               multiline textAlignVertical="top" maxLength={BUG_REPORT_TEXT_LIMIT}
               allowFontScaling
@@ -168,24 +207,20 @@ export default function ReportBugPage() {
 
           <ReportText bold={preferences.boldTextEnabled} style={textStyle}>
             Please do not include passwords, personal information, or precise location details.
-            When reporting becomes available, reports will include only your chosen category,
-            description, optional steps, platform, app version, and OS version when available.
-            GPS coordinates, navigation history, and account information are not attached.
+            Reports include your chosen category, description, optional steps, platform, and app version.
+            Reports are submitted using your signed-in session.
           </ReportText>
 
-          <TouchableOpacity style={[styles.checkButton, contrast && styles.highContrastBorder]}
-            onPress={checkReport} accessibilityRole="button" accessibilityLabel="Check report"
-            accessibilityHint="Checks required fields without sending or saving your report">
-            <ReportText bold={preferences.boldTextEnabled} style={[textStyle, styles.checkButtonText]}>Check report</ReportText>
-          </TouchableOpacity>
-          {checked && !Object.keys(errors).length && <ReportText bold={preferences.boldTextEnabled} style={textStyle}>
-            Required fields are complete. Submission is not yet available. Nothing has been sent.
-          </ReportText>}
-          <TouchableOpacity style={[styles.submitButton, contrast && styles.highContrastBorder]}
-            disabled accessibilityRole="button" accessibilityLabel="Submit Report, reporting is not yet available"
-            accessibilityState={{ disabled: true }}>
-            <ReportText bold={preferences.boldTextEnabled} style={[textStyle, styles.submitButtonText]}>
-              Submit Report (unavailable)
+          <TouchableOpacity style={[styles.submitButton, submitDisabled && styles.submitButtonDisabled,
+            contrast && styles.highContrastBorder]}
+            onPress={sendReport} disabled={submitDisabled} accessibilityRole="button" accessibilityLabel="Submit Report"
+            accessibilityHint={submitDisabled && !sending
+              ? "Choose a category and enter a description to submit your report."
+              : "Sends your bug report to the mapQP team."}
+            accessibilityState={{ disabled: submitDisabled, busy: sending }}>
+            <ReportText bold={preferences.boldTextEnabled} style={[textStyle, styles.submitButtonText,
+              submitDisabled && styles.submitButtonTextDisabled]}>
+              {sending ? "Sending report…" : "Submit Report"}
             </ReportText>
           </TouchableOpacity>
         </ScrollView>
@@ -220,8 +255,8 @@ const styles = StyleSheet.create({
   invalidInput: { borderColor: "#B42318", borderWidth: 2 },
   error: { color: "#B42318", fontWeight: "700" },
   stepsLabel: { marginTop: 14 },
-  checkButton: { minHeight: 48, padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: "#761723", backgroundColor: "#F9E5E7", alignItems: "center", justifyContent: "center" },
-  checkButtonText: { color: "#761723", fontWeight: "700", textAlign: "center" },
-  submitButton: { minHeight: 48, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#6B7280", backgroundColor: "#E5E7EB", alignItems: "center", justifyContent: "center" },
-  submitButtonText: { color: "#374151", fontWeight: "700", textAlign: "center" },
+  submitButton: { minHeight: 48, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#761723", backgroundColor: "#AC2B37", alignItems: "center", justifyContent: "center" },
+  submitButtonDisabled: { borderColor: "#6B7280", backgroundColor: "#E5E7EB" },
+  submitButtonText: { color: "#FFFFFF", fontWeight: "700", textAlign: "center" },
+  submitButtonTextDisabled: { color: "#374151" },
 });

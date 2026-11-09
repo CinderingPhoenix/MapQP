@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { SettingsProvider, useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useSessionMonitor } from "../hooks/use-session-monitor";
+import { useServerMonitor } from "../hooks/use-server-monitor";
 import { useNavigationModeRouting } from "../hooks/use-navigation-mode-routing";
 
 function RootNavigator() {
@@ -52,6 +53,7 @@ function RootNavigator() {
 
 function MainLayout() {
   useSessionMonitor();
+  useServerMonitor();
   return <RootNavigator />;
 }
 

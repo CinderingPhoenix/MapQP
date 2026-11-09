@@ -118,16 +118,19 @@ type WalkwaySegment = { from: GraphNode; to: GraphNode; edge: GraphEdge };
 let routingSegments: WalkwaySegment[] | null = null;
 
 export function initRoutingGraph(
-  routePointsData: { nodes: (string | number)[][]; connections: Record<string, WalkwayConnectionItem[]> },
+  routePointsData: { nodes: unknown[]; connections: Record<string, WalkwayConnectionItem[]> },
   buildingData: BuildingInput[]
 ) {
-  // JSON imports infer arrays rather than tuples. Validate at the data boundary.
+  // Bundled data uses tuples; older saved/downloaded data may use objects.
   const validatedNodes: GraphNode[] = routePointsData.nodes.map((node, index) => {
-    const [id, latitude, longitude] = node;
-    if (node.length !== 3 || typeof id !== "string" ||
+    const fields = Array.isArray(node)
+      ? (node.length === 3 ? { id: node[0], latitude: node[1], longitude: node[2] } : null)
+      : (node !== null && typeof node === "object" ? node as Partial<GraphNode> : null);
+    const { id, latitude, longitude } = fields ?? {};
+    if (typeof id !== "string" ||
         typeof latitude !== "number" || !Number.isFinite(latitude) ||
         typeof longitude !== "number" || !Number.isFinite(longitude)) {
-      throw new Error(`Invalid walkway node at index ${index}: expected [id, latitude, longitude].`);
+      throw new Error(`Invalid walkway node at index ${index}: expected [id, latitude, longitude] or { id, latitude, longitude } with finite coordinates.`);
     }
     return { id, latitude, longitude };
   });
@@ -138,7 +141,7 @@ export function initRoutingGraph(
   graphEdges.clear();
   campusNodesById.clear();
 
-  // Map tuple nodes [id, latitude, longitude] to GraphNode objects
+  // Store normalized nodes as GraphNode objects.
   walkwayNodes = validatedNodes;
   walkwayConnections = routePointsData.connections;
 

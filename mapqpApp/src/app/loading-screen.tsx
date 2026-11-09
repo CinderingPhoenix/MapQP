@@ -34,6 +34,8 @@ import { useSettings } from '../context/settings-context';
 import { useKeyLockout } from '../hooks/use-key-lockout';
 import { useAccessibilityPreferences } from '../hooks/use-accessibility-preferences';
 import { initRoutingGraph } from '../utils/routing';
+import { isServerOnline, setServerOnline } from '../utils/server-status';
+import { ensureBackendSession } from '../utils/backend-session';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
@@ -55,12 +57,11 @@ const MICROSOFT_CLIENT_ID = Constants.expoConfig?.extra?.CLIENT_ID;
 const AUTH_CONFIGURATION_MISSING = !MICROSOFT_AUTHORITY || !MICROSOFT_CLIENT_ID;
 const DISCOVERY_ISSUER = MICROSOFT_AUTHORITY ?? 'https://login.microsoftonline.com/common';
 
-let isServerOnline = true;
 
 // Hardened public key fetcher and local caching for cryptographic verification
 async function fetchAndCachePublicKey(): Promise<boolean> {
   if (!API_BASE_URL) {
-    isServerOnline = false;
+    setServerOnline(false);
     return false;
   }
 
@@ -86,7 +87,7 @@ async function fetchAndCachePublicKey(): Promise<boolean> {
           console.warn('Could not cache public key locally:', fileErr);
         }
         
-        isServerOnline = true;
+        setServerOnline(true);
         return true;
       }
     }
@@ -97,14 +98,14 @@ async function fetchAndCachePublicKey(): Promise<boolean> {
   try {
     const publicKeyFile = new File(Paths.document, 'public-key.pem');
     if (publicKeyFile.exists) {
-      isServerOnline = false;
+      setServerOnline(false);
       return true; 
     }
   } catch (e) {
     // ignore file read error
   }
 
-  isServerOnline = false;
+  setServerOnline(false);
   return false;
 }
 
@@ -192,7 +193,7 @@ export default function LoadingScreen({
   }, [hasSelectedMode, navigationMode, onFinish]);
 
   const syncMapData = async (): Promise<boolean> => {
-    if (!API_BASE_URL || !isServerOnline) {
+    if (!API_BASE_URL || !isServerOnline()) {
       setDebugStatus(`Target: ${API_BASE_URL} (Offline)`);
       return false;
     }
@@ -299,6 +300,7 @@ export default function LoadingScreen({
 
           const serverIsUp = await fetchAndCachePublicKey();
           if (serverIsUp) {
+            if (isServerOnline()) await ensureBackendSession().catch(() => {});
             await syncMapData();
           } else {
             setDebugStatus(`Target: ${API_BASE_URL} (Cached Session Mode)`);
@@ -367,20 +369,11 @@ export default function LoadingScreen({
           AUTH_STORAGE_KEY,
           JSON.stringify(tokenResponse)
         );
+        await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
 
-        if (API_BASE_URL && isServerOnline) {
+        if (API_BASE_URL && isServerOnline()) {
           try {
-            const sessionRes = await fetch(`${API_BASE_URL}/auth/microsoft-session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: tokenResponse.accessToken ?? 'wpi_user@wpi.edu' }),
-            });
-            if (sessionRes.ok) {
-              const sessionData = await sessionRes.json();
-              if (sessionData.access_token) {
-                await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, sessionData.access_token);
-              }
-            }
+            await ensureBackendSession();
           } catch (e) {
             console.error('Failed to obtain backend session token:', e);
           }
