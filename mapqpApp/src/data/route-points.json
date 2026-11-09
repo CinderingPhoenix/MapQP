@@ -942,7 +942,10 @@
     ["node_4iicjug", 42.276188, -71.802423],
     ["node_95ifo4l", 42.276145, -71.802479],
     ["node_sarxih1", 42.275694, -71.802768],
-    ["node_tgq5wux", 42.272781, -71.805791]
+    ["node_tgq5wux", 42.272781, -71.805791],
+    ["node_hi9x7tq", 42.274171, -71.80679],
+    ["node_hjaqo27", 42.274271, -71.80674],
+    ["node_dkc7vgj", 42.27414, -71.806707]
   ],
   "connections": {
     "quad-center": [
@@ -1258,7 +1261,7 @@
         "to": "node_gaz4s9p",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "fuller-upper": [
@@ -1272,7 +1275,7 @@
         "to": "node_0dv9bei",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "gordon": [
@@ -1283,19 +1286,19 @@
         "roadCrossing": false
       },
       {
-        "to": "node_a2gsuto",
-        "accessible": false,
-        "indoor": false,
-        "roadCrossing": true
-      },
-      {
-        "to": "node_rzwcnms",
+        "to": "gordon-library-entrance-0",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
       },
       {
-        "to": "gordon-library-entrance-0",
+        "to": "node_hjaqo27",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_dkc7vgj",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
@@ -1332,7 +1335,7 @@
         "to": "node_k767ddn",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "boynton-corner": [
@@ -1619,7 +1622,7 @@
         "to": "node_0nr3ojf",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       },
       {
         "to": "node_4x153s8",
@@ -1647,7 +1650,7 @@
         "to": "node_e17wwaa",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "kaven-stairs": [
@@ -1743,7 +1746,7 @@
         "to": "node_h65mlhu",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       },
       {
         "to": "kaven-stairs",
@@ -4388,12 +4391,6 @@
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
-      },
-      {
-        "to": "gordon",
-        "accessible": false,
-        "indoor": false,
-        "roadCrossing": true
       }
     ],
     "node_asqoh7a": [
@@ -4705,7 +4702,7 @@
         "to": "fuller-upper",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_7x2h2f6": [
@@ -4753,13 +4750,13 @@
         "to": "node_273q4b0",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       },
       {
         "to": "node_75hve00",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_fpqmuk8": [
@@ -4837,7 +4834,7 @@
         "to": "olin-atwater-cut",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_gaz4s9p": [
@@ -4851,7 +4848,7 @@
         "to": "olin-atwater",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_7v9ru73": [
@@ -5099,7 +5096,7 @@
         "to": "node_h65mlhu",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       },
       {
         "to": "node_5srbb6n",
@@ -5149,12 +5146,6 @@
     "node_rzwcnms": [
       {
         "to": "node_n8l1pcj",
-        "accessible": true,
-        "indoor": false,
-        "roadCrossing": false
-      },
-      {
-        "to": "node_e17wwaa",
         "accessible": true,
         "indoor": false,
         "roadCrossing": false
@@ -5223,7 +5214,7 @@
         "to": "boynton",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_37ji0er": [
@@ -10184,7 +10175,7 @@
         "to": "node_mrtsh89",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_273q4b0": [
@@ -10198,7 +10189,7 @@
         "to": "node_mrtsh89",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "Salisbury Laboratories-entrance-4": [
@@ -11145,13 +11136,13 @@
         "to": "fuller-side-stairs",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       },
       {
         "to": "node_ycelv86",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_e17wwaa": [
@@ -11159,7 +11150,7 @@
         "to": "gordon-washburn-cut",
         "accessible": false,
         "indoor": false,
-        "roadCrossing": true
+        "roadCrossing": false
       }
     ],
     "node_tgq5wux": [
@@ -11174,6 +11165,54 @@
         "accessible": false,
         "indoor": false,
         "roadCrossing": true
+      }
+    ],
+    "node_hjaqo27": [
+      {
+        "to": "node_a2gsuto",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_hi9x7tq",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_hi9x7tq": [
+      {
+        "to": "node_e17wwaa",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_f3hubup",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_dkc7vgj",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      }
+    ],
+    "node_dkc7vgj": [
+      {
+        "to": "node_hi9x7tq",
+        "accessible": false,
+        "indoor": false,
+        "roadCrossing": false
+      },
+      {
+        "to": "node_rzwcnms",
+        "accessible": true,
+        "indoor": false,
+        "roadCrossing": false
       }
     ]
   }
