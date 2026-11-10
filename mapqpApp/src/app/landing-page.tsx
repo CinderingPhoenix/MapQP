@@ -2,13 +2,13 @@
 
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp } from "expo-router";
+import { router, useFocusEffect, useIsFocused, useNavigation, type NativeStackNavigationProp } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState, useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
-import { useSettings, type AccessibilityNeed } from "../context/settings-context";
+import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
@@ -20,7 +20,7 @@ const TUTORIAL_SHOWN_KEY = "mapqp_tutorial_shown_once";
 export default function LandingPage() {
   useLocationWarmup();
   const { isChecking: authChecking } = useAuthGuard();
-  const { setNavigationMode, setHasSelectedMode, settingsLoaded, settingsReadSucceeded, hasAnsweredAvoidStairsPrompt, accessibilityNeed, setAccessibilityNeed } = useSettings();
+  const { setNavigationMode, setHasSelectedMode, settingsLoaded } = useSettings();
   const { fontScale, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
@@ -34,14 +34,12 @@ export default function LandingPage() {
   const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
 
   const [showTutorial, setShowTutorial] = useState(false);
-  const [showAccessibilityChoice, setShowAccessibilityChoice] = useState(false);
-  const [selectedNeed, setSelectedNeed] = useState<AccessibilityNeed | null>(accessibilityNeed);
-  const pendingAccessibilityNavigation = useRef(false);
   const [tutorialReady, setTutorialReady] = useState(false);
-  const [tutorialReadSucceeded, setTutorialReadSucceeded] = useState(false);
   const [tutorialDismissed, setTutorialDismissed] = useState(true);
-  const [promptPhase, setPromptPhase] = useState<"waiting" | "open" | "closing" | "done">("waiting");
-  const [focused, setFocused] = useState(navigation.isFocused());
+  const [promptPhase, setPromptPhase] = useState<"idle" | "open" | "closing">("idle");
+  const [pendingMode, setPendingMode] = useState<"standard" | "accessibility" | null>(null);
+  const pendingModeRef = useRef<"standard" | "accessibility" | null>(null);
+  const focused = useIsFocused();
   const mounted = useRef(true);
   const tutorialClosing = useRef(false);
   useEffect(() => {
@@ -52,15 +50,13 @@ export default function LandingPage() {
   useFocusEffect(useCallback(() => {
     let active = true;
     setTutorialReady(false);
-    setTutorialReadSucceeded(false);
-    setPromptPhase("waiting");
+    setPromptPhase("idle");
     async function checkFirstLaunch() {
       try {
         const hasShown = await SecureStore.getItemAsync(TUTORIAL_SHOWN_KEY);
         if (!active) return;
         setTutorialDismissed(hasShown === "true");
         setShowTutorial(hasShown !== "true");
-        setTutorialReadSucceeded(true);
       } catch (error) {
         // Skip new onboarding after an unverified read; keep landing usable.
         console.error("Failed to check tutorial status", error);
@@ -90,7 +86,6 @@ export default function LandingPage() {
   const transitionCompleteRef = useRef(Platform.OS === "web");
 
   useLayoutEffect(() => {
-    const removeFocus = navigation.addListener("focus", () => setFocused(true));
     const removeStart = navigation.addListener("transitionStart", () => {
       transitionCompleteRef.current = false;
       setTransitionComplete(false);
@@ -101,13 +96,11 @@ export default function LandingPage() {
       setTransitionComplete(true);
     });
     const removeBlur = navigation.addListener("blur", () => {
-      setFocused(false);
       initialFocusHandled.current = true;
       transitionCompleteRef.current = false;
       setTransitionComplete(false);
     });
     return () => {
-      removeFocus();
       removeStart();
       removeEnd();
       removeBlur();
@@ -115,16 +108,15 @@ export default function LandingPage() {
   }, [navigation]);
 
   useEffect(() => {
-    if (!focused) setPromptPhase("waiting");
+    if (!focused) {
+      setPromptPhase("idle");
+      pendingModeRef.current = null;
+      setPendingMode(null);
+    }
   }, [focused]);
 
   const eligibilityReady = settingsLoaded && tutorialReady && accessibilityLoaded && !authChecking;
-  useEffect(() => {
-    if (!focused || !transitionComplete || !eligibilityReady || showTutorial || !tutorialDismissed || promptPhase !== "waiting") return;
-    setPromptPhase(!settingsReadSucceeded || !tutorialReadSucceeded || hasAnsweredAvoidStairsPrompt ? "done" : "open");
-  }, [focused, transitionComplete, eligibilityReady, showTutorial, tutorialDismissed, promptPhase, hasAnsweredAvoidStairsPrompt, settingsReadSucceeded, tutorialReadSucceeded]);
-
-  const onboardingBlocksFocus = !eligibilityReady || showTutorial || !tutorialDismissed || promptPhase !== "done";
+  const onboardingBlocksFocus = !eligibilityReady || showTutorial || !tutorialDismissed || promptPhase !== "idle";
   const onboardingBlocksFocusRef = useRef(onboardingBlocksFocus);
   onboardingBlocksFocusRef.current = onboardingBlocksFocus;
   const tutorialVisible = showTutorial && focused && !authChecking && transitionComplete;
@@ -148,32 +140,25 @@ export default function LandingPage() {
     }, [accessibilityLoaded, headingLaidOut, screenReaderEnabled, transitionComplete, onboardingBlocksFocus, focused, navigation])
   );
 
-  const openStandardNavigation = () => {
-    setNavigationMode("standard");
+  const requestNavigation = (mode: "standard" | "accessibility") => {
+    if (onboardingBlocksFocus || pendingModeRef.current) return;
+    pendingModeRef.current = mode;
+    setPendingMode(mode);
+    setPromptPhase("open");
+  };
+
+  const openStandardNavigation = () => requestNavigation("standard");
+  const openAccessibilityNavigation = () => requestNavigation("accessibility");
+
+  const finishNavigation = () => {
+    const mode = pendingModeRef.current;
+    if (!mounted.current || !navigation.isFocused() || !mode || promptPhase !== "closing") return;
+    pendingModeRef.current = null;
+    setPendingMode(null);
+    setPromptPhase("idle");
+    setNavigationMode(mode);
     setHasSelectedMode(true);
-    router.push("/standard-navigation");
-  };
-
-  const openAccessibilityNavigation = () => {
-    setSelectedNeed(accessibilityNeed);
-    setShowAccessibilityChoice(true);
-  };
-
-  const finishAccessibilityNavigation = () => {
-    if (!pendingAccessibilityNavigation.current) return;
-    pendingAccessibilityNavigation.current = false;
-    router.push("/accessibility-navigation");
-  };
-
-  const confirmAccessibilityChoice = () => {
-    if (!selectedNeed || !settingsLoaded) return;
-    setAccessibilityNeed(selectedNeed);
-    setNavigationMode("accessibility");
-    setHasSelectedMode(true);
-    pendingAccessibilityNavigation.current = true;
-    setShowAccessibilityChoice(false);
-    // iOS must finish dismissing its native modal before pushing a screen.
-    if (Platform.OS !== "ios") finishAccessibilityNavigation();
+    router.push(mode === "accessibility" ? "/accessibility-navigation" : "/standard-navigation");
   };
 
   return (
@@ -271,7 +256,7 @@ export default function LandingPage() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Standard mode"
-                  accessibilityHint="Opens standard campus navigation"
+                  accessibilityHint="Choose routing preferences, then open standard campus navigation"
                 >
                   <LinearGradient
                     colors={opaqueSurfaces
@@ -309,7 +294,7 @@ export default function LandingPage() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Accessibility mode"
-                  accessibilityHint="Choose visual or motor impairment support before opening campus navigation"
+                  accessibilityHint="Choose routing preferences, then open accessible campus navigation. Avoid stairs is selected by default."
                 >
                   <LinearGradient
                     colors={opaqueSurfaces
@@ -345,60 +330,6 @@ export default function LandingPage() {
         </SafeAreaView>
       </View>
 
-      <Modal
-        visible={showAccessibilityChoice}
-        transparent
-        animationType="none"
-        onRequestClose={() => setShowAccessibilityChoice(false)}
-        onDismiss={finishAccessibilityNavigation}
-      >
-        <View style={styles.choiceOverlay}>
-          <View style={styles.choiceCard} accessibilityViewIsModal>
-            <ScrollView contentContainerStyle={styles.choiceContent}>
-              <Text accessibilityRole="header" style={styles.choiceTitle}>Accessibility support</Text>
-              <Text style={styles.choiceDescription}>Choose the option that best matches your needs.</Text>
-              {([
-                { value: "visual", label: "Visual impairment" },
-                { value: "motor", label: "Motor impairment" },
-              ] as const).map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[styles.choiceOption, selectedNeed === option.value && styles.choiceOptionSelected]}
-                  accessibilityRole="radio"
-                  accessibilityLabel={option.label}
-                  accessibilityState={{ checked: selectedNeed === option.value }}
-                  onPress={() => setSelectedNeed(option.value)}
-                >
-                  <Text style={styles.choiceOptionText}>{option.label}</Text>
-                  <Ionicons
-                    name={selectedNeed === option.value ? "radio-button-on" : "radio-button-off"}
-                    size={26}
-                    color="#064C52"
-                    accessible={false}
-                  />
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                style={[styles.choiceContinue, (!selectedNeed || !settingsLoaded) && styles.choiceDisabled]}
-                disabled={!selectedNeed || !settingsLoaded}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !selectedNeed || !settingsLoaded }}
-                onPress={confirmAccessibilityChoice}
-              >
-                <Text style={styles.choiceContinueText}>Continue</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.choiceCancel}
-                accessibilityRole="button"
-                onPress={() => setShowAccessibilityChoice(false)}
-              >
-                <Text style={styles.choiceOptionText}>Cancel</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
       {/* First-time Tutorial Modal Component */}
       <TutorialModal visible={tutorialVisible} onClose={handleDismissTutorial} onDismiss={() => {
         if (!showTutorial && mounted.current) {
@@ -406,37 +337,18 @@ export default function LandingPage() {
           setTutorialDismissed(true);
         }
       }} />
-      <AvoidStairsPrompt visible={promptVisible} onAnswered={() => {
-        if (mounted.current) setPromptPhase(navigation.isFocused() ? "closing" : "waiting");
-      }} onDismiss={() => {
-        if (mounted.current && promptPhase === "closing") {
-          initialFocusHandled.current = false;
-          setPromptPhase("done");
-        }
-      }} />
+      <AvoidStairsPrompt visible={promptVisible}
+        defaultAvoidStairs={pendingMode === "accessibility" ? true : undefined}
+        onAnswered={() => {
+          if (mounted.current) setPromptPhase("closing");
+        }}
+        onDismiss={finishNavigation}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  choiceOverlay: {
-    flex: 1, justifyContent: "center", alignItems: "center",
-    padding: 24, backgroundColor: "rgba(0,0,0,0.65)",
-  },
-  choiceCard: { width: "100%", maxWidth: 420, maxHeight: "90%", backgroundColor: "#FFFFFF", borderRadius: 24 },
-  choiceContent: { padding: 24, gap: 16 },
-  choiceTitle: { fontSize: 24, fontWeight: "800", color: "#064C52" },
-  choiceDescription: { fontSize: 16, color: "#334155" },
-  choiceOption: {
-    minHeight: 56, padding: 16, borderWidth: 2, borderColor: "#64748B",
-    borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 12,
-  },
-  choiceOptionSelected: { borderColor: "#064C52", backgroundColor: "#DDF2F0" },
-  choiceOptionText: { flexShrink: 1, flexGrow: 1, fontSize: 18, fontWeight: "700", color: "#064C52" },
-  choiceContinue: { minHeight: 48, padding: 14, borderRadius: 12, backgroundColor: "#064C52", alignItems: "center" },
-  choiceContinueText: { fontSize: 18, fontWeight: "700", color: "#FFFFFF" },
-  choiceDisabled: { backgroundColor: "#64748B" },
-  choiceCancel: { minHeight: 48, alignItems: "center", justifyContent: "center", padding: 12 },
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   safeArea: { flex: 1, backgroundColor: "transparent" },
   header: {

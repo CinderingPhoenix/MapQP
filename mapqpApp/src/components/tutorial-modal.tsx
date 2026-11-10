@@ -222,20 +222,10 @@ const accessibilityTutorialPages: TutorialPage[] = [
     topic: "getting-started",
     title: "Accessibility Mode",
     subtitle: "Start accessible campus navigation",
-    description: "Tap Accessibility Mode to choose your support options.",
+    description: "Tap Accessibility Mode to open accessible campus navigation.",
     image: require("../../assets/tutorial/landing-page.webp"),
     highlights: [
       { top: "75%", left: "51%", width: "45%", height: "20%", label: "Accessibility Mode", tagPosition: "top" },
-    ],
-  },
-  {
-    topic: "getting-started",
-    title: "Accessibility Support",
-    subtitle: "Choose the support that matches your needs",
-    description: "Select Visual impairment or Motor impairment, then tap Continue.",
-    image: require("../../assets/tutorial/accessibility/accessibility-support.webp"),
-    highlights: [
-      { top: "39%", left: "9%", width: "82%", height: "16%", label: "Support Options", tagPosition: "top" },
     ],
   },
   {
@@ -572,6 +562,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                         {box.label}
                       </Text>
                     </View>
+                  </View>
                   );
                 })}
               </View>
@@ -598,6 +589,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                       />
                     ))}
                   </View>
+                </View>
               )}
               <View
                 accessible
@@ -642,6 +634,13 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 }
 
 const styles = StyleSheet.create({
+  topicContent: { paddingHorizontal: 24, paddingBottom: 24, gap: 16 },
+  topicGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  topicButton: { flexGrow: 1, flexBasis: "45%", minHeight: 112, padding: 12,
+    alignItems: "center", justifyContent: "center", gap: 8,
+    borderRadius: 16, backgroundColor: "#F1F5F9" },
+  topicIcon: { alignItems: "center", justifyContent: "center" },
+  topicTitle: { fontSize: 16, fontWeight: "600", color: "#172033", textAlign: "center" },
   contrastBorder: { borderWidth: 2, borderColor: "#111827" },
   opaqueOverlay: { backgroundColor: "#262626" },
   headerTitle: { fontSize: 16, fontWeight: "700", color: "#172033", flex: 1, minWidth: 0, paddingVertical: 2 },
