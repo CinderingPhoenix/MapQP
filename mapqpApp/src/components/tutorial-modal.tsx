@@ -1,6 +1,7 @@
 // tutorial-modal.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentProps } from "react";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useModalDismissal } from "./avoid-stairs-prompt";
 import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle, useWindowDimensions } from "react-native";
 
@@ -13,7 +14,10 @@ interface HighlightItem {
   tagPosition?: "top" | "side" | "bottom";
 }
 
+type TutorialTopic = "getting-started" | "navigation" | "destinations" | "saved" | "routing" | "settings";
+
 interface TutorialPage {
+  topic: TutorialTopic;
   title: string;
   subtitle: string;
   description: string;
@@ -26,166 +30,185 @@ type TutorialMode = "standard" | "accessibility";
 
 const standardTutorialPages: TutorialPage[] = [
   {
+    topic: "getting-started",
     title: "Standard Mode",
     subtitle: "Start your campus navigation",
-    description: "Choose Standard Mode on the landing page to open the campus map and destination search.",
+    description: "Tap Standard Mode to open the campus map.",
     image: require("../../assets/tutorial/landing-page.webp"),
     highlights: [
       { top: "72%", left: "6%", width: "42%", height: "24%", label: "Standard Mode", tagPosition: "top" },
     ],
   },
   {
+    topic: "destinations",
     title: "Destination Search",
     subtitle: "Find a campus building",
-    description: "Tap the destination search bar at the bottom of the map and enter a building name. Select a result to start a route to that destination.",
+    description: "Type a building name in search. Tap a result to start a route.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
       { top: "90%", left: "5%", width: "90%", height: "9%", label: "Destination Search", tagPosition: "top" },
     ],
   },
   {
+    topic: "navigation",
     title: "Map Orientation",
     subtitle: "Change how the map faces",
-    description: "Use the orientation control at the top right to change the map orientation while you navigate.",
+    description: "Tap the top-right compass to change map orientation.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
       { top: "6%", left: "80%", width: "16%", height: "7%", label: "Map Orientation", tagPosition: "top" },
     ],
   },
   {
+    topic: "navigation",
     title: "Audio Feedback",
     subtitle: "Control spoken navigation",
-    description: "Tap the audio control below the orientation button to mute or unmute spoken navigation instructions.",
+    description: "Tap the speaker to mute or unmute directions.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
       { top: "13%", left: "80%", width: "16%", height: "7%", label: "Audio Feedback", tagPosition: "top" },
     ],
   },
   {
+    topic: "saved",
     title: "Open Saved Locations",
     subtitle: "Find your favorites from the map",
-    description: "Tap the star beside the destination search to view your saved buildings and choose a frequent destination.",
+    description: "Tap the star beside search to open saved buildings.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
       { top: "92%", left: "70%", width: "13%", height: "6%", label: "Saved Locations", tagPosition: "top" },
     ],
   },
   {
+    topic: "destinations",
     title: "Voice Search",
     subtitle: "Find a destination by speaking",
-    description: "Tap the microphone beside the destination search bar and say a campus building name. The app starts a route directly to the recognized building.",
+    description: "Tap the microphone and say a building name to start a route.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
       { top: "92%", left: "83%", width: "12%", height: "6%", label: "Voice Search", tagPosition: "top" },
     ],
   },
   {
+    topic: "destinations",
     title: "Recent Searches",
     subtitle: "Return to a previous destination",
-    description: "Open the destination search to see your recent searches. Tap a building in the list to start a new route there.",
+    description: "Open search, then tap a recent building to route there.",
     image: require("../../assets/tutorial/standard/routing.webp"),
     highlights: [
       { top: "30%", left: "6%", width: "87%", height: "34%", label: "Recent Searches", tagPosition: "top" },
     ],
   },
   {
+    topic: "destinations",
     title: "Building Chooser",
     subtitle: "Browse available destinations",
-    description: "Open the building chooser from the search panel to browse campus buildings instead of typing a name.",
+    description: "Open the building chooser from search to browse destinations.",
     image: require("../../assets/tutorial/standard/routing.webp"),
     highlights: [
       { top: "23%", left: "6%", width: "87%", height: "6%", label: "Building Chooser", tagPosition: "top" },
     ],
   },
   {
+    topic: "destinations",
     title: "Select a Building",
     subtitle: "Start a route from the building list",
-    description: "Tap a building name in the chooser to select it as your destination and generate a route.",
+    description: "Tap a building to start a route.",
     image: require("../../assets/tutorial/standard/building-chooser.webp"),
     highlights: [
       { top: "19%", left: "2%", width: "35%", height: "4%", label: "Select Building", tagPosition: "top" },
     ],
   },
   {
+    topic: "saved",
     title: "Save a Building",
     subtitle: "Keep a destination for later",
-    description: "Tap the star beside a building to save it. Tap the star again to remove that building from your saved locations.",
+    description: "Tap a building's star to save or remove it.",
     image: require("../../assets/tutorial/standard/building-chooser.webp"),
     highlights: [
       { top: "19%", left: "84%", width: "10%", height: "4%", label: "Save or Remove", tagPosition: "top" },
     ],
   },
   {
+    topic: "saved",
     title: "Saved List",
     subtitle: "Browse only your favorite buildings",
-    description: "Switch to the Saved tab in the building chooser to see your favorites. Select a building to navigate there.",
+    description: "Open the Saved tab. Tap a building to route there.",
     image: require("../../assets/tutorial/standard/building-chooser.webp"),
     highlights: [
       { top: "12%", left: "57%", width: "38%", height: "5%", label: "Saved Tab", tagPosition: "top" },
     ],
   },
   {
+    topic: "saved",
     title: "Manage Saved Locations",
     subtitle: "Remove a destination you no longer need",
-    description: "In your saved locations, tap the filled star beside a building to remove it from the list. You can save it again from the building chooser.",
+    description: "Tap the filled star to remove a saved building.",
     image: require("../../assets/tutorial/standard/saved-locations.webp"),
     highlights: [
       { top: "19%", left: "84%", width: "10%", height: "4%", label: "Remove Favorite", tagPosition: "top" },
     ],
   },
   {
+    topic: "routing",
     title: "Next Direction",
     subtitle: "Follow the upcoming instruction",
-    description: "Once a route starts, read the instruction at the top of the screen to see your next navigation step.",
+    description: "Follow the next instruction at the top of the map.",
     image: require("../../assets/tutorial/standard/next-direction.webp"),
     highlights: [
       { top: "5%", left: "2%", width: "94%", height: "10%", label: "Next Direction", tagPosition: "top" },
     ],
   },
   {
+    topic: "routing",
     title: "Expanded Directions",
     subtitle: "Review the upcoming steps",
-    description: "Tap the direction summary at the top to expand the list of upcoming directions along your route.",
+    description: "Tap the top direction summary to see upcoming steps.",
     image: require("../../assets/tutorial/standard/direction-list.webp"),
   },
   {
+    topic: "routing",
     title: "Cancel a Route",
     subtitle: "Stop the current navigation",
-    description: "Tap the cancel control at the bottom of the screen to end the current route. You can then search for a new destination.",
+    description: "Tap Cancel at the bottom to stop your route.",
     image: require("../../assets/tutorial/standard/next-direction.webp"),
     highlights: [
       { top: "93%", left: "80%", width: "12%", height: "5%", label: "Cancel Route", tagPosition: "top" },
     ],
   },
   {
+    topic: "navigation",
     title: "Recenter the Map",
     subtitle: "Return to your current position",
-    description: "The Recenter button appears at the bottom right when the map is no longer focused on your position, such as after moving around the map. Tap it to bring the map back to your current position.",
+    description: "When Recenter appears, tap it to return to your location.",
     image: require("../../assets/tutorial/standard/recenter.webp"),
     highlights: [
       { top: "84%", left: "78%", width: "19%", height: "5%", label: "Recenter", tagPosition: "top" },
     ],
   },
   {
+    topic: "settings",
     title: "Open Settings",
     subtitle: "Find navigation preferences",
-    description: "Tap the settings button at the top left of the map to open your navigation preferences.",
+    description: "Tap the top-left settings button to open preferences.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
       { top: "7%", left: "2%", width: "13%", height: "6%", label: "Settings", tagPosition: "top" },
     ],
   },
   {
+    topic: "settings",
     title: "Customize Navigation",
     subtitle: "Adjust the app to your preferences",
-    description: "In Settings, choose your navigation mode, distance units, direction style, and text size.",
+    description: "Choose your mode, units, direction style, and text size.",
     image: require("../../assets/tutorial/standard/settings.webp"),
     section: "standard-settings",
   },
   {
+    topic: "routing",
     title: "Routing Settings",
     subtitle: "Choose your route preferences",
-    description: "Open the Routing tab in Settings to choose whether to avoid stairs, indoor walkways, or inaccessible road crossings. These choices apply when you start a new route. You can also adjust spoken instruction repetition under Accessibility.",
+    description: "In Settings > Routing, choose paths to avoid. Changes apply to new routes.",
     image: require("../../assets/tutorial/standard/settings-routing.webp"),
     section: "standard-settings",
   },
@@ -194,131 +217,156 @@ const standardTutorialPages: TutorialPage[] = [
 
 const accessibilityTutorialPages: TutorialPage[] = [
   {
+    topic: "getting-started",
     title: "Accessibility Mode",
     subtitle: "Start accessible campus navigation",
-    description: "Tap Accessibility Mode on the landing page to open the accessibility support options. Choose the option that matches your needs, then continue to the navigation screen.",
+    description: "Tap Accessibility Mode to choose your support options.",
     image: require("../../assets/tutorial/landing-page.webp"),
     highlights: [
       { top: "75%", left: "51%", width: "45%", height: "20%", label: "Accessibility Mode", tagPosition: "top" },
     ],
   },
   {
+    topic: "getting-started",
     title: "Accessibility Support",
     subtitle: "Choose the support that matches your needs",
-    description: "Choose Accessibility Mode on the landing page, select Visual impairment or Motor impairment, and tap Continue. Routing preferences are selected separately.",
+    description: "Select Visual impairment or Motor impairment, then tap Continue.",
     image: require("../../assets/tutorial/accessibility/accessibility-support.webp"),
     highlights: [
       { top: "39%", left: "9%", width: "82%", height: "16%", label: "Support Options", tagPosition: "top" },
     ],
   },
   {
+    topic: "destinations",
     title: "Voice Search",
     subtitle: "Say your destination",
-    description: "Tap Speak and say a campus building name. The app starts a route directly to the recognized building. Microphone and speech recognition permissions are requested on the loading screen.",
+    description: "Tap Speak and say a building name to start a route.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
       { top: "88%", left: "38%", width: "25%", height: "9%", label: "Speak", tagPosition: "top" },
     ],
   },
   {
+    topic: "saved",
     title: "Saved Destinations",
     subtitle: "Return to your favorite places",
-    description: "Tap Saved to open your saved buildings. Choose a building to start a route. Use the star in the building list to save or remove a favorite.",
+    description: "Tap Saved, then choose a building to start a route.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
       { top: "87%", left: "70%", width: "19%", height: "10%", label: "Saved", tagPosition: "top" },
     ],
   },
   {
+    topic: "saved",
+    title: "Manage Saved Locations",
+    subtitle: "Remove a destination you no longer need",
+    description: "Tap the filled star to remove a saved building.",
+    image: require("../../assets/tutorial/standard/saved-locations.webp"),
+    highlights: [
+      { top: "19%", left: "84%", width: "10%", height: "4%", label: "Remove Favorite", tagPosition: "top" },
+    ],
+  },
+  {
+    topic: "navigation",
     title: "Move and Zoom the Map",
     subtitle: "Explore without dragging or pinching",
-    description: "Use the arrow buttons to move around the map. Tap plus to zoom in or minus to zoom out. Recenter returns the map to your location when available.",
+    description: "Use arrows to move the map. Tap + or - to zoom.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
       { top: "66%", left: "3%", width: "36%", height: "12%", label: "Map Controls", tagPosition: "top" },
     ],
   },
   {
+    topic: "navigation",
     title: "Map Orientation",
     subtitle: "Change how the map faces",
-    description: "Tap the compass at the top right to change the map orientation.",
+    description: "Tap the top-right compass to change map orientation.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
       { top: "7%", left: "79%", width: "16%", height: "7%", label: "Orientation", tagPosition: "top" },
     ],
   },
   {
+    topic: "navigation",
     title: "Spoken Directions",
     subtitle: "Control navigation audio",
-    description: "Tap the speaker button to mute or unmute spoken directions. During a route, the top summary shows the next instruction; tap it to expand the directions. Instruction repetition can be adjusted in Settings.",
+    description: "Tap the speaker to mute or unmute directions.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
       { top: "15%", left: "81%", width: "13%", height: "6%", label: "Audio", tagPosition: "top" },
     ],
   },
   {
+    topic: "routing",
     title: "Follow Your Route",
     subtitle: "See your next direction at a glance",
-    description: "After choosing a destination, follow the highlighted route on the map. The summary at the top shows your next instruction, total distance, travel time, and arrival time. Tap the summary to expand your directions.",
+    description: "Follow the highlighted route and the instruction at the top.",
     image: require("../../assets/tutorial/accessibility/routing.webp"),
     highlights: [
       { top: "6%", left: "4%", width: "92%", height: "8%", label: "Next Direction", tagPosition: "top" },
     ],
   },
   {
+    topic: "routing",
     title: "Expanded Directions",
     subtitle: "Review the upcoming steps",
-    description: "Tap the route summary to open Upcoming Directions. Scroll through the list to review your route, then tap the summary again to collapse it.",
+    description: "Tap the route summary to show or hide upcoming directions.",
     image: require("../../assets/tutorial/accessibility/direction-list.webp"),
     highlights: [
       { top: "14%", left: "5%", width: "90%", height: "40%", label: "Upcoming Directions", tagPosition: "top" },
     ],
   },
   {
+    topic: "routing",
     title: "Cancel a Route",
     subtitle: "Cancel with the button or your voice",
-    description: "Tap Cancel in the top route summary to stop navigation. You can also tap Speak and say \"cancel route\" to stop the current route using your voice. Then speak a new destination or choose another saved building.",
+    description: "Tap Cancel, or tap Speak and say \"cancel route\".",
     image: require("../../assets/tutorial/accessibility/routing.webp"),
     highlights: [
       { top: "8%", left: "77%", width: "16%", height: "4%", label: "Cancel Route", tagPosition: "top" },
     ],
   },
   {
+    topic: "navigation",
     title: "Recenter the Map",
     subtitle: "Return to your current position",
-    description: "The Recenter button appears at the bottom right when the map is no longer focused on your position, such as after moving around the map. Tap it to bring the map back to your current position.",
+    description: "When Recenter appears, tap it to return to your location.",
     image: require("../../assets/tutorial/accessibility/recenter.webp"),
     highlights: [
       { top: "79%", left: "78%", width: "19%", height: "5%", label: "Recenter", tagPosition: "top" },
     ],
   },
   {
+    topic: "settings",
     title: "Open Settings",
     subtitle: "Adjust your navigation experience",
-    description: "Tap Settings in the bottom controls to open your preferences.",
+    description: "Tap Settings at the bottom to open preferences.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
       { top: "87%", left: "14%", width: "20%", height: "10%", label: "Settings", tagPosition: "top" },
     ],
   },
   {
+    topic: "settings",
     title: "General Settings",
     subtitle: "Personalize the display and directions",
-    description: "Use the General tab to change navigation mode, Settings appearance, distance units, direction style, and text size. Scroll down for accessibility preferences and spoken instruction repetition.",
+    description: "In General, choose your mode, units, direction style, and text size.",
     image: require("../../assets/tutorial/accessibility/settings.webp"),
     section: "accessibility-settings",
   },
   {
+    topic: "routing",
     title: "Routing Settings",
     subtitle: "Choose which paths to allow",
-    description: "Use the Routing tab to choose whether to avoid stairs, indoor walkways, or inaccessible road crossings. Each restriction follows its own switch and applies when you start a new route.",
+    description: "Choose paths to avoid in Routing. Changes apply to new routes.",
     image: require("../../assets/tutorial/accessibility/settings-routing.webp"),
     section: "accessibility-settings",
   },
   {
+    topic: "settings",
     title: "Instruction Repetition",
     subtitle: "Choose how often directions repeat",
-    description: "Scroll to Accessibility in the Routing tab to turn repetition on or off and select its frequency. Turning repetition off still allows new directions to be spoken. The same controls are available under Accessibility in General.",
+    description: "Under Accessibility, turn repetition on or off and choose how often directions repeat.",
     image: require("../../assets/tutorial/accessibility/settings-routing-repetition.webp"),
     section: "accessibility-settings",
   },
@@ -342,6 +390,15 @@ function getTutorialPageGroups(pages: TutorialPage[]) {
   return groups;
 }
 
+const tutorialTopics: { value: TutorialTopic; label: string; icon: ComponentProps<typeof MaterialCommunityIcons>["name"]; description: string }[] = [
+  { value: "getting-started", icon: "rocket-launch-outline", label: "Getting Started", description: "Choose a mode." },
+  { value: "navigation", icon: "compass-outline", label: "Navigation", description: "Map and audio controls." },
+  { value: "destinations", icon: "map-search-outline", label: "Destinations", description: "Find campus buildings." },
+  { value: "saved", icon: "star-outline", label: "Saved Locations", description: "Manage saved buildings." },
+  { value: "routing", icon: "routes", label: "Routing", description: "Directions and route options." },
+  { value: "settings", icon: "cog-outline", label: "Settings", description: "Display and navigation preferences." },
+];
+
 const tutorialModes = [
   { value: "standard", label: "Standard" },
   { value: "accessibility", label: "Accessibility" },
@@ -361,15 +418,19 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
   const tagWidth = Math.min(160, previewWidth);
   const [mode, setMode] = useState<TutorialMode>("standard");
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedTopic, setSelectedTopic] = useState<TutorialTopic | null>(null);
 
-  // Reset to page 0 every time the modal is opened
+  // Start at the topic menu every time the modal is opened
   useEffect(() => {
     if (visible) {
+      setSelectedTopic(null);
       setCurrentPage(0);
     }
   }, [visible]);
 
-  const tutorialPages = tutorialPagesByMode[mode];
+  const tutorialPages = tutorialPagesByMode[mode].filter(
+    (page) => selectedTopic === null || page.topic === selectedTopic
+  );
   const current = tutorialPages[currentPage];
   const pageGroups = getTutorialPageGroups(tutorialPages);
   const pageIndex = pageGroups.findIndex(
@@ -380,6 +441,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 
   const handleModeChange = (nextMode: TutorialMode) => {
     if (nextMode !== mode) {
+      setSelectedTopic(null);
       setCurrentPage(0);
       setMode(nextMode);
     }
@@ -390,7 +452,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
       setCurrentPage(currentPage + 1);
     } else {
       setCurrentPage(0);
-      onClose();
+      setSelectedTopic(null);
     }
   };
 
@@ -411,8 +473,8 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
       <View style={styles.modalOverlay}>
         <View style={styles.tutorialCard}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Skip Tutorial">
-              <Text style={styles.skipText}>Skip</Text>
+            <TouchableOpacity style={styles.headerButton} onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Close tutorial">
+              <Text style={styles.skipText}>Close</Text>
             </TouchableOpacity>
           </View>
 
@@ -433,66 +495,89 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
             ))}
           </View>
 
-          <ScrollView key={`${mode}-${currentPage}`} style={styles.scrollArea}
-            contentContainerStyle={styles.content} showsVerticalScrollIndicator>
-            <View style={[styles.imageContainer, { width: previewWidth, height: previewHeight }]}>
-              <Image source={current.image} style={styles.previewImage} resizeMode="cover" />
-              {current.highlights?.map((box, idx) => {
-                let tagStyle: ViewStyle = styles.tagTop;
-                if (box.tagPosition === "side") tagStyle = styles.tagSide;
-                if (box.tagPosition === "bottom") tagStyle = styles.tagBottom;
+          {selectedTopic === null ? (
+            <ScrollView key={`topics-${mode}`} style={styles.scrollArea} contentContainerStyle={styles.topicContent} showsVerticalScrollIndicator>
+              <Text style={styles.title} accessibilityRole="header">What would you like to learn?</Text>
+              <View style={styles.topicGrid}>
+              {tutorialTopics.map((topic) => (
+                <TouchableOpacity
+                  key={topic.value}
+                  style={styles.topicButton}
+                  onPress={() => { setCurrentPage(0); setSelectedTopic(topic.value); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={topic.label}
+                  accessibilityHint={topic.description}
+                >
+                  <View style={styles.topicIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                    <MaterialCommunityIcons name={topic.icon} size={36} color="#AC2B37" />
+                  </View>
+                  <Text style={styles.topicTitle}>{topic.label}</Text>
+                </TouchableOpacity>
+              ))}
+              </View>
+            </ScrollView>
+          ) : (
+            <>
+            <ScrollView key={`${mode}-${selectedTopic}-${currentPage}`} style={styles.scrollArea}
+              contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+              <View style={[styles.imageContainer, { width: previewWidth, height: previewHeight }]}>
+                <Image source={current.image} style={styles.previewImage} resizeMode="cover" />
+                {current.highlights?.map((box, idx) => {
+                  let tagStyle: ViewStyle = styles.tagTop;
+                  if (box.tagPosition === "side") tagStyle = styles.tagSide;
+                  if (box.tagPosition === "bottom") tagStyle = styles.tagBottom;
 
-                return (
+                  return (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.yellowHighlightBox,
+                        {
+                          top: box.top as any,
+                          left: box.left as any,
+                          width: box.width as any,
+                          height: box.height as any,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.highlightTag, tagStyle, {
+                        // Keep the larger label inside the screenshot's horizontal bounds.
+                        width: tagWidth,
+                        left: Math.min(previewWidth - tagWidth, parseFloat(box.left) * previewWidth / 100)
+                          - parseFloat(box.left) * previewWidth / 100,
+                      }]}>
+                        <Text style={styles.highlightTagText}>
+                          {box.label}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.title}>{current.title}</Text>
+              <Text style={styles.subtitle}>{current.subtitle}</Text>
+              <Text style={styles.description}>{current.description}</Text>
+            </ScrollView>
+
+            <View style={styles.footer}>
+              <View style={styles.progressContainer}>
+                {currentGroup.count > 1 && (
                   <View
-                    key={idx}
-                    style={[
-                      styles.yellowHighlightBox,
-                      {
-                        top: box.top as any,
-                        left: box.left as any,
-                        width: box.width as any,
-                        height: box.height as any,
-                      },
-                    ]}
+                    accessible
+                    accessibilityRole="progressbar"
+                    accessibilityLabel="Current page parts"
+                    accessibilityValue={{ min: 1, max: currentGroup.count, now: partIndex + 1 }}
                   >
-                    <View style={[styles.highlightTag, tagStyle, {
-                      // Keep the larger label inside the screenshot's horizontal bounds.
-                      width: tagWidth,
-                      left: Math.min(previewWidth - tagWidth, parseFloat(box.left) * previewWidth / 100)
-                        - parseFloat(box.left) * previewWidth / 100,
-                    }]}>
-                      <Text style={styles.highlightTagText}>
-                        {box.label}
-                      </Text>
+                    <View style={styles.progressSegments}>
+                      {Array.from({ length: currentGroup.count }, (_, index) => (
+                        <View
+                          key={index}
+                          style={[styles.progressSegment, index <= partIndex && styles.filledSegment]}
+                        />
+                      ))}
                     </View>
                   </View>
-                );
-              })}
-            </View>
-
-            <Text style={styles.title}>{current.title}</Text>
-            <Text style={styles.subtitle}>{current.subtitle}</Text>
-            <Text style={styles.description}>{current.description}</Text>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <View style={styles.progressContainer}>
-              {currentGroup.count > 1 && (
-                <View
-                  accessible
-                  accessibilityRole="progressbar"
-                  accessibilityLabel="Current page parts"
-                  accessibilityValue={{ min: 1, max: currentGroup.count, now: partIndex + 1 }}
-                >
-                  <View style={styles.progressSegments}>
-                    {Array.from({ length: currentGroup.count }, (_, index) => (
-                      <View
-                        key={index}
-                        style={[styles.progressSegment, index <= partIndex && styles.filledSegment]}
-                      />
-                    ))}
-                  </View>
-                </View>
               )}
               <View
                 accessible
@@ -521,13 +606,15 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                   <Text style={styles.backButtonText}>Back</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Get Started" : "Next slide"}>
+              <TouchableOpacity style={currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Back to topics" : "Next slide"}>
                 <Text style={styles.nextButtonText}>
-                  {currentPage === tutorialPages.length - 1 ? "Get Started" : "Next"}
+                  {currentPage === tutorialPages.length - 1 ? "Back to Topics" : "Next"}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
+          </>
+          )}
         </View>
       </View>
     </Modal>
@@ -558,7 +645,53 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    alignItems: "flex-end",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  headerButton: {
+    minHeight: 44,
+    minWidth: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: "auto",
+  },
+  topicContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  topicGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+  },
+  topicButton: {
+    width: "48%",
+    minHeight: 132,
+    paddingHorizontal: 8,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 18,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  topicIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: "#FCEDEF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topicTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#172033",
+    textAlign: "center",
   },
   tabs: {
     flexDirection: "row",
