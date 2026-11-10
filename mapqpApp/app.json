@@ -9,10 +9,12 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/mapqp-logo.png",
+      "bundleIdentifier": "com.anonymous.mapQP",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition for finding WPI buildings.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone for voice search.",
-        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your precise location for campus routing."
+        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your precise location for campus routing.",
+        "NSPhotoLibraryUsageDescription": "This should not be requested..."
       }
     },
     "android": {
