@@ -1,3 +1,4 @@
+import { PreferenceIcon } from "../components/settings/preference-icon";
 import { AccessibleSettings } from "../components/settings/accessible-settings";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Slider from "@react-native-community/slider";
@@ -472,9 +473,44 @@ export default function SettingsPage() {
 // Signal is intentionally separate from standardStyles: Accessible appearance
 // inherits those legacy styles, so changing them would also change Accessible.
 const SIGNAL = {
-  background: "#F7F6F2", ink: "#252720", muted: "#62645B",
-  divider: "#DDDED5", accent: "#741B2B", off: "#68635F", outline: "#AAA198",
+  background: "#F7F6F2", heading: "#000000", ink: "#000000", muted: "#000000", status: "#000000",
+  divider: "#D0CDC9", accent: "#741B2B", off: "#686868", outline: "#686868",
+  disabled: "#E0DDD7",
 } as const;
+
+// Standard-only visual overrides. Effective settings remain owned by the
+// existing resolver; no saved values or shared Accessible styles are changed.
+function useSignalContrast() {
+  const preferences = useAccessibilityPreferences();
+  return preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+}
+
+function useSignalStyles() {
+  const increased = useSignalContrast();
+  if (!increased) return signalStyles;
+  return {
+    ...signalStyles,
+    container: { ...signalStyles.container, backgroundColor: "#FFFFFF" },
+    modeGroup: { ...signalStyles.modeGroup, backgroundColor: "#FFFFFF" },
+    choice: { ...signalStyles.choice, backgroundColor: "#FFFFFF", borderColor: "#272423", borderWidth: 2 },
+    choiceSelected: { ...signalStyles.choiceSelected, borderColor: "#272423" },
+    choiceLabel: { ...signalStyles.choiceLabel, fontWeight: "700" as const },
+    tabs: { ...signalStyles.tabs, borderBottomColor: "#70655F" },
+    tabSelected: { ...signalStyles.tabSelected, borderBottomWidth: 4 },
+    preferenceRow: { ...signalStyles.preferenceRow, borderBottomColor: "#272423", borderBottomWidth: 2 },
+    preferenceBlock: { ...signalStyles.preferenceBlock, borderBottomColor: "#272423", borderBottomWidth: 2 },
+    // These are grouping separators, not interactive control outlines.
+    switchRow: { ...signalStyles.switchRow, borderBottomColor: "#B9B1AA" },
+    routeInfo: { ...signalStyles.routeInfo, borderLeftColor: "#70655F" },
+    deviceBadge: { ...signalStyles.deviceBadge, backgroundColor: "#DAD6D0", borderWidth: 2, borderColor: "#272423" },
+    switchTrack: { ...signalStyles.switchTrack, borderWidth: 2, borderColor: "#272423", padding: 2 },
+    switchOff: { ...signalStyles.switchOff, backgroundColor: "#454545" },
+    switchReadOnly: { ...signalStyles.switchReadOnly, borderWidth: 2, padding: 2 },
+    disabled: { ...signalStyles.disabled, backgroundColor: "#DAD6D0" },
+    modalPanel: { ...signalStyles.modalPanel, backgroundColor: "#FFFFFF", borderColor: "#272423", borderWidth: 2 },
+    opaqueOverlay: { ...signalStyles.opaqueOverlay, backgroundColor: "#FFFFFF" },
+  };
+}
 
 function SignalText({ size = 17, weight = "400", color = SIGNAL.ink, style, textRef, ...props }:
   TextProps & { size?: number; weight?: TextStyle["fontWeight"]; color?: string; textRef?: React.Ref<React.ElementRef<typeof Text>> }) {
@@ -483,15 +519,16 @@ function SignalText({ size = 17, weight = "400", color = SIGNAL.ink, style, text
   const highContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
   return <Text ref={textRef} allowFontScaling maxFontSizeMultiplier={2.5} {...props}
     style={[{ fontSize: size * fontSize, lineHeight: Math.ceil(size * fontSize * 1.4),
-      fontWeight: weight, color: highContrast && color === SIGNAL.muted ? SIGNAL.ink : color,
+      fontWeight: weight, color: highContrast && (color === SIGNAL.muted || color === SIGNAL.status || color === SIGNAL.outline) ? SIGNAL.ink : color,
       flexShrink: 1 }, style, preferences.boldTextEnabled && standardStyles.boldTextOverride]} />;
 }
 
 function SignalSection({ title, description, children, titleRef }: {
   title: string; description?: string; children: ReactNode; titleRef?: React.Ref<React.ElementRef<typeof Text>>;
 }) {
+  const signalStyles = useSignalStyles();
   return <View style={signalStyles.section}>
-    <SignalText textRef={titleRef} size={20} weight="600" accessibilityRole="header">{title}</SignalText>
+    <SignalText textRef={titleRef} size={20} weight="600" color={SIGNAL.heading} accessibilityRole="header">{title}</SignalText>
     {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
     {children}
   </View>;
@@ -510,13 +547,17 @@ type SignalOption = {
 function SignalChoice({ label, accessibilityLabel, hint, selected, onPress, disabled = false, vertical = false }: SignalOption & {
   disabled?: boolean; vertical?: boolean;
 }) {
+  const signalStyles = useSignalStyles();
   const stacked = useSignalStacked();
+  const increased = useSignalContrast();
   return <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}
     accessibilityHint={hint} accessibilityState={{ selected, disabled }} disabled={disabled}
     onPress={onPress} style={[signalStyles.choice, (vertical || stacked) && signalStyles.stackedChoice, selected && signalStyles.choiceSelected,
-      disabled && signalStyles.disabled]}>
-    {selected && <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" accessible={false}
+      disabled && !selected && signalStyles.disabled, disabled && signalStyles.disabledChoice]}>
+    {selected && <MaterialCommunityIcons name={disabled ? "lock-check-outline" : "check"} size={16} color="#FFFFFF" accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+    {disabled && !selected && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={SIGNAL.ink}
+      accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <SignalText accessible={false} size={16} weight="600" color={selected ? "#FFFFFF" : SIGNAL.ink}
       style={signalStyles.choiceLabel}>{label}</SignalText>
   </TouchableOpacity>;
@@ -527,6 +568,7 @@ function SignalChoice({ label, accessibilityLabel, hint, selected, onPress, disa
 function SignalPreferenceRow({ label, value, description, options, disabled = false }: {
   label: string; value: string; description?: string; options: SignalOption[]; disabled?: boolean;
 }) {
+  const signalStyles = useSignalStyles();
   const [open, setOpen] = useState(false);
   const [presented, setPresented] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
@@ -537,6 +579,7 @@ function SignalPreferenceRow({ label, value, description, options, disabled = fa
   const stacked = useSignalStacked();
   const { fontSize } = useSettings();
   const { screenReaderEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
+  const increased = useSignalContrast();
 
   const restoreFocus = useCallback(() => {
     if (screenReaderEnabled && trigger.current) {
@@ -578,8 +621,10 @@ function SignalPreferenceRow({ label, value, description, options, disabled = fa
           <SignalText weight="500">{label}</SignalText>
         </View>
         <View style={[signalStyles.valueWithChevron, stacked && signalStyles.stackedValue]} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <SignalText size={15} weight="600" color={SIGNAL.accent}>{value}</SignalText>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={SIGNAL.accent} accessible={false} allowFontScaling={false} />
+          <SignalText size={15} weight="600" color={disabled ? SIGNAL.status : SIGNAL.accent}>{value}</SignalText>
+          {disabled && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={SIGNAL.ink}
+            accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+          <MaterialCommunityIcons name="chevron-right" size={20} color={disabled ? SIGNAL.status : SIGNAL.accent} accessible={false} allowFontScaling={false} />
         </View>
       </View>
       {description && <SignalText size={14} color={SIGNAL.muted} accessible={false}
@@ -608,13 +653,14 @@ function SignalPreferenceRow({ label, value, description, options, disabled = fa
 }
 
 function SignalSwitch(props: SwitchProps) {
+  const signalStyles = useSignalStyles();
   const stacked = useSignalStacked();
   const { value, disabled, onValueChange, ...accessibilityProps } = props;
   return <TouchableOpacity {...accessibilityProps} accessible accessibilityRole="switch"
     accessibilityState={{ ...props.accessibilityState, checked: !!value, disabled: !!disabled }}
     disabled={disabled} activeOpacity={1} onPress={() => { if (!disabled) onValueChange?.(!value); }}
     style={[signalStyles.switchControl, stacked && signalStyles.switchControlLarge]}>
-    <SignalText size={14} color={SIGNAL.muted} accessible={false} accessibilityElementsHidden
+    <SignalText size={14} color={SIGNAL.status} accessible={false} accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">{`${value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}</SignalText>
     <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[signalStyles.switchTrack, value ? signalStyles.switchOn : signalStyles.switchOff,
@@ -624,24 +670,27 @@ function SignalSwitch(props: SwitchProps) {
   </TouchableOpacity>;
 }
 
-function SignalSwitchRow({ label, description, status, children }: {
-  label: string; description?: string; status?: string; children: ReactNode;
+function SignalSwitchRow({ label, description, status, icon, children }: {
+  label: string; description?: string; status?: string; icon?: SettingsIconName; children: ReactNode;
 }) {
+  const signalStyles = useSignalStyles();
   const stacked = useSignalStacked();
   return <View style={signalStyles.switchRow}>
     <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]}>
-      <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel]}
+      <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel, icon && signalStyles.iconLabel]}
         accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {icon && <PreferenceIcon name={icon} />}
         <SignalText weight="500">{label}</SignalText>
       </View>
       {children}
     </View>
     {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
-    {status && <SignalText size={14} weight="500" color={SIGNAL.muted}>{status}</SignalText>}
+    {status && <SignalText size={14} weight="500" color={SIGNAL.status}>{status}</SignalText>}
   </View>;
 }
 
 function SignalGuidanceSettings({ titleRef }: { titleRef?: React.Ref<React.ElementRef<typeof Text>> }) {
+  const signalStyles = useSignalStyles();
   const { repeatGuidanceEnabled, repeatGuidanceSeconds, setRepeatGuidanceEnabled, setRepeatGuidanceSeconds,
     settingsLoaded, settingsReadSucceeded } = useSettings();
   const stacked = useSignalStacked();
@@ -677,11 +726,23 @@ function SignalActionRow({ label, description, onPress, accessibilityLabel = lab
   label: string; description?: string; onPress: () => void; accessibilityLabel?: string;
   accessibilityHint: string; chevron?: boolean;
 }) {
+  const signalStyles = useSignalStyles();
+  const [pressed, setPressed] = useState(false);
+  const preferences = useAccessibilityPreferences();
+  const increasedContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
   return <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}
     accessibilityHint={accessibilityHint} onPress={onPress}
-    style={[signalStyles.preferenceRow, !chevron && signalStyles.deleteAction]}>
+    activeOpacity={chevron ? undefined : 1}
+    onPressIn={!chevron ? () => setPressed(true) : undefined}
+    onPressOut={!chevron ? () => setPressed(false) : undefined}
+    style={[signalStyles.preferenceRow, !chevron && signalStyles.deleteAction,
+      !chevron && { backgroundColor: pressed ? "#8F1C28" : "#B42332",
+        borderColor: increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332"),
+        borderBottomColor: increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332") }]}>
+    {!chevron && <MaterialCommunityIcons name="trash-can-outline" size={24} color="#FFFFFF" accessible={false}
+      accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <SignalText weight="500" color={chevron ? SIGNAL.ink : SIGNAL.accent}>{label}</SignalText>
+      <SignalText weight={chevron ? "500" : "700"} color={chevron ? SIGNAL.ink : "#FFFFFF"}>{label}</SignalText>
       {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
     </View>
     {chevron && <MaterialCommunityIcons name="chevron-right" size={20} color={SIGNAL.accent} accessible={false}
@@ -698,6 +759,7 @@ type SignalSettingsProps = {
 
 function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHome, onDelete,
   onNavigationModeChange, onFontSizeAccessibilityAction }: SignalSettingsProps) {
+  const signalStyles = useSignalStyles();
   const { settingsAppearance, setSettingsAppearance, navigationMode, distanceUnits, setDistanceUnits,
     directionStyle, setDirectionStyle, fontSize, setFontSize, deviceAccessibility,
     customAccessibilityPreferences: savedAccessibilityPreferences, settingsLoaded, settingsReadSucceeded,
@@ -705,6 +767,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
     configureAvoidStairs, configureRoutingPreferences, repeatGuidanceEnabled, repeatGuidanceSeconds } = useSettings();
   const stacked = useSignalStacked();
   const { screenReaderEnabled, reduceMotionEnabled } = useAccessibilityPreferences();
+  const increased = useSignalContrast();
   const scroll = useRef<React.ElementRef<typeof ScrollView>>(null);
   const guidanceHeading = useRef<React.ElementRef<typeof Text>>(null);
   const pendingGuidance = useRef(false);
@@ -757,7 +820,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           <SignalText size={16} weight="700">MapQP</SignalText>
         </View>
         <View style={signalStyles.titleGroup}>
-          <SignalText size={30} weight="700" accessibilityRole="header">Settings</SignalText>
+          <SignalText size={30} weight="700" color={SIGNAL.heading} accessibilityRole="header">Settings</SignalText>
         </View>
         <View style={signalStyles.tabs} accessibilityRole="tablist">
           {(["general", "routing"] as const).map((tab) => {
@@ -767,7 +830,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
               accessibilityState={{ selected }} onPress={() => changeTab(tab)}
               style={[signalStyles.tab, selected && signalStyles.tabSelected]}>
               <SignalText accessible={false} weight={selected ? "600" : "500"}
-                color={selected ? SIGNAL.accent : SIGNAL.muted} style={signalStyles.centered}>{label}</SignalText>
+                color={selected ? SIGNAL.accent : SIGNAL.outline} style={[signalStyles.centered, selected && increased && { textDecorationLine: "underline", fontWeight: "700" }]}>{label}</SignalText>
             </TouchableOpacity>;
           })}
         </View>
@@ -830,7 +893,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   onAccessibilityAction={onFontSizeAccessibilityAction}>
                   <Slider style={signalStyles.sliderInput} minimumValue={0.8} maximumValue={1.8} step={0.1}
                     value={fontSize} onValueChange={setFontSize} minimumTrackTintColor={SIGNAL.accent}
-                    maximumTrackTintColor="#B6ADA3" thumbTintColor={SIGNAL.accent} accessible={false}
+                    maximumTrackTintColor={increased ? "#272423" : SIGNAL.outline} thumbTintColor={SIGNAL.accent} accessible={false}
                     accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                 </View>
                 <SignalText size={25} weight="600" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
@@ -843,17 +906,20 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
               style={signalStyles.switchRow}>
               <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]} accessible={false}
                 accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <SignalText weight="500">Screen reader</SignalText>
+                <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel, signalStyles.iconLabel]}>
+                  <PreferenceIcon name="account-voice" />
+                  <SignalText weight="500">Screen reader</SignalText>
+                </View>
                 <View style={signalStyles.deviceBadge}>
-                  <SignalText size={14} weight="600" color={SIGNAL.muted}>{deviceValue("screenReaderEnabled")}</SignalText>
+                  <SignalText size={14} weight="600" color={SIGNAL.status}>{deviceValue("screenReaderEnabled")}</SignalText>
                 </View>
               </View>
               <SignalText size={14} color={SIGNAL.muted} accessible={false}
                 accessibilityElementsHidden importantForAccessibility="no-hide-descendants">VoiceOver or TalkBack reads screen content aloud.</SignalText>
-              <SignalText size={14} weight="500" color={SIGNAL.muted} accessible={false}
+              <SignalText size={14} weight="500" color={SIGNAL.status} accessible={false}
                 accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Device {deviceValue("screenReaderEnabled").toLowerCase()} · Read only</SignalText>
             </View>
-            {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, description }) => {
+            {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, description, icon }) => {
               const detectedPreference = preference === "increaseContrastEnabled" && Platform.OS === "android"
                 ? "highTextContrastEnabled" : devicePreference;
               const control = accessibilityControlState(deviceAccessibility, detectedPreference, savedAccessibilityPreferences[preference], settingsLoaded);
@@ -866,7 +932,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                 + (control.disabled ? ` · ${deviceControlled ? "Read only" : "Loading"}` : "")
                 + (status === "unavailable" && deviceControlled ? " · Last detected on" : "");
               return <SignalSwitchRow key={preference} label={label.charAt(0) + label.slice(1).toLowerCase()}
-                description={description} status={summary}>
+                status={summary} icon={icon}>
                 <SignalSwitch value={control.enabled} disabled={control.disabled} accessibilityLabel={label}
                   accessibilityValue={{ text: sourceDescription }} accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
                   accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
@@ -901,8 +967,8 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
               accessibilityHint="Opens the bug reporting form. Submitting reports is not yet available."
               onPress={() => router.push("/report-bug")} />
             <View style={[signalStyles.preferenceRow, stacked && signalStyles.stackedRow]}>
-              <SignalText size={15} color={SIGNAL.muted}>Route data version</SignalText>
-              <SignalText size={15} color={SIGNAL.muted}>v{mapVersion}</SignalText>
+              <SignalText size={15} color={SIGNAL.status}>Route data version</SignalText>
+              <SignalText size={15} color={SIGNAL.status}>v{mapVersion}</SignalText>
             </View>
             <SignalActionRow label="Back to Home" accessibilityHint="Returns to the home screen." onPress={onHome} />
           </SignalSection>
@@ -913,18 +979,18 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           </View>
         </> : <>
           <SignalSection title="Route preferences" description="Changes apply when you start a new route.">
-            <SignalSwitchRow label="Avoid stairs" description="Use paths and building entrances marked accessible in campus data.">
+            <SignalSwitchRow label="Avoid stairs" icon="stairs" description="Use paths and building entrances marked accessible in campus data.">
               <SignalSwitch value={avoidStairs} disabled={disabled} accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
                 accessibilityHint="Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route."
                 onValueChange={(enabled) => { if (!disabled) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
             </SignalSwitchRow>
             {([
-              { key: "avoidIndoorRoutes", label: "Avoid indoor walkways", accessibilityLabel: "Avoid Indoor Navigation", value: avoidIndoorRoutes,
+              { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid indoor walkways", accessibilityLabel: "Avoid Indoor Navigation", value: avoidIndoorRoutes,
                 description: "Exclude indoor links in route data.", hint: "Excludes indoor walkways." },
-              { key: "avoidInaccessibleCrosswalks", label: "Accessible crossings only", accessibilityLabel: "Avoid Inaccessible Road Crossings",
+              { key: "avoidInaccessibleCrosswalks", icon: "walk", label: "Accessible crossings only", accessibilityLabel: "Avoid Inaccessible Road Crossings",
                 value: avoidInaccessibleCrosswalks, description: "Avoid crossings not marked accessible in campus data.",
                 hint: "Allows only road crossings marked accessible when enabled." },
-            ] as const).map(({ key, label, accessibilityLabel, value, description, hint }) => <SignalSwitchRow key={key} label={label} description={description}>
+            ] as const).map(({ key, icon, label, accessibilityLabel, value, description, hint }) => <SignalSwitchRow key={key} label={label} icon={icon} description={description}>
               <SignalSwitch value={value} disabled={disabled} accessibilityLabel={accessibilityLabel} accessibilityHint={hint}
                 onValueChange={(enabled) => { if (!disabled) void configureRoutingPreferences({ [key]: enabled }).catch(() =>
                   Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
@@ -936,13 +1002,13 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
             <SignalGuidanceSettings titleRef={guidanceHeading} />
           </View>
           <View style={signalStyles.routeInfo}>
-            <SignalText size={17} weight="600" accessibilityRole="header">About your route</SignalText>
+            <SignalText size={17} weight="600" color={SIGNAL.heading} accessibilityRole="header">About your route</SignalText>
             <SignalText size={14} color={SIGNAL.muted}>Accessibility is based on campus map data, not live conditions. Check your surroundings as you travel.</SignalText>
           </View>
         </>}
       </View>
       <View style={signalStyles.footer}>
-        <SignalText size={13} color={SIGNAL.muted} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
+        <SignalText size={13} color={SIGNAL.status} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
       </View>
     </ScrollView>
   </SafeAreaView>;
@@ -967,7 +1033,7 @@ const signalStyles = StyleSheet.create({
   stackedChoices: { flexDirection: "column", alignItems: "stretch" },
   choice: { flexGrow: 1, flexBasis: 0, minWidth: 0, minHeight: 48, flexDirection: "row", alignItems: "center",
     justifyContent: "center", gap: 8, paddingHorizontal: 8, paddingVertical: 12, borderRadius: 8,
-    borderWidth: 1, borderColor: "transparent", backgroundColor: "#F0EEEA" },
+    borderWidth: 1, borderColor: SIGNAL.outline, backgroundColor: "#F0EEEA" },
   choiceSelected: { backgroundColor: SIGNAL.accent, borderColor: SIGNAL.accent },
   stackedChoice: { flexBasis: "auto", flexGrow: 0, flexShrink: 0, width: "100%" },
   choiceLabel: { textAlign: "center" },
@@ -976,6 +1042,7 @@ const signalStyles = StyleSheet.create({
   preferenceBlock: { gap: 4, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: SIGNAL.divider },
   preferenceHeading: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   rowLabel: { flex: 1, minWidth: 0, gap: 4 },
+  iconLabel: { flexDirection: "row", alignItems: "center", gap: 12 },
   valueWithChevron: { maxWidth: "45%", flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
   stackedRow: { flexDirection: "column", alignItems: "stretch" },
   stackedLabel: { flex: 0, flexBasis: "auto", width: "100%" },
@@ -997,16 +1064,19 @@ const signalStyles = StyleSheet.create({
   frequencyGroup: { gap: 12, paddingVertical: 12 },
   frequencyOptions: { flexDirection: "row", gap: 6 },
   deleteSection: { gap: 4 },
-  deleteAction: { minHeight: 48, borderBottomWidth: 0, paddingVertical: 0 },
-  routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: "#C3BCB0", paddingLeft: 16, paddingVertical: 8 },
+  deleteAction: { minHeight: 48, borderWidth: 2, borderBottomWidth: 2, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: SIGNAL.divider, paddingLeft: 16, paddingVertical: 8 },
   footer: { alignItems: "center", paddingTop: 20, paddingBottom: 12 },
-  disabled: { opacity: 0.6 },
+  // Disabled choices/rows keep full text contrast; the fill, neutral value and
+  // locked selected indicator distinguish them without changing their geometry.
+  disabled: { backgroundColor: SIGNAL.disabled },
+  disabledChoice: { borderStyle: "dashed" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(37,39,32,0.35)", justifyContent: "center", padding: 24 },
   opaqueOverlay: { backgroundColor: SIGNAL.background },
   modalPanel: { maxHeight: "90%", maxWidth: 480, width: "100%", alignSelf: "center", backgroundColor: SIGNAL.background,
     borderWidth: 1, borderColor: SIGNAL.outline, borderRadius: 16, overflow: "hidden" },
   modalContent: { padding: 24, gap: 16 },
-  modalHeading: { color: SIGNAL.ink, fontSize: 23, lineHeight: 32, fontWeight: "600" },
+  modalHeading: { color: SIGNAL.heading, fontSize: 23, lineHeight: 32, fontWeight: "600" },
   cancelButton: { minHeight: 48, alignItems: "center", justifyContent: "center" },
 });
 

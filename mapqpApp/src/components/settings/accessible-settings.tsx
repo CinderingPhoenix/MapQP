@@ -12,7 +12,7 @@ import { useSettings, type AccessibilityPreference } from "../../context/setting
 import { accessibilityControlState, useAccessibilityPreferences } from "../../hooks/use-accessibility-preferences";
 import type { DeviceAccessibilityPreference } from "../../hooks/use-device-accessibility";
 
-type IconName = keyof typeof MaterialCommunityIcons.glyphMap | "reduce-motion";
+import { PreferenceIcon, type PreferenceIconName as IconName } from "./preference-icon";
 type Preference = {
   label: string; preference: AccessibilityPreference; devicePreference: DeviceAccessibilityPreference;
   icon: IconName; description: string;
@@ -77,10 +77,12 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
     > width - gutter * 2 - 32 - 40 - 48;
   const header = useRef<ComponentRef<typeof TouchableOpacity>>(null);
   const frame = useRef<number | null>(null);
+  const pendingBottomFocus = useRef(false);
   const active = useRef(false);
   const cancelCollapse = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = null;
+    pendingBottomFocus.current = false;
   }, []);
   useFocusEffect(useCallback(() => {
     active.current = true;
@@ -99,7 +101,27 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
       });
     } else setExpanded(false);
   };
-  return <View style={[s.panel, increasedContrast && s.strongPanel]} onAccessibilityEscape={expanded ? collapse : undefined}>
+  const collapseFromBottom = () => {
+    if (!active.current || !expanded || pendingBottomFocus.current) return;
+    cancelCollapse();
+    pendingBottomFocus.current = screenReaderEnabled || Platform.OS === "web";
+    setExpanded(false);
+  };
+  const focusCollapsedHeader = () => {
+    if (expanded || !active.current || !pendingBottomFocus.current || frame.current !== null) return;
+    // The panel has its collapsed native layout now. Request focus only once,
+    // letting VoiceOver/TalkBack reveal that target through native scrolling.
+    // Web focus also brings the header into view for keyboard activation.
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      if (active.current && pendingBottomFocus.current) {
+        pendingBottomFocus.current = false;
+        focusControl(header.current);
+      }
+    });
+  };
+  return <View style={[s.panel, increasedContrast && s.strongPanel]} onLayout={focusCollapsedHeader}
+    onAccessibilityEscape={expanded ? collapse : undefined}>
     <TouchableOpacity ref={header} accessible accessibilityRole="button" accessibilityLabel={title}
       accessibilityState={{ expanded }} accessibilityHint={expanded ? "Collapses this section" : "Expands this section"}
       onPress={() => { if (expanded) collapse(); else { cancelCollapse(); setExpanded(true); } }}
@@ -114,7 +136,18 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
       <MaterialCommunityIcons name={expanded ? "chevron-up" : "chevron-down"} size={28}
         color={increasedContrast ? COLORS.contrastInk : COLORS.ink} accessible={false} allowFontScaling={false} style={stackHeading ? s.chevronEnd : undefined} />
     </TouchableOpacity>
-    {expanded && <View>{children}</View>}
+    {expanded && <View>
+      {children}
+      <View style={s.collapseFooter}>
+        <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={`Collapse ${title}`}
+          onPress={collapseFromBottom} activeOpacity={1}
+          style={[s.collapseButton, increasedContrast && s.strongBoundary]}>
+          <BoldText accessible={false} style={s.flex}>Collapse {title}</BoldText>
+          <MaterialCommunityIcons name="chevron-up" size={24}
+            color={increasedContrast ? COLORS.contrastInk : COLORS.ink} accessible={false} allowFontScaling={false} />
+        </TouchableOpacity>
+      </View>
+    </View>}
   </View>;
 }
 
@@ -165,42 +198,24 @@ function Action({ label, description, onPress, danger = false, back = false, tar
   { label: string; description?: string; onPress: () => void; danger?: boolean; back?: boolean;
     targetRef?: React.Ref<ComponentRef<typeof TouchableOpacity>>; onLayout?: () => void }) {
   const increasedContrast = useIncreasedContrast();
+  const [pressed, setPressed] = useState(false);
   return <TouchableOpacity ref={targetRef} onLayout={onLayout} accessible accessibilityRole="button"
     accessibilityLabel={description ? `${label}. ${description}` : label}
-    onPress={onPress} activeOpacity={0.85} style={[s.action, back && s.back, back && increasedContrast && s.strongBoundary]}>
+    onPress={onPress} activeOpacity={danger ? 1 : 0.85}
+    onPressIn={danger ? () => setPressed(true) : undefined}
+    onPressOut={danger ? () => setPressed(false) : undefined}
+    style={[s.action, back && s.back, back && increasedContrast && s.strongBoundary,
+      danger && { minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, flexWrap: "wrap", borderRadius: 12, borderWidth: 2, borderColor: increasedContrast ? COLORS.contrastOutline : (pressed ? "#8F1C28" : "#B42332"),
+        backgroundColor: pressed ? "#8F1C28" : "#B42332" }]}>
+    {danger && <MaterialCommunityIcons name="trash-can-outline" size={24} color="#FFFFFF" accessible={false}
+      accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <View style={s.actionCopy} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <BoldText color={danger ? COLORS.danger : COLORS.ink}>{label}</BoldText>
-      {description && <BoldText size={17} weight="600" color={COLORS.secondary}>{description}</BoldText>}
+      <BoldText color={danger ? "#FFFFFF" : COLORS.ink}>{label}</BoldText>
+      {description && !danger && <BoldText size={17} weight="600" color={COLORS.secondary}>{description}</BoldText>}
     </View>
     {!danger && !back && <MaterialCommunityIcons name="chevron-right" size={28} color={COLORS.ink}
       accessible={false} allowFontScaling={false} />}
   </TouchableOpacity>;
-}
-
-// Same MaterialCommunityIcons and custom Reduce Motion geometry as Settings' existing SettingIcon.
-// Only the presentation size changes to match the 32-point V3.2 reference.
-function PreferenceIcon({ name }: { name: IconName }) {
-  const iconSize = 32;
-  const stroke = iconSize * 0.055, circleRadius = iconSize * 0.25, dotSize = iconSize * 0.06;
-  const diameter = circleRadius * 2 + stroke;
-  return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-    pointerEvents="none" style={s.icon}>
-    {name === "reduce-motion" ? <View style={[s.motionTile, { width: iconSize, height: iconSize, borderRadius: iconSize * 0.22 }]}>
-      {Array.from({ length: 16 }, (_, index) => {
-        const angle = index * Math.PI * 2 / 16;
-        return <View key={index} style={{ position: "absolute", backgroundColor: "#FFFFFF",
-          width: dotSize, height: dotSize, borderRadius: dotSize / 2,
-          left: iconSize * 0.35 + circleRadius * Math.cos(angle) - dotSize / 2,
-          top: iconSize * 0.5 + circleRadius * Math.sin(angle) - dotSize / 2 }} />;
-      })}
-      <View style={{ position: "absolute", borderColor: "#FFFFFF", width: diameter, height: diameter,
-        left: iconSize * 0.65 - diameter / 2, top: (iconSize - diameter) / 2,
-        borderRadius: diameter / 2, borderWidth: stroke }} />
-    </View> : <View style={[s.iconTile, { backgroundColor:
-      name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF" }]}>
-      <MaterialCommunityIcons name={name} size={25} color="#FFFFFF" accessible={false} allowFontScaling={false} />
-    </View>}
-  </View>;
 }
 
 function PreferenceLabel({ label, icon, stacked = false }: { label: string; icon?: IconName; stacked?: boolean }) {
@@ -221,7 +236,10 @@ function PreferenceLabel({ label, icon, stacked = false }: { label: string; icon
 function ToggleRow({ label, value, onChange, disabled, description, icon }:
   { label: string; value: boolean; onChange: (value: boolean) => void; disabled: boolean; description?: string; icon?: IconName }) {
   const { stackRow } = useLayout();
-  const stacked = stackRow(label, !!icon);
+  // Give the new routing labels a little measurement slack for bold native
+  // glyphs, so long words use the full row before their switch moves below.
+  const routingIcon = icon === "stairs" || icon === "office-building" || icon === "walk";
+  const stacked = stackRow(label, !!icon, routingIcon ? 96 : 80);
   return <TouchableOpacity accessible accessibilityRole="switch" accessibilityLabel={description ? `${label}. ${description}` : label}
     accessibilityState={{ checked: value, disabled }} disabled={disabled}
     onPress={() => { if (!disabled) onChange(!value); }} activeOpacity={1} style={[s.toggleRow, stacked && s.stackedRow]}>
@@ -405,9 +423,9 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
       <Accordion title="Routing & spoken guidance" icon={HEADER_ICONS.routing}>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>
-          <ToggleRow label="Avoid stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
-          <ToggleRow label="Avoid indoor walkways" value={settings.avoidIndoorRoutes} disabled={disabled} onChange={(value) => saveRoute("avoidIndoorRoutes", value)} /><Divider />
-          <ToggleRow label="Accessible road crossings only" value={settings.avoidInaccessibleCrosswalks} disabled={disabled} onChange={(value) => saveRoute("avoidInaccessibleCrosswalks", value)} />
+          <ToggleRow label="Avoid stairs" icon="stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
+          <ToggleRow label="Avoid indoor walkways" icon="office-building" value={settings.avoidIndoorRoutes} disabled={disabled} onChange={(value) => saveRoute("avoidIndoorRoutes", value)} /><Divider />
+          <ToggleRow label="Accessible road crossings only" icon="walk" value={settings.avoidInaccessibleCrosswalks} disabled={disabled} onChange={(value) => saveRoute("avoidInaccessibleCrosswalks", value)} />
           <Divider important /><BoldText style={s.label}>Spoken guidance</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>For accessibility navigation.</BoldText>
           <ToggleRow label="Repeat spoken instructions" value={settings.repeatGuidanceEnabled} disabled={disabled} onChange={settings.setRepeatGuidanceEnabled} /><Divider />
@@ -429,7 +447,9 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           <View style={[s.infoRow, stacked && s.stackedRow]}><BoldText style={s.flex}>Route data version</BoldText><BoldText size={18} color={COLORS.secondary}>v{mapVersion}</BoldText></View>
           <Divider important /><BoldText style={s.label}>Navigation</BoldText><Action label="Back to Home" onPress={onHome} />
           <Divider important /><BoldText style={s.label}>Data management</BoldText>
-          <Action label="Delete all local data" description="Confirmation required." danger onPress={onDelete} />
+          <View style={s.collapseFooter}>
+            <Action label="Delete all local data" description="Confirmation required." danger onPress={onDelete} />
+          </View>
       </Accordion>
       </View>
     </ScrollView>
@@ -444,6 +464,10 @@ const s = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: "transparent" },
   expandedHeader: { backgroundColor: "#F5ECEE", borderBottomColor: COLORS.accent, borderBottomWidth: 3 },
   accordionHeading: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12 },
+  collapseFooter: { padding: 12 },
+  collapseButton: { minWidth: 44, minHeight: 56, paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: COLORS.outline,
+    borderRadius: 12, backgroundColor: COLORS.panel },
   headerIcon: { width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   panel: { backgroundColor: COLORS.panel, borderRadius: 18, borderWidth: 1, borderColor: COLORS.outline, overflow: "hidden" },
   strongPanel: { borderWidth: 2, borderColor: COLORS.contrastOutline },
@@ -474,8 +498,6 @@ const s = StyleSheet.create({
   status: { minWidth: 96, alignItems: "center", gap: 4, flexShrink: 0 },
   readOnly: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, minHeight: 96 }, readOnlyHeading: { flexDirection: "row", alignItems: "center", gap: 12 },
   statusNote: { paddingHorizontal: 16, paddingBottom: 16 },
-  icon: { width: 32, height: 32, flexShrink: 0 }, motionTile: { backgroundColor: "#30D158" },
-  iconTile: { width: 32, height: 32, borderRadius: 7, alignItems: "center", justifyContent: "center" },
   label: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   note: { paddingHorizontal: 16, paddingBottom: 8 }, choiceInset: { paddingHorizontal: 12, paddingVertical: 8 },
   sizeActions: { paddingHorizontal: 12, paddingVertical: 8 },
