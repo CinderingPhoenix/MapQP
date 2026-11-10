@@ -9,11 +9,11 @@ subprojects { subproject ->
     subproject.plugins.withId(androidPlugin) {
       subproject.extensions.getByName("androidComponents").finalizeDsl { android ->
         if (androidPlugin == "com.android.application") {
-          android.externalNativeBuild.cmake.buildStagingDirectory = new File(rootProject.projectDir, "../../.cxx")
+          android.externalNativeBuild.cmake.buildStagingDirectory = new File(rootProject.projectDir, "../../.cxx").canonicalFile
         }
         def cmakeArguments = android.defaultConfig.externalNativeBuild.cmake.arguments
         cmakeArguments.removeAll { it.startsWith("-DCMAKE_OBJECT_PATH_MAX=") }
-        cmakeArguments.add("-DCMAKE_OBJECT_PATH_MAX=240")
+        cmakeArguments.add("-DCMAKE_OBJECT_PATH_MAX=250")
       }
     }
   }

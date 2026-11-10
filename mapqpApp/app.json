@@ -28,6 +28,9 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACTIVITY_RECOGNITION"
       ]
     },
     "web": {
@@ -70,7 +73,9 @@
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your precise location for campus routing."
         }
       ],
-      "./plugins/with-short-cmake-paths"
+      "./plugins/with-short-cmake-paths",
+      "./plugins/with-upload-signing",
+      "./plugins/with-android-application-id"
     ],
     "experiments": {
       "typedRoutes": true,
