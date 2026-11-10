@@ -1,9 +1,11 @@
 // tutorial-modal.tsx
 
+import { useSettings } from "../context/settings-context";
+import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useState, useEffect, type ComponentProps } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useModalDismissal } from "./avoid-stairs-prompt";
-import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, ViewStyle, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Modal, ScrollView, Image, Platform, TextStyle, ViewStyle, useWindowDimensions } from "react-native";
 
 interface HighlightItem {
   top: string;
@@ -56,7 +58,7 @@ const standardTutorialPages: TutorialPage[] = [
     description: "Tap the top-right compass to change map orientation.",
     image: require("../../assets/tutorial/standard/standard-navigation.webp"),
     highlights: [
-      { top: "6%", left: "80%", width: "16%", height: "7%", label: "Map Orientation", tagPosition: "top" },
+      { top: "6%", left: "80%", width: "16%", height: "7%", label: "Map Orientation", tagPosition: "bottom" },
     ],
   },
   {
@@ -283,7 +285,7 @@ const accessibilityTutorialPages: TutorialPage[] = [
     description: "Tap the top-right compass to change map orientation.",
     image: require("../../assets/tutorial/accessibility/accessibility-navigation.webp"),
     highlights: [
-      { top: "7%", left: "79%", width: "16%", height: "7%", label: "Orientation", tagPosition: "top" },
+      { top: "7%", left: "79%", width: "16%", height: "7%", label: "Orientation", tagPosition: "bottom" },
     ],
   },
   {
@@ -413,11 +415,29 @@ interface TutorialModalProps {
 export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProps) {
   const nativeDismiss = useModalDismissal(visible, onDismiss);
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const { fontSize } = useSettings();
+  const preferences = useAccessibilityPreferences();
+  const increasedContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+  const textStyle = (base: TextStyle, treatment: "ordinary" | "accent" | "onControl" | "callout" = "ordinary", baselineScale = 1): TextStyle => ({
+    fontSize: (base.fontSize ?? 14) * baselineScale * fontSize,
+    ...(base.lineHeight !== undefined ? { lineHeight: base.lineHeight * baselineScale * fontSize } : {}),
+    ...(preferences.boldTextEnabled ? {
+      ...(Platform.OS === "ios" ? { fontFamily: "System" } : {}),
+      fontWeight: base.fontWeight === "800" ? "900" : base.fontWeight === "700" ? "800" : "700",
+    } : {}),
+    ...(treatment === "ordinary" && (preferences.boldTextEnabled || increasedContrast)
+      ? { color: "#111827" } : {}),
+    ...(treatment === "accent" && increasedContrast ? { color: "#761723" } : {}),
+    ...(treatment === "onControl" ? { color: "#FFFFFF" } : {}),
+    ...(treatment === "callout" && increasedContrast ? { color: "#111827" } : {}),
+  });
+  const contrastBorder = increasedContrast && styles.contrastBorder;
   const previewHeight = Math.min(360, screenHeight * 0.38, Math.max(120, screenWidth - 128) * 2.22);
   const previewWidth = previewHeight / 2.22;
   const tagWidth = Math.min(160, previewWidth);
   const [mode, setMode] = useState<TutorialMode>("standard");
   const [currentPage, setCurrentPage] = useState(0);
+  const slideTextScale = mode === "accessibility" ? 1.12 : 1;
   const [selectedTopic, setSelectedTopic] = useState<TutorialTopic | null>(null);
 
   // Start at the topic menu every time the modal is opened
@@ -470,11 +490,12 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
       onDismiss={nativeDismiss}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, preferences.reduceTransparencyEnabled && styles.opaqueOverlay]}>
         <View style={styles.tutorialCard}>
           <View style={styles.header}>
-            <TouchableOpacity style={styles.headerButton} onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Close tutorial">
-              <Text style={styles.skipText}>Close</Text>
+            <Text accessibilityRole="header" style={[styles.headerTitle, textStyle(styles.headerTitle)]}>MapQP Tutorial</Text>
+            <TouchableOpacity style={styles.skipButton} onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Skip Tutorial">
+              <Text style={[styles.skipText, textStyle(styles.skipText)]}>Skip Tutorial</Text>
             </TouchableOpacity>
           </View>
 
@@ -482,13 +503,13 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
             {tutorialModes.map((tab) => (
               <TouchableOpacity
                 key={tab.value}
-                style={[styles.tab, mode === tab.value && styles.activeTab]}
+                style={[styles.tab, mode === tab.value && styles.activeTab, contrastBorder]}
                 onPress={() => handleModeChange(tab.value)}
                 accessibilityRole="tab"
                 accessibilityLabel={`${tab.label} tutorial`}
                 accessibilityState={{ selected: mode === tab.value }}
               >
-                <Text style={[styles.tabText, mode === tab.value && styles.activeTabText]}>
+                <Text style={[styles.tabText, mode === tab.value && styles.activeTabText, textStyle(styles.tabText, mode === tab.value ? "onControl" : "ordinary")]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -527,56 +548,55 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                   if (box.tagPosition === "side") tagStyle = styles.tagSide;
                   if (box.tagPosition === "bottom") tagStyle = styles.tagBottom;
 
-                  return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.yellowHighlightBox,
-                        {
-                          top: box.top as any,
-                          left: box.left as any,
-                          width: box.width as any,
-                          height: box.height as any,
-                        },
-                      ]}
-                    >
-                      <View style={[styles.highlightTag, tagStyle, {
-                        // Keep the larger label inside the screenshot's horizontal bounds.
-                        width: tagWidth,
-                        left: Math.min(previewWidth - tagWidth, parseFloat(box.left) * previewWidth / 100)
-                          - parseFloat(box.left) * previewWidth / 100,
-                      }]}>
-                        <Text style={styles.highlightTagText}>
-                          {box.label}
-                        </Text>
-                      </View>
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.yellowHighlightBox,
+                      preferences.reduceTransparencyEnabled && { backgroundColor: "transparent" },
+                      {
+                        top: box.top as any,
+                        left: box.left as any,
+                        width: box.width as any,
+                        height: box.height as any,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.highlightTag, tagStyle, {
+                      // Keep the larger label inside the screenshot's horizontal bounds.
+                      width: tagWidth,
+                      left: Math.min(previewWidth - tagWidth, parseFloat(box.left) * previewWidth / 100)
+                        - parseFloat(box.left) * previewWidth / 100,
+                    }]}>
+                      <Text style={[styles.highlightTagText, textStyle(styles.highlightTagText, "callout")]}>
+                        {box.label}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
 
-              <Text style={styles.title}>{current.title}</Text>
-              <Text style={styles.subtitle}>{current.subtitle}</Text>
-              <Text style={styles.description}>{current.description}</Text>
-            </ScrollView>
+            <Text style={[styles.title, textStyle(styles.title, "ordinary", slideTextScale)]}>{current.title}</Text>
+            <Text style={[styles.subtitle, textStyle(styles.subtitle, "accent", slideTextScale)]}>{current.subtitle}</Text>
+            <Text style={[styles.description, textStyle(styles.description, "ordinary", slideTextScale)]}>{current.description}</Text>
+          </ScrollView>
 
-            <View style={styles.footer}>
-              <View style={styles.progressContainer}>
-                {currentGroup.count > 1 && (
-                  <View
-                    accessible
-                    accessibilityRole="progressbar"
-                    accessibilityLabel="Current page parts"
-                    accessibilityValue={{ min: 1, max: currentGroup.count, now: partIndex + 1 }}
-                  >
-                    <View style={styles.progressSegments}>
-                      {Array.from({ length: currentGroup.count }, (_, index) => (
-                        <View
-                          key={index}
-                          style={[styles.progressSegment, index <= partIndex && styles.filledSegment]}
-                        />
-                      ))}
-                    </View>
+          <View style={styles.footer}>
+            <View style={styles.progressContainer}>
+              {currentGroup.count > 1 && (
+                <View
+                  accessible
+                  accessibilityRole="progressbar"
+                  accessibilityLabel="Current page parts"
+                  accessibilityValue={{ min: 1, max: currentGroup.count, now: partIndex + 1 }}
+                >
+                  <View style={styles.progressSegments}>
+                    {Array.from({ length: currentGroup.count }, (_, index) => (
+                      <View
+                        key={index}
+                        style={[styles.progressSegment, index <= partIndex && styles.filledSegment, contrastBorder]}
+                      />
+                    ))}
                   </View>
               )}
               <View
@@ -593,7 +613,7 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                   {pageGroups.map((group, index) => (
                     <View
                       key={group.start}
-                      style={[styles.progressSegment, index <= pageIndex && styles.filledSegment]}
+                      style={[styles.progressSegment, index <= pageIndex && styles.filledSegment, contrastBorder]}
                     />
                   ))}
                 </View>
@@ -602,13 +622,13 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 
             <View key={`buttons-${currentPage}`} style={styles.buttonRow}>
               {currentPage > 0 && (
-                <TouchableOpacity style={styles.backButton} onPress={handleBack} accessible accessibilityRole="button" accessibilityLabel="Previous slide">
-                  <Text style={styles.backButtonText}>Back</Text>
+                <TouchableOpacity style={[styles.backButton, contrastBorder]} onPress={handleBack} accessible accessibilityRole="button" accessibilityLabel="Previous slide">
+                  <Text style={[styles.backButtonText, textStyle(styles.backButtonText)]}>Back</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Back to topics" : "Next slide"}>
-                <Text style={styles.nextButtonText}>
-                  {currentPage === tutorialPages.length - 1 ? "Back to Topics" : "Next"}
+              <TouchableOpacity style={[currentPage > 0 ? styles.nextButtonHalf : styles.nextButtonFull, contrastBorder]} onPress={handleNext} accessible accessibilityRole="button" accessibilityLabel={currentPage === tutorialPages.length - 1 ? "Get Started" : "Next slide"}>
+                <Text style={[styles.nextButtonText, textStyle(styles.nextButtonText, "onControl")]}>
+                  {currentPage === tutorialPages.length - 1 ? "Get Started" : "Next"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -622,6 +642,10 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 }
 
 const styles = StyleSheet.create({
+  contrastBorder: { borderWidth: 2, borderColor: "#111827" },
+  opaqueOverlay: { backgroundColor: "#262626" },
+  headerTitle: { fontSize: 16, fontWeight: "700", color: "#172033", flex: 1, minWidth: 0, paddingVertical: 2 },
+  skipButton: { flexShrink: 1, minWidth: 0, paddingVertical: 2 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.65)",
@@ -646,52 +670,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  headerButton: {
-    minHeight: 44,
-    minWidth: 48,
-    justifyContent: "center",
     alignItems: "center",
-    marginLeft: "auto",
-  },
-  topicContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    justifyContent: "space-between",
     gap: 12,
-  },
-  topicGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 12,
-  },
-  topicButton: {
-    width: "48%",
-    minHeight: 132,
-    paddingHorizontal: 8,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderRadius: 18,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  topicIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: "#FCEDEF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topicTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#172033",
-    textAlign: "center",
   },
   tabs: {
     flexDirection: "row",
@@ -716,6 +697,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#AC2B37",
   },
   tabText: {
+    alignSelf: "stretch",
     fontSize: 14,
     fontWeight: "700",
     color: "#475569",
@@ -860,6 +842,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButtonText: {
+    alignSelf: "stretch",
+    textAlign: "center",
     fontSize: 15,
     fontWeight: "700",
     color: "#475569",
@@ -891,6 +875,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   nextButtonText: {
+    alignSelf: "stretch",
+    textAlign: "center",
     fontSize: 15,
     fontWeight: "700",
     color: "#FFFFFF",

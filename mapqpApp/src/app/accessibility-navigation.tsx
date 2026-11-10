@@ -24,7 +24,7 @@ import { File, Paths } from "expo-file-system";
 import { TemporarySessionNotice } from "../components/temporary-session-notice";
 import BuildingPicker from "../components/building-picker";
 import { RouteAlternativePrompt } from "../components/route-alternative-prompt";
-import LocationMap from "../components/location-map";
+import LocationMap, { type LocationMapHandle } from "../components/location-map";
 import RecenterOverlay from "../components/recenter-overlay";
 import CurrentNavigationSummary from "../components/current-navigation-summary";
 import { useSettings } from "../context/settings-context";
@@ -47,6 +47,7 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
+  const voiceMapRef = useRef<LocationMapHandle>(null);
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
@@ -392,6 +393,7 @@ export default function Home() {
           </View>
         ) : (
           <LocationMap
+            ref={voiceMapRef}
             latitude={showRecenter ? mapCenter.latitude : coordinates?.latitude ?? mapCenter.latitude}
             longitude={showRecenter ? mapCenter.longitude : coordinates?.longitude ?? mapCenter.longitude}
             userLatitude={coordinates?.latitude}
@@ -454,6 +456,8 @@ export default function Home() {
         </RecenterOverlay>
 
         <BuildingPicker
+          onVoiceMapCommand={(command) => voiceMapRef.current?.voiceCommand(command, handleRecenter)
+            ?? Promise.resolve("Map is still loading.")}
           buildings={buildings}
           value={destinationBuilding}
           onChange={handleDestinationChange}

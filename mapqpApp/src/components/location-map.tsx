@@ -1,12 +1,18 @@
 import { Asset } from "expo-asset";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import type { VoiceMapCommand } from "../utils/voice-map-command";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 import MapControls, { MAP_CONTROLS_HEIGHT, MAP_CONTROLS_WIDTH, MAP_ZOOM_CONTROLS_WIDTH, type CameraAction, type CameraState } from "./map-controls";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 
+export type LocationMapHandle = {
+  voiceCommand: (command: VoiceMapCommand, recenter: () => void) => Promise<string>;
+};
+
 type LocationMapProps = {
+  ref?: Ref<LocationMapHandle>;
   latitude: number;
   longitude: number;
   userLatitude?: number;
@@ -27,6 +33,7 @@ type LocationMapProps = {
 };
 
 export default function LocationMap({
+  ref,
   latitude,
   longitude,
   userLatitude,
@@ -53,6 +60,38 @@ export default function LocationMap({
   } | null>(null);
   const [isHeadingFocused, setIsHeadingFocused] = useState(false);
   const [camera, setCamera] = useState<CameraState>({ ready: false, zoom: 16, minZoom: 0, maxZoom: 19 });
+  const cameraReady = useRef(camera.ready);
+  const voiceSequence = useRef(0);
+  const pendingVoice = useRef<{ id: number; resolve: (message: string) => void; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const pendingRecenter = useRef<number | null>(null);
+  const finishVoice = (message: string) => {
+    const pending = pendingVoice.current;
+    pendingVoice.current = null;
+    pendingRecenter.current = null;
+    if (pending) { clearTimeout(pending.timer); pending.resolve(message); }
+  };
+  useEffect(() => () => finishVoice("Map command cancelled."), []);
+  useImperativeHandle(ref, () => ({
+    voiceCommand: (command, recenter) => {
+      if (!accessibilityMode || !cameraReady.current || !webViewRef.current) return Promise.resolve("Map is still loading.");
+      if (pendingVoice.current) return Promise.resolve("Map is still moving. Try again.");
+      if (command === "recenter" && (!Number.isFinite(userLatitude) || !Number.isFinite(userLongitude))) return Promise.resolve("Current location is unavailable.");
+      if (command === "zoom-in" && camera.zoom >= camera.maxZoom) return Promise.resolve("Maximum zoom reached.");
+      if (command === "zoom-out" && camera.zoom <= camera.minZoom) return Promise.resolve("Minimum zoom reached.");
+      return new Promise<string>((resolve) => {
+        const id = ++voiceSequence.current;
+        pendingVoice.current = { id, resolve, timer: setTimeout(() => finishVoice("Map command timed out. Try again."), 4500) };
+        cancelPreview();
+        try {
+          if (command === "recenter") { pendingRecenter.current = id; recenter(); }
+          else {
+            beginManualExploration();
+            webViewRef.current?.injectJavaScript(`window.voiceCameraCommand && window.voiceCameraCommand(${JSON.stringify(command)}, ${id}); true;`);
+          }
+        } catch { finishVoice("Could not move the map. Try again."); }
+      });
+    },
+  }));
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewGeneration = useRef(0);
   const hasUserPannedAwayRef = useRef(false);
@@ -263,8 +302,12 @@ export default function LocationMap({
   useEffect(() => {
     if (recenterSignal !== undefined && recenterSignal > 0) {
       cancelPreview();
+      const voiceId = pendingRecenter.current;
+      pendingRecenter.current = null;
       webViewRef.current?.injectJavaScript(`
-        if (window.resetView) {
+        if (${voiceId !== null} && window.voiceCameraCommand) {
+          window.voiceCameraCommand('recenter', ${voiceId});
+        } else if (window.resetView) {
           window.resetView();
         }
         if (window.map) {
@@ -304,10 +347,14 @@ export default function LocationMap({
         allowUniversalAccessFromFileURLs={true}
         allowFileAccessFromFileURLs={true}
         onLoadStart={() => {
+          cameraReady.current = false;
+          finishVoice("Map reloaded. Try again.");
           cancelPreview();
           setCamera((previous) => ({ ...previous, ready: false }));
         }}
         onError={() => {
+          cameraReady.current = false;
+          finishVoice("Map is unavailable. Try again.");
           cancelPreview();
           setCamera((previous) => ({ ...previous, ready: false }));
         }}
@@ -317,12 +364,16 @@ export default function LocationMap({
           if (data.startsWith("{")) {
             try {
               const state = JSON.parse(data);
+              if (state.type === "VOICE_CAMERA_RESULT" && state.id === pendingVoice.current?.id && typeof state.message === "string") {
+                finishVoice(state.message);
+              }
               if (state.type === "MAP_CONTROLS_LAYOUT" &&
                   [state.top, state.leftBottom, state.clearance].every(Number.isFinite)) {
                 setControlLayout(state);
               }
               if (["MAP_READY", "CAMERA_STATE", "CAMERA_COMMAND_COMPLETE"].includes(state.type) &&
                   [state.zoom, state.minZoom, state.maxZoom].every(Number.isFinite)) {
+                cameraReady.current = true;
                 setCamera({ ready: true, zoom: state.zoom, minZoom: state.minZoom, maxZoom: state.maxZoom });
               }
             } catch { /* Ignore messages outside the camera protocol. */ }

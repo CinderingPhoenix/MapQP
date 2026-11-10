@@ -356,6 +356,74 @@
       reportCamera('CAMERA_COMMAND_COMPLETE', command);
     };
 
+    // Voice requests use the same operations, but acknowledge only the target
+    // camera position. Existing touch commands retain their original protocol.
+    var cancelVoiceCamera = null;
+    window.voiceCameraCommand = function(command, id) {
+      function reply(message) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'VOICE_CAMERA_RESULT', id: id, message: message }));
+      }
+      if (!map) { reply('Map is still loading.'); return; }
+      if (cancelVoiceCamera) cancelVoiceCamera();
+      var timer = null;
+      var done = false;
+      function finish(message) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        map.off('moveend zoomend', check);
+        map.off('dragstart zoomstart', interrupted);
+        cancelVoiceCamera = null;
+        reply(message);
+      }
+      function interrupted() { if (armed) finish('Map movement interrupted. Try again.'); }
+      var armed = false;
+      var targetCenter, targetZoom;
+      function check() {
+        if (!armed) return;
+        if (Math.abs(map.getZoom() - targetZoom) < 0.001 && map.getCenter().distanceTo(targetCenter) < 1) {
+          var messages = { 'zoom-in': 'Map zoomed in.', 'zoom-out': 'Map zoomed out.',
+            'pan-left': 'Map moved left.', 'pan-right': 'Map moved right.',
+            'pan-up': 'Map moved up.', 'pan-down': 'Map moved down.', 'recenter': 'Map recentered.' };
+          finish(messages[command]);
+        }
+      }
+      try {
+        if (['zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'pan-up', 'pan-down', 'recenter'].indexOf(command) < 0) {
+          reply('That map command is not supported.'); return;
+        }
+        map.stop();
+        targetZoom = map.getZoom();
+        targetCenter = map.getCenter();
+        if (command === 'zoom-in' || command === 'zoom-out') {
+          targetZoom += command === 'zoom-in' ? 1 : -1;
+          if (targetZoom > map.getMaxZoom() || targetZoom < map.getMinZoom()) {
+            reply(command === 'zoom-in' ? 'Maximum zoom reached.' : 'Minimum zoom reached.'); return;
+          }
+        } else if (command === 'recenter') {
+          if (!marker) { reply('Current location is unavailable.'); return; }
+          targetCenter = marker.getLatLng();
+        } else {
+          var size = map.getSize();
+          var point = L.point(size.x / 2, size.y / 2);
+          if (command === 'pan-left') point.x -= size.x / 4;
+          if (command === 'pan-right') point.x += size.x / 4;
+          if (command === 'pan-up') point.y -= size.y / 4;
+          if (command === 'pan-down') point.y += size.y / 4;
+          targetCenter = map.containerPointToLatLng(point);
+        }
+        cancelVoiceCamera = function() { finish('Map movement interrupted. Try again.'); };
+        map.on('moveend zoomend', check);
+        timer = setTimeout(function() { finish('Map command timed out. Try again.'); }, 3500);
+        // Register before moving; reduced-motion operations can finish synchronously.
+        armed = true;
+        if (command === 'recenter') window.resetView();
+        else window.cameraCommand(command);
+        check();
+        if (!done) map.on('dragstart zoomstart', interrupted);
+      } catch (error) { finish('Could not move the map. Try again.'); }
+    };
+
     /**
      * Initializes Leaflet and its map controls.
      */
