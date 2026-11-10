@@ -117,6 +117,51 @@ let graphEdges = new Map<string, GraphEdge[]>();
 type WalkwaySegment = { from: GraphNode; to: GraphNode; edge: GraphEdge };
 let routingSegments: WalkwaySegment[] | null = null;
 
+// Downloaded nodes may use named fields; bundled and legacy maps use tuples.
+function parseWalkwayNode(node: unknown, index: number): GraphNode {
+  const value = node as GraphNode | null;
+  const id = Array.isArray(node) ? node[0] : value?.id;
+  const latitude = Array.isArray(node) ? node[1] : value?.latitude;
+  const longitude = Array.isArray(node) ? node[2] : value?.longitude;
+  if ((Array.isArray(node) && node.length !== 3) || typeof id !== "string" ||
+      typeof latitude !== "number" || !Number.isFinite(latitude) ||
+      typeof longitude !== "number" || !Number.isFinite(longitude)) {
+    throw new Error(`Invalid walkway node at index ${index}: expected [id, latitude, longitude] or { id, latitude, longitude }; received ${JSON.stringify(node)}.`);
+  }
+  return { id, latitude, longitude };
+}
+
+export function validateMapData(routePointsData: any, buildingData: any): void {
+  if (!routePointsData || !Array.isArray(routePointsData.nodes) ||
+      !routePointsData.connections || typeof routePointsData.connections !== "object" ||
+      Array.isArray(routePointsData.connections)) {
+    throw new Error("Invalid route data: expected nodes and connection lists.");
+  }
+  routePointsData.nodes.forEach(parseWalkwayNode);
+  for (const [id, connections] of Object.entries(routePointsData.connections)) {
+    if (!Array.isArray(connections)) throw new Error(`Invalid connection list for ${id}: expected an array.`);
+    for (const item of connections) {
+      if (typeof item === "string") continue;
+      if (!item || typeof (Array.isArray(item) ? item[0] : item.to) !== "string") {
+        throw new Error(`Invalid walkway connection for ${id}.`);
+      }
+    }
+  }
+  if (!Array.isArray(buildingData)) throw new Error("Invalid building data: expected an array.");
+  for (const building of buildingData) {
+    const name = Array.isArray(building) ? building[0] : building?.name;
+    const entrances = Array.isArray(building) ? building[1] : building?.entrances;
+    if (typeof name !== "string" || !Array.isArray(entrances)) {
+      throw new Error("Invalid building: expected a name and entrance list.");
+    }
+    for (const entrance of entrances) {
+      const lat = Array.isArray(entrance) ? entrance[0] : entrance?.latitude;
+      const lng = Array.isArray(entrance) ? entrance[1] : entrance?.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error(`Invalid entrance coordinates for ${name}.`);
+    }
+  }
+}
+
 export function initRoutingGraph(
   routePointsData: { nodes: unknown[]; connections: Record<string, WalkwayConnectionItem[]> },
   buildingData: BuildingInput[]

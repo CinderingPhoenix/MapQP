@@ -40,3 +40,16 @@ test('route geometry preserves mapped corners on unequal-length walkway segments
     assert.ok(route.geometry.some(p => p[0] === lat && p[1] === lng), `Missing corner ${lat}, ${lng}`);
   }
 });
+
+test('object nodes produce the same route geometry as tuple nodes', async () => {
+  const nodes = [['start', 0, -0.001], ['corner', 0, 0], ['end', 0.002, 0]];
+  const connections = { start: ['corner'], corner: ['end'] };
+  const start = { latitude: 0, longitude: -0.001, label: 'Start' };
+  const end = { latitude: 0.002, longitude: 0, label: 'End' };
+  initRoutingGraph({ nodes, connections }, []);
+  const tupleRoute = await routeBetween(start, end);
+  initRoutingGraph({ nodes: nodes.map(([id, latitude, longitude]) => ({ id, latitude, longitude })), connections }, []);
+  const objectRoute = await routeBetween(start, end);
+  assert.equal(JSON.stringify(objectRoute.geometry), JSON.stringify(tupleRoute.geometry));
+  assert.equal(objectRoute.distance, tupleRoute.distance);
+});

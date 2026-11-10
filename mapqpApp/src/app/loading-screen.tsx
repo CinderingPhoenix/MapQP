@@ -33,19 +33,19 @@ import { useLocationWarmup } from '../hooks/use-location-warmup';
 import { useSettings } from '../context/settings-context';
 import { useKeyLockout } from '../hooks/use-key-lockout';
 import { useAccessibilityPreferences } from '../hooks/use-accessibility-preferences';
-import { initRoutingGraph } from '../utils/routing';
 import { isServerOnline, setServerOnline } from '../utils/server-status';
 import { ensureBackendSession } from '../utils/backend-session';
+import { initRoutingGraph, validateMapData } from '../utils/routing';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
 const TEMP_CODE_EXPIRES_AT_KEY = 'mapqp_temp_code_expires_at';
 const ACCESS_TOKEN_KEY = 'mapqp_access_token';
 
-const extra = Constants.expoConfig?.extra as { 
-  SERVER_IP?: string; 
-  PORT?: string; 
-  PUBLIC_KEY?: string 
+const extra = Constants.expoConfig?.extra as {
+  SERVER_IP?: string;
+  PORT?: string;
+  PUBLIC_KEY?: string
 } | undefined;
 const SERVER_IP = extra?.SERVER_IP ?? process.env.SERVER_IP;
 const PORT = extra?.PORT ?? process.env.PORT;
@@ -224,10 +224,14 @@ export default function LoadingScreen({
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         if (data.update_required && data.route_points) {
+          const buildings = data.wpi_buildings ?? (buildingsFile.exists
+            ? JSON.parse(await buildingsFile.text()) : defaultBuildings);
+          
+(data.route_points, buildings);
           if (!routeFile.exists) routeFile.create();
           routeFile.write(JSON.stringify(data.route_points, null, 2));
 
@@ -256,28 +260,35 @@ export default function LoadingScreen({
 
       let routeData = defaultRoutePoints;
       let buildingData = defaultBuildings;
+      try {
 
-      const routeFile = new File(Paths.document, 'route-points.json');
-      const buildingsFile = new File(Paths.document, 'wpi-buildings.json');
+        const routeFile = new File(Paths.document, 'route-points.json');
+        const buildingsFile = new File(Paths.document, 'wpi-buildings.json');
 
-      if (routeFile.exists) {
-        const routeContent = await routeFile.text();
-        routeData = JSON.parse(routeContent);
+        if (routeFile.exists) {
+          const routeContent = await routeFile.text();
+          routeData = JSON.parse(routeContent);
+        }
+
+        if (buildingsFile.exists) {
+          const buildingContent = await buildingsFile.text();
+          buildingData = JSON.parse(buildingContent);
+        }
+
+        initRoutingGraph(routeData, buildingData);
+      } catch (cacheError) {
+        console.warn("Cached map data is unusable; using bundled map data.", cacheError);
+        routeData = defaultRoutePoints;
+        buildingData = defaultBuildings;
+        initRoutingGraph(routeData, buildingData);
       }
-
-      if (buildingsFile.exists) {
-        const buildingContent = await buildingsFile.text();
-        buildingData = JSON.parse(buildingContent);
-      }
-
-      initRoutingGraph(routeData, buildingData);
     } catch (err) {
       console.error('Pre-load map data error:', err);
     } finally {
       continueToApp();
     }
   }, [continueToApp]);
-  
+
   const isAuthenticatedRef = useRef(isAuthenticated);
   isAuthenticatedRef.current = isAuthenticated;
 
@@ -294,7 +305,16 @@ export default function LoadingScreen({
         const savedTempCode = await SecureStore.getItemAsync(TEMP_CODE_STORAGE_KEY);
         const localAccessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
 
-        if (msSession || (savedTempCode && localAccessToken)) {
+        const expiry = Number(await SecureStore.getItemAsync(TEMP_CODE_EXPIRES_AT_KEY));
+        const validTempSession = savedTempCode && localAccessToken && Number.isFinite(expiry) && expiry > Date.now();
+        if (savedTempCode && !validTempSession && !msSession) {
+          await Promise.all([
+            SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY),
+            SecureStore.deleteItemAsync(TEMP_CODE_EXPIRES_AT_KEY),
+            SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
+          ]);
+        }
+        if (msSession || validTempSession) {
           setIsAuthenticated(true);
           setAuthLoaded(true);
 
@@ -419,11 +439,19 @@ export default function LoadingScreen({
 
       if (res.ok) {
         const data = await res.json();
-        const now = Date.now();
-        let expiresAtMs = now + 60 * 60 * 1000;
-
-        if (data.expires_at) {
-          expiresAtMs = new Date(data.expires_at).getTime();
+        const absoluteExpiry = Date.parse(data.expires_at);
+        const seconds = data.expires_in_seconds === undefined
+          ? (absoluteExpiry - Date.now()) / 1000 : data.expires_in_seconds;
+        if (data.valid !== true || typeof seconds !== 'number' || !Number.isFinite(seconds)
+          || seconds <= 0 || !Number.isFinite(absoluteExpiry) || !data.access_token) {
+          Alert.alert('Login Failed', 'This code has expired or has invalid session details.');
+          return;
+        }
+        // Relative time may shorten the session, but never extend the server deadline.
+        const expiresAtMs = Math.min(Date.now() + seconds * 1000, absoluteExpiry);
+        if (expiresAtMs <= Date.now()) {
+          Alert.alert('Login Failed', 'This code has expired. Please log in again.');
+          return;
         }
 
         await Promise.all([
@@ -513,7 +541,7 @@ export default function LoadingScreen({
           <View style={styles.loginCard}>
             <Text style={styles.loginTitle}>WPI login required</Text>
             <Text style={styles.loginMessage}>Sign in with your WPI Microsoft account or enter a temporary code to continue.</Text>
-            
+
             <Pressable
               accessibilityRole="button"
               disabled={!request || AUTH_CONFIGURATION_MISSING}
@@ -531,7 +559,7 @@ export default function LoadingScreen({
             </Pressable>
 
             <Text style={styles.orText}>Or enter your 6-character code</Text>
-            
+
             <TextInput
               accessibilityLabel="WPI six-character code"
               autoCapitalize="characters"
