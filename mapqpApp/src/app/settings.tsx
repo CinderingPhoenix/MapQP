@@ -174,6 +174,7 @@ function GuidanceRepetitionSettings() {
 const KEYS_TO_DELETE = [
   "mapqp_tutorial_shown_once",
   "mapqp_microsoft_session",
+  "mapqp_access_token",
   "mapqp_temp_code_session",
   "mapqp_temp_code_expires_at",
   "wpi_map_last_location",
@@ -1163,7 +1164,7 @@ export default function SettingsPage() {
           onPress={() => router.push("/report-bug")}
           accessibilityRole="button"
           accessibilityLabel="Report a Bug"
-          accessibilityHint="Opens the bug reporting form. Submitting reports is not yet available."
+          accessibilityHint="Opens the form to submit a bug report."
         >
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
