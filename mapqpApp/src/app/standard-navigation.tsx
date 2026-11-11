@@ -41,6 +41,9 @@ import { initRoutingGraph } from "../utils/routing";
 import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
+import {COLOR_VISION_PALETTES} from "../theme/color-vision-palettes";
+import type { IndoorRoom } from "../utils/indoor-types";
+
 export default function Home() {
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
@@ -119,11 +122,20 @@ export default function Home() {
     setShowRecenter,
   } = useMapNavigation(buildings);
 
+  function handleRoomSelect(room: IndoorRoom) {
+  router.push({
+    pathname: "/indoor-navigation",
+    params: {
+      roomNum: room.roomNum,
+    },
+  });
+}
+
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
 
-  const { distanceUnits, directionStyle, fontSize } = useSettings();
+  const { distanceUnits, directionStyle, fontSize, colorVisionPreset} = useSettings();
   const {
     screenReaderEnabled,
     reduceMotionEnabled,
@@ -133,6 +145,8 @@ export default function Home() {
     highTextContrastEnabled,
     reduceTransparencyEnabled,
   } = useAccessibilityPreferences();
+
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
 
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const emphasizedText = emphasizedTextEnabled;
@@ -412,6 +426,7 @@ export default function Home() {
           buildings={buildings}
           value={destinationBuilding}
           onChange={handleDestinationChange}
+          onRoomSelect={handleRoomSelect}
           onCancel={handleCancelRoute}
           placeholder="Search WPI destinations..."
         />

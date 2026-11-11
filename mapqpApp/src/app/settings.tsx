@@ -25,6 +25,8 @@ import { useAccessibilityPreferences, accessibilityControlState } from "../hooks
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import defaultRoutePoints from "../data/route-points.json";
 import { useFocusEffect } from "expo-router";
+import type { ColorVisionPresets } from "../context/settings-context";;
+import { COLOR_VISION_PALETTES } from "../theme/color-vision-palettes";
 
 // Color overrides are opt-in for Accessibility sections in Accessible appearance.
 const ACCESSIBILITY_PALETTE = {
@@ -60,7 +62,9 @@ const ACCESSIBILITY_CONTROLS: {
 // Each appearance exposes one switch target; decoration never becomes a focus stop.
 function SettingsSwitch({ style, disabled, accessibilitySection = false, ...props }:
   SwitchProps & { accessibilitySection?: boolean }) {
-  const { settingsAppearance, fontSize } = useSettings();
+  const { settingsAppearance, fontSize, colorVisionPreset} = useSettings();
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
+  const accessibilitySectionStyles = createAccessibilitySectionStyles(palette);
   const accessibleAppearance = settingsAppearance === "accessible";
   const { boldTextEnabled } = useAccessibilityPreferences();
   if (accessibleAppearance) {
@@ -76,17 +80,16 @@ function SettingsSwitch({ style, disabled, accessibilitySection = false, ...prop
       accessibilityState={{ ...props.accessibilityState, checked: !!props.value, disabled: !!disabled }}
       disabled={disabled} onPress={activate} activeOpacity={1}
       style={[style, accessibleStyles.switchControl, disabled && accessibleStyles.switchControlReadOnly,
-        accessibilitySection && accessibilitySectionStyles.switchControl]}>
+        {backgroundColor: disabled ? palette.background : palette.surface, borderColor: palette.border}]}>
       <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
         pointerEvents="none" style={[accessibleStyles.switchTrack,
           props.value ? accessibleStyles.switchTrackOn : accessibleStyles.switchTrackOff,
-          accessibilitySection && accessibilitySectionStyles.switchTrack,
-          accessibilitySection && props.value && accessibilitySectionStyles.switchTrackOn]}>
+          {backgroundColor: props.value ? palette.primary : palette.secondaryText, borderColor: palette.border}]}>
         <View style={[accessibleStyles.switchThumb,
-          accessibilitySection && accessibilitySectionStyles.switchThumb]} />
+          {backgroundColor: palette.onPrimary, borderColor: palette.border}]} />
       </View>
       <Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-        pointerEvents="none" style={[accessibleStyles.switchStateLabel, { fontSize: 16.25 * fontSize }]}>
+        pointerEvents="none" style={[accessibleStyles.switchStateLabel, { fontSize: 16.25 * fontSize, color: palette.text}]}>
         {`${props.value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}
       </Text>
     </TouchableOpacity>;
@@ -102,12 +105,13 @@ function SettingsSwitch({ style, disabled, accessibilitySection = false, ...prop
     <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       pointerEvents="none" style={[standardSwitchStyles.track,
         props.value ? standardSwitchStyles.on : standardSwitchStyles.off,
-        disabled && standardSwitchStyles.readOnly]}>
-      <View style={standardSwitchStyles.thumb} />
+        disabled && standardSwitchStyles.readOnly, { backgroundColor: props.value ? palette.primary : palette.secondaryText, borderColor: palette.border
+        }]}>
+      <View style={[standardSwitchStyles.thumb, { backgroundColor: palette.onPrimary, borderColor: palette.border}]} />
     </View>
     <AccessibleText boldTextEnabled={boldTextEnabled} accessible={false} accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants" pointerEvents="none"
-      style={[standardSwitchStyles.label, { fontSize: 14 * fontSize }]}>
+      style={[standardSwitchStyles.label, { fontSize: 14 * fontSize, color: palette.text}]}>
       {`${props.value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}
     </AccessibleText>
   </TouchableOpacity>;
@@ -115,9 +119,10 @@ function SettingsSwitch({ style, disabled, accessibilitySection = false, ...prop
 
 // Both tabs edit the same persisted spoken-guidance preferences.
 function GuidanceRepetitionSettings() {
-  const { settingsAppearance, fontSize, settingsLoaded, settingsReadSucceeded,
+  const { settingsAppearance, fontSize, colorVisionPreset, settingsLoaded, settingsReadSucceeded,
     repeatGuidanceEnabled, repeatGuidanceSeconds,
     setRepeatGuidanceEnabled, setRepeatGuidanceSeconds } = useSettings();
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
   const preferences = useAccessibilityPreferences();
   const accessible = settingsAppearance === "accessible";
   const styles = accessible ? accessibleStyles : standardStyles;
@@ -137,7 +142,7 @@ function GuidanceRepetitionSettings() {
           : "Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled."} />
     </View>
     <AccessibleText boldTextEnabled={preferences.boldTextEnabled}
-      style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2 }]}>Repetition frequency</AccessibleText>
+      style={[styles.settingTitle, { fontSize: 16 * size, lineHeight: Math.ceil(24 * size), width: "100%", flexShrink: 0, paddingVertical: 2, color: palette.text}]}>Repetition frequency</AccessibleText>
     <View style={{ width: "100%", gap: 10, marginTop: 8, marginBottom: 12 }}>
       {[5, 9, 15, 30, 60].map((seconds) => {
         const selected = repeatGuidanceSeconds === seconds;
@@ -147,18 +152,18 @@ function GuidanceRepetitionSettings() {
           onPress={() => setRepeatGuidanceSeconds(seconds)}
           style={{ width: "100%", minHeight: accessible ? 60 : 48,
             paddingHorizontal: 16, paddingVertical: 14, borderRadius: 10,
-            borderWidth: 2, borderColor: accessible ? ACCESSIBILITY_PALETTE.accent : "#AC2B37",
-            backgroundColor: selected ? (accessible ? ACCESSIBILITY_PALETTE.accent : "#AC2B37") : (accessible ? ACCESSIBILITY_PALETTE.card : "#FFFFFF"),
+            borderWidth: 2, borderColor: palette.border,
+            backgroundColor: selected ? palette.primary : palette.surface,
             flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
             style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2,
-              borderColor: selected ? "#FFFFFF" : (accessible ? ACCESSIBILITY_PALETTE.accent : "#AC2B37"),
+              borderColor: selected ? palette.onPrimary : palette.border,
               alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            {selected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" }} />}
+            {selected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: palette.onPrimary }} />}
           </View>
           <AccessibleText boldTextEnabled={preferences.boldTextEnabled} accessible={false}
             style={{ fontSize: 15 * size, fontWeight: "700", lineHeight: Math.ceil(23 * size),
-              flex: 1, minWidth: 0, color: selected ? "#FFFFFF" : "#101820" }}>
+              flex: 1, minWidth: 0, color: selected ? palette.onPrimary : palette.text }}>
             Every {seconds} seconds
           </AccessibleText>
         </TouchableOpacity>;
@@ -211,7 +216,8 @@ function SelectionIndicator({ selected }: { selected: boolean }) {
 function SettingIcon({ name }: {
   name: SettingsIconName; highContrast: boolean;
 }) {
-  const { fontSize: textSizeMultiplier } = useSettings();
+  const { fontSize: textSizeMultiplier, colorVisionPreset } = useSettings();
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
   const iconSize = Math.max(20, Math.min(30, Math.round(22 * textSizeMultiplier)));
   const stroke = iconSize * 0.055;
   const circleRadius = iconSize * 0.25;
@@ -221,7 +227,7 @@ function SettingIcon({ name }: {
     accessible={false} pointerEvents="none"
     accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
     {name === "reduce-motion" ? (
-      <View style={[standardStyles.reduceMotionTile, { width: iconSize, height: iconSize, borderRadius: iconSize * 0.22 }]}>
+      <View style={[standardStyles.reduceMotionTile, { width: iconSize, height: iconSize, borderRadius: iconSize * 0.22, backgroundColor: palette.primary}]}>
         {/* Equal angular steps place identical dots on a circular centerline. */}
         {Array.from({ length: 16 }, (_, index) => {
           const angle = index * Math.PI * 2 / 16;
@@ -240,8 +246,8 @@ function SettingIcon({ name }: {
     ) : (
       <View style={[standardStyles.accessibilityIconTile, {
         width: iconSize, height: iconSize, borderRadius: iconSize * 0.22,
-        backgroundColor: name === "stairs" ? "#C45100" : name === "compass" ? "#B32635" : name === "navigation" ? "#7950B2"
-          : name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF",
+        backgroundColor: name === "stairs" ? palette.primary : name === "compass" ? palette.primary : name === "navigation" ? palette.primary
+          : name === "contrast-circle" || name === "layers-outline" ? palette.border : palette.primary,
       }]}>
         <MaterialCommunityIcons name={name} size={Math.round(iconSize * 0.78)} color="#FFFFFF"
           accessible={false} allowFontScaling={false} />
@@ -249,6 +255,17 @@ function SettingIcon({ name }: {
     )}
   </View>;
 }
+
+const COLOR_VISION_OPTIONS: {
+  value: ColorVisionPresets;
+  label: string;
+}[] = [
+  { value: "default", label: "Default" },
+  { value: "protanopia", label: "Protanopia" },
+  { value: "deuteranopia", label: "Deuteranopia" },
+  { value: "tritanopia", label: "Tritanopia" },
+  { value: "achromatopsia", label: "Achromatopsia / Monochromacy" }
+];
 
 export default function SettingsPage() {
   const navigation = useNavigation();
@@ -264,6 +281,8 @@ export default function SettingsPage() {
   const {
     settingsAppearance,
     setSettingsAppearance,
+    colorVisionPreset,
+    setColorVisionPreset,
     navigationMode,
     setNavigationMode,
     setHasSelectedMode,
@@ -286,6 +305,10 @@ export default function SettingsPage() {
     setAccessibilityPreference,
     resetAccessibilitySettings,
   } = useSettings();
+
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
+
+  const accessibilitySectionStyles = createAccessibilitySectionStyles(palette);
 
   const [mapVersion, setMapVersion] = useState<string>(
     defaultRoutePoints.version ? String(defaultRoutePoints.version) : "1.0"
@@ -424,6 +447,7 @@ export default function SettingsPage() {
                 resetAvoidStairsPreference();
                 setFontSize(1);
                 setSettingsAppearance("standard");
+                setColorVisionPreset("default");
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -451,9 +475,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, {backgroundColor: palette.background}]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {backgroundColor: palette.primary}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleBackFromSettings}
@@ -468,7 +492,7 @@ export default function SettingsPage() {
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             allowFontScaling={false}
-            style={styles.backArrow}
+            style={[styles.backArrow, {color: palette.onPrimary}]}
           >
             ‹
           </AccessibleText>
@@ -479,7 +503,7 @@ export default function SettingsPage() {
           key={`settings-text-1-${fontScale}`}
           accessibilityRole="header"
           maxFontSizeMultiplier={2.5}
-          style={[styles.headerTitle, { fontSize: 21 * displayFontSize }]}
+          style={[styles.headerTitle, { fontSize: 21 * displayFontSize, color: palette.onPrimary }]}
         >
           Settings
         </AccessibleText>
@@ -487,16 +511,16 @@ export default function SettingsPage() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.settingsTabs} accessibilityRole="tablist">
+      <View style={[styles.settingsTabs, {backgroundColor: palette.surface, borderColor: palette.border}]} accessibilityRole="tablist">
         {(["general", "routing"] as const).map((tab) => {
           const selected = activeTab === tab;
           const label = tab === "general" ? "General" : "Routing";
           return <TouchableOpacity key={tab} accessibilityRole="tab" accessibilityLabel={label}
             accessibilityState={{ selected }} onPress={() => setActiveTab(tab)}
-            style={[styles.settingsTab, selected && styles.settingsTabSelected]}>
+            style={[styles.settingsTab, selected && styles.settingsTabSelected, {backgroundColor: selected ? palette.primary : palette.surface, borderColor: palette.border}]}>
             <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
               style={[styles.settingsTabLabel, { fontSize: 17 * displayFontSize },
-                selected && styles.settingsTabLabelSelected]}>
+                selected && styles.settingsTabLabelSelected, {fontSize: 17 * displayFontSize, color: selected ? palette.onPrimary : palette.text}]}>
               {label}
             </AccessibleText>
           </TouchableOpacity>;
@@ -521,7 +545,7 @@ export default function SettingsPage() {
             styles.sectionBandRed,
             increasedContrast && styles.sectionLabelHighContrast,
             accessibleAppearance && burgundySectionStyles.header,
-            { fontSize: 12 * displayFontSize },
+            { fontSize: 12 * displayFontSize, color: palette.border, backgroundColor: `${palette.primary}1A`, borderColor: palette.border, borderLeftColor: palette.primary },
           ]}
         >
           NAVIGATION MODE
@@ -532,7 +556,9 @@ export default function SettingsPage() {
             styles.settingsCard,
             styles.navigationCard,
             increasedContrast && styles.settingsCardHighContrast,
-            accessibleAppearance && burgundySectionStyles.card,
+            accessibleAppearance && burgundySectionStyles.card, {
+              borderLeftColor: palette.primary
+            }
           ]}
         >
           <View style={styles.optionRow}>
@@ -565,6 +591,7 @@ export default function SettingsPage() {
                   navigationMode === "standard" &&
                     styles.segmentButtonSelected,
                   accessibleAppearance && navigationMode === "standard" && burgundySectionStyles.buttonSelected,
+                  { backgroundColor: navigationMode === "standard" ? palette.primary : palette.surface, borderColor: palette.border}
                 ]}
                 onPress={() => changeNavigationMode("standard")}
                 accessible
@@ -587,6 +614,7 @@ export default function SettingsPage() {
                     navigationMode === "standard" &&
                       styles.segmentTextSelected,
                     accessibleAppearance && navigationMode === "standard" && burgundySectionStyles.textSelected,
+                    { color: navigationMode === "standard" ? palette.background : palette.primary}
                   ]}
                 >
                   Standard
@@ -601,6 +629,7 @@ export default function SettingsPage() {
                   navigationMode === "accessibility" &&
                     styles.segmentButtonSelected,
                   accessibleAppearance && navigationMode === "accessibility" && burgundySectionStyles.buttonSelected,
+                  { backgroundColor: navigationMode === "accessibility" ? palette.primary : palette.surface, borderColor: palette.border}
                 ]}
                 onPress={() => changeNavigationMode("accessibility")}
                 accessible
@@ -623,6 +652,7 @@ export default function SettingsPage() {
                     navigationMode === "accessibility" &&
                       styles.segmentTextSelected,
                     accessibleAppearance && navigationMode === "accessibility" && burgundySectionStyles.textSelected,
+                    { color: navigationMode === "accessibility" ? palette.background : palette.primary}
                   ]}
                 >
                   Accessible
@@ -635,15 +665,15 @@ export default function SettingsPage() {
         <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
           accessibilityRole="header" style={[styles.sectionLabel, styles.interactiveSectionLabel,
             styles.sectionBandRed, accessibleAppearance && burgundySectionStyles.header,
-            { fontSize: 12 * displayFontSize }]}>
-          Appearance
+            { fontSize: 12 * displayFontSize, color: palette.border, backgroundColor : `${palette.primary}1A`, borderColor: palette.border}]}>
+          APPEARANCE
         </AccessibleText>
         <View style={[styles.settingsCard, styles.navigationCard,
           increasedContrast && styles.settingsCardHighContrast,
           accessibleAppearance && burgundySectionStyles.card]}>
           <View style={styles.optionRow}>
             <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize }]}>
+              style={[styles.deviceSectionDescription, { fontSize: 13 * displayFontSize, color: palette.text }]}>
               Choose how the Settings page is displayed. This does not affect your navigation mode.
             </AccessibleText>
             <View style={[styles.segmentedControl, appearanceStacked && styles.segmentedControlStacked,
@@ -661,13 +691,15 @@ export default function SettingsPage() {
                   style={[styles.segmentButton, appearanceStacked && styles.segmentButtonStacked,
                     accessibleAppearance && burgundySectionStyles.button,
                     selected && styles.segmentButtonSelected,
-                    accessibleAppearance && selected && burgundySectionStyles.buttonSelected]}>
+                    accessibleAppearance && selected && burgundySectionStyles.buttonSelected,
+                    { backgroundColor: selected ? palette.primary : palette.surface, borderColor: palette.border}]}>
                   <SelectionIndicator selected={selected} />
                   <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled} accessible={false}
                     style={[styles.segmentText, increasedContrast && styles.segmentTextHighContrast,
                       { fontSize: 13 * displayFontSize }, selected && styles.segmentTextSelected,
                       selected && styles.appearanceSelectionText,
-                      accessibleAppearance && selected && burgundySectionStyles.textSelected]}>
+                      accessibleAppearance && selected && burgundySectionStyles.textSelected,
+                      { color: selected ? palette.background : palette.text}]}>
                     {label}
                   </AccessibleText>
                 </TouchableOpacity>;
@@ -676,6 +708,92 @@ export default function SettingsPage() {
           </View>
         </View>
 
+        <AccessibleText boldTextEnabled = {accessibilityPreferences.boldTextEnabled}
+          accessibilityRole="header" style = {[styles.sectionLabel, {fontSize: 12 * displayFontSize}]}>
+            COLOR-VISION PRESET
+        </AccessibleText>
+
+        <View style = {[styles.settingsCard, {backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <AccessibleText boldTextEnabled = {accessibilityPreferences.boldTextEnabled}
+                style={[ styles.deviceSectionDescription,
+                  { fontSize: 13 * displayFontSize, marginVertical: 12,},
+                ]}>
+                  Choose the color preset that works best for you.
+                  This will only change the colors of the app, not the navigation mode or the map.
+                </AccessibleText>
+
+                <View style = {{ width: "100%", gap: 10, flexDirection: "column", marginTop: 12}}>
+                  {COLOR_VISION_OPTIONS.map((option) => {
+                    const selected = colorVisionPreset === option.value;
+                    const disabled = !settingsLoaded || !settingsReadSucceeded;
+
+                    const previewPalette = COLOR_VISION_PALETTES[option.value];
+
+                    const previewColors = [
+                      previewPalette.background,
+                      previewPalette.surface,
+                      previewPalette.text,
+                      previewPalette.secondaryText,
+                      previewPalette.primary,
+                      previewPalette.onPrimary,
+                      previewPalette.border
+                    ]
+
+                    const palette = COLOR_VISION_PALETTES[colorVisionPreset];
+
+                    return (
+                      <TouchableOpacity key={option.value}
+                        accessible
+                        accessibilityRole="radio"
+                        accessibilityLabel={option.label}
+                        accessibilityState={{checked: selected, disabled,}}
+                        disabled={disabled}
+                        onPress={() => setColorVisionPreset(option.value)}
+                        style={[styles.segmentButton, {
+                        flexGrow: 0, width: "100%", flexShrink: 0, flexBasis: "auto", minHeight: accessibleAppearance ? 120 : 104,
+                        paddingVertical: 14, paddingHorizontal: 12, borderRadius: 10, borderWidth: selected ? 2 : 1, flexDirection: "column",
+                        borderColor: palette.border, backgroundColor: selected ? palette.primary : palette.surface,
+                        alignItems: "stretch", justifyContent: "center", opacity: disabled ? 0.5 : 1,
+                        }]}>
+                        <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
+                          accessible={false}
+                          style = {{
+                            fontSize: 15 * displayFontSize, fontWeight: "700", flexShrink: 1,
+                            color: selected ? palette.onPrimary : palette.text, textAlign: "center"
+                          }}>
+                              {option.label}
+                              {selected ? " — selected" : ""}
+                            </AccessibleText>
+                            <View
+                              accessible = {false}
+                              accessibilityElementsHidden
+                              importantForAccessibility = "no-hide-descendants"
+                              pointerEvents = "none"
+                              style = {{
+                                flexDirection: "row",
+                                width: "100%",
+                                flexWrap: "wrap",
+                                justifyContent: "center",
+                                gap: 6,
+                                marginTop: 12, }}>
+                                  {previewColors.map((color, index) => (
+                                    <View key={index} style={{
+                                      flex: 1,
+                                      minWidth: 0,
+                                      alignItems: "center",
+                                      height: 34,
+                                      borderRadius: 5,
+                                      backgroundColor: color,
+                                      borderWidth: 1,
+                                      borderColor: selected ? palette.onPrimary : palette.text,
+                                    }}/>
+                                  ))}
+                                </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+        </View>
         {/* Navigation Preferences */}
         <AccessibleText
           boldTextEnabled={accessibilityPreferences.boldTextEnabled}
@@ -687,7 +805,7 @@ export default function SettingsPage() {
             styles.interactiveSectionLabel,
             styles.sectionBandRed,
             increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * displayFontSize },
+            { fontSize: 12 * displayFontSize, color: palette.border, backgroundColor: `${palette.primary}1A`, borderColor: palette.border},
           ]}
         >
           NAVIGATION PREFERENCES
@@ -728,7 +846,9 @@ export default function SettingsPage() {
                   distanceStacked && styles.segmentButtonStacked,
                   distanceUnits === "imperial" &&
                     styles.segmentButtonSelected,
-                ]}
+                    {
+                      backgroundColor: distanceUnits === "imperial" ? palette.primary : palette.surface
+                    }]}
                 onPress={() => setDistanceUnits("imperial")}
                 accessible
                 accessibilityRole="button"
@@ -749,7 +869,9 @@ export default function SettingsPage() {
                     { fontSize: 13 * displayFontSize },
                     distanceUnits === "imperial" &&
                       styles.segmentTextSelected,
-                  ]}
+                      {
+                        color: distanceUnits === "imperial" ? palette.onPrimary : palette.text
+                      }]}
                 >
                   ft / mi
                 </AccessibleText>
@@ -761,7 +883,9 @@ export default function SettingsPage() {
                   distanceStacked && styles.segmentButtonStacked,
                   distanceUnits === "metric" &&
                     styles.segmentButtonSelected,
-                ]}
+                    {
+                      backgroundColor: distanceUnits === "metric" ? palette.primary : palette.surface, borderColor: palette.border
+                    }]}
                 onPress={() => setDistanceUnits("metric")}
                 accessible
                 accessibilityRole="button"
@@ -781,8 +905,9 @@ export default function SettingsPage() {
                     increasedContrast && styles.segmentTextHighContrast,
                     { fontSize: 13 * displayFontSize },
                     distanceUnits === "metric" &&
-                      styles.segmentTextSelected,
-                  ]}
+                      styles.segmentTextSelected, {
+                        color: distanceUnits === "metric" ? palette.onPrimary : palette.text
+                      }]}
                 >
                   m / km
                 </AccessibleText>
@@ -819,8 +944,10 @@ export default function SettingsPage() {
                   styles.segmentButton,
                   directionStacked && styles.segmentButtonStacked,
                   directionStyle === "natural" &&
-                    styles.segmentButtonSelected,
-                ]}
+                    styles.segmentButtonSelected, {
+                      backgroundColor: directionStyle === "natural" ? palette.primary : palette.surface,
+                      borderColor: palette.border
+                    }]}
                 onPress={() => setDirectionStyle("natural")}
                 accessible
                 accessibilityRole="button"
@@ -840,8 +967,9 @@ export default function SettingsPage() {
                     increasedContrast && styles.segmentTextHighContrast,
                     { fontSize: 13 * displayFontSize },
                     directionStyle === "natural" &&
-                      styles.segmentTextSelected,
-                  ]}
+                      styles.segmentTextSelected, {
+                        color: directionStyle === "natural" ? palette.onPrimary : palette.text
+                      }]}
                 >
                   Natural
                 </AccessibleText>
@@ -852,8 +980,10 @@ export default function SettingsPage() {
                   styles.segmentButton,
                   directionStacked && styles.segmentButtonStacked,
                   directionStyle === "degrees" &&
-                    styles.segmentButtonSelected,
-                ]}
+                    styles.segmentButtonSelected, {
+                      backgroundColor: directionStyle === "degrees" ? palette.primary : palette.surface,
+                      borderColor: palette.border
+                    }]}
                 onPress={() => setDirectionStyle("degrees")}
                 accessible
                 accessibilityRole="button"
@@ -873,8 +1003,9 @@ export default function SettingsPage() {
                     increasedContrast && styles.segmentTextHighContrast,
                     { fontSize: 13 * displayFontSize },
                     directionStyle === "degrees" &&
-                      styles.segmentTextSelected,
-                  ]}
+                      styles.segmentTextSelected, {
+                        color: directionStyle === "degrees" ? palette.onPrimary : palette.text
+                  }]}
                 >
                   Degrees
                 </AccessibleText>
@@ -1027,7 +1158,7 @@ export default function SettingsPage() {
             styles.deviceSectionLabel,
             styles.sectionBandTeal,
             increasedContrast && styles.sectionLabelHighContrast,
-            accessibleAppearance && accessibilitySectionStyles.header,
+            accessibilitySectionStyles.header,
             { fontSize: 12 * displayFontSize },
           ]}
         >
@@ -1048,7 +1179,7 @@ export default function SettingsPage() {
         </View>
         <View style={[styles.settingsCard, styles.deviceSettingsCard,
           increasedContrast && styles.settingsCardHighContrast,
-          accessibleAppearance && accessibilitySectionStyles.card]}>
+          accessibilitySectionStyles.card]}>
           <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
             stackPreferenceControls && styles.accessibilitySourceRowStacked]}
             accessible accessibilityRole="text"
@@ -1110,7 +1241,7 @@ export default function SettingsPage() {
               : "Saved MapQP preference.";
             return (
               <View key={preference}>
-                <View style={[styles.divider, accessibleAppearance && accessibilitySectionStyles.divider]} accessible={false} />
+                <View style={[styles.divider, accessibilitySectionStyles.divider]} accessible={false} />
                 <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
                   stackPreferenceControls && styles.accessibilitySourceRowStacked]}>
                   <View style={[styles.accessibilitySourceLabel,
@@ -1154,12 +1285,12 @@ export default function SettingsPage() {
               </View>
             );
           })}
-          <View style={[styles.divider, accessibleAppearance && accessibilitySectionStyles.divider]} accessible={false} />
+          <View style={[styles.divider, accessibilitySectionStyles.divider]} accessible={false} />
           <GuidanceRepetitionSettings />
         </View>
 
         <TouchableOpacity
-          style={[styles.landingButton, increasedContrast && styles.settingsCardHighContrast]}
+          style={[styles.landingButton, increasedContrast && styles.settingsCardHighContrast, { backgroundColor: palette.surface, borderColor: palette.border}]}
           onPress={() => router.push("/report-bug")}
           accessibilityRole="button"
           accessibilityLabel="Report a Bug"
@@ -1167,7 +1298,7 @@ export default function SettingsPage() {
         >
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            style={[styles.landingButtonText, { fontSize: 15 * displayFontSize }]}
+            style={[styles.landingButtonText, { fontSize: 15 * displayFontSize, color: palette.text}]}
           >
             Report a Bug
           </AccessibleText>
@@ -1190,7 +1321,7 @@ export default function SettingsPage() {
         </View>
 
         <TouchableOpacity
-          style={styles.landingButton}
+          style={[styles.landingButton, {backgroundColor: palette.surface, borderColor: palette.border}]}
           onPress={returnToLandingPage}
           accessibilityRole="button"
           accessibilityLabel="Back to Home"
@@ -1200,7 +1331,7 @@ export default function SettingsPage() {
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             key={`settings-text-31-${fontScale}`}
             maxFontSizeMultiplier={2.5}
-            style={[styles.landingButtonText, { fontSize: 15 * displayFontSize }]}
+            style={[styles.landingButtonText, { fontSize: 15 * displayFontSize, color: palette.text}]}
           >
             Back to Home
           </AccessibleText>
@@ -1210,13 +1341,13 @@ export default function SettingsPage() {
           accessibilityRole="button"
           accessibilityLabel="Delete all local data"
           accessibilityHint="Opens a confirmation dialog before deleting saved data"
-          style={styles.deleteStorageButton}
+          style={[styles.deleteStorageButton, {backgroundColor: palette.surface, borderColor: palette.border}]}
           onPress={deleteLocalStorage}
         >
           <AccessibleText
             boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             key={`settings-text-32-${fontScale}`}
-            style={[styles.deleteStorageText, { fontSize: 15 * displayFontSize }]}
+            style={[styles.deleteStorageText, { fontSize: 15 * displayFontSize, color: palette.text}]}
           >
             Delete all local data
           </AccessibleText>
@@ -1288,11 +1419,11 @@ export default function SettingsPage() {
         {activeTab === "routing" && <>
           <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
             accessibilityRole="header" style={[styles.sectionLabel, styles.sectionBandTeal,
-              accessibleAppearance && accessibilitySectionStyles.header,
+              accessibilitySectionStyles.header,
               { fontSize: 12 * displayFontSize }]}>ACCESSIBILITY</AccessibleText>
           <View style={[styles.settingsCard, styles.deviceSettingsCard,
             increasedContrast && styles.settingsCardHighContrast,
-            accessibleAppearance && accessibilitySectionStyles.card]}>
+            accessibilitySectionStyles.card]}>
             <GuidanceRepetitionSettings />
           </View>
         </>}
@@ -1705,7 +1836,7 @@ const accessibleStyles = StyleSheet.create({
   // Match Settings' existing Bold Text override, the strongest numeric weight.
   // Use the native system font so the platform can resolve its heavy face.
   headerTitle: { ...standardStyles.headerTitle, fontWeight: "900" },
-  backArrow: { ...standardStyles.backArrow, fontWeight: "900" },
+  backArrow: { ...standardStyles.backArrow, fontWeight: "900"},
   settingsTabLabelSelected: { ...standardStyles.settingsTabLabelSelected, fontWeight: "900" },
   deviceValue: { ...standardStyles.deviceValue, fontWeight: "900" },
   smallA: { ...standardStyles.smallA, fontWeight: "900" },
@@ -1765,18 +1896,58 @@ const standardSwitchStyles = StyleSheet.create({
 });
 
 // Color-only overrides leave the shared layout, text, icons and Routing controls intact.
-const accessibilitySectionStyles = StyleSheet.create({
-  header: { backgroundColor: ACCESSIBILITY_PALETTE.header, color: ACCESSIBILITY_PALETTE.heading },
-  card: { backgroundColor: ACCESSIBILITY_PALETTE.card,
-    borderColor: ACCESSIBILITY_PALETTE.accent, borderLeftColor: ACCESSIBILITY_PALETTE.accent },
-  switchControl: { backgroundColor: ACCESSIBILITY_PALETTE.card, borderColor: ACCESSIBILITY_PALETTE.accent },
-  switchTrack: { borderColor: ACCESSIBILITY_PALETTE.accent },
-  switchTrackOn: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
-  switchThumb: { borderColor: ACCESSIBILITY_PALETTE.accent },
-  deviceValue: { backgroundColor: ACCESSIBILITY_PALETTE.card, borderColor: ACCESSIBILITY_PALETTE.accent },
-  deviceValueOn: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
-  divider: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
-});
+// const accessibilitySectionStyles = StyleSheet.create({
+//   header: { backgroundColor: ACCESSIBILITY_PALETTE.header, color: ACCESSIBILITY_PALETTE.heading },
+//   card: { backgroundColor: ACCESSIBILITY_PALETTE.card,
+//     borderColor: ACCESSIBILITY_PALETTE.accent, borderLeftColor: ACCESSIBILITY_PALETTE.accent },
+//   switchControl: { backgroundColor: ACCESSIBILITY_PALETTE.card, borderColor: ACCESSIBILITY_PALETTE.accent },
+//   switchTrack: { borderColor: ACCESSIBILITY_PALETTE.accent },
+//   switchTrackOn: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
+//   switchThumb: { borderColor: ACCESSIBILITY_PALETTE.accent },
+//   deviceValue: { backgroundColor: ACCESSIBILITY_PALETTE.card, borderColor: ACCESSIBILITY_PALETTE.accent },
+//   deviceValueOn: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
+//   divider: { backgroundColor: ACCESSIBILITY_PALETTE.accent },
+// });
+
+
+function createAccessibilitySectionStyles( palette: (typeof COLOR_VISION_PALETTES)[keyof typeof COLOR_VISION_PALETTES]) {
+  return StyleSheet.create({
+    header: {
+      backgroundColor: `${palette.primary}1A`,
+      color: palette.text,
+      borderLeftColor: palette.primary
+    },
+    card: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border,
+      borderLeftColor: palette.primary
+    },
+    switchControl: {
+      backgroundColor: palette.surface,
+      borderColor:palette.border
+    },
+    switchTrack: {
+      borderColor: palette.primary
+    },
+    switchTrackOn: {
+      backgroundColor: palette.primary
+    },
+    switchThumb: {
+      backgroundColor: palette.onPrimary,
+      borderColor: palette.border
+    },
+    deviceValue: {
+      backgroundColor: palette.surface,
+      borderColor: palette.border
+    },
+    deviceValueOn: {
+      backgroundColor: palette.primary
+    },
+    divider: {
+      backgroundColor: palette.border
+    }
+  });
+};
 
 // Color-only overrides; shared styles and other sections retain their existing themes.
 const burgundySectionStyles = StyleSheet.create({
