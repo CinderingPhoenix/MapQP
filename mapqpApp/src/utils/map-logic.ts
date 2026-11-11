@@ -1,3 +1,4 @@
+import type { NavigationStartupSession } from "../hooks/use-navigation-start-focus";
 // map-logic.ts
 
 import { useSettings } from "@/context/settings-context";
@@ -6,7 +7,7 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Platform, Vibration } from "react-native";
+import { AccessibilityInfo, Alert, AppState, Platform, Vibration } from "react-native";
 import { getRelaxedRoutingPreferences, getRoutingPreferences, NavigationPoint, routeBetween, WalkingRoute, RoutingPreferences } from "./routing";
 import { useFocusEffect } from "expo-router";
 
@@ -326,28 +327,64 @@ function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
 }
 
 export function useMapNavigation(buildings: Building[]) {
-  const [isFocused, setIsFocused] = useState(true);
+  const [isFocused, setIsFocused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState === "active");
+  const foregroundRef = useRef(AppState.currentState === "active");
+  const [speechListening, setSpeechListening] = useState(false);
+  const [politeAnnouncement, setPoliteAnnouncement] = useState({ text: "", revision: 0 });
   const speechRef = useRef<NavigationSpeech | null>(null);
-  if (!speechRef.current) speechRef.current = new NavigationSpeech(Speech);
+  if (!speechRef.current) speechRef.current = new NavigationSpeech(Speech, (text) => {
+    setPoliteAnnouncement((previous) => ({ text, revision: previous.revision + 1 }));
+  });
   const navigationSpeech = speechRef.current;
   const audioMutedRef = useRef(false);
-  const screenFocusedRef = useRef(true);
+  const [startupSession, setStartupSession] = useState<NavigationStartupSession | null>(null);
+  const startupSessionRef = useRef<NavigationStartupSession | null>(null);
+  const [pickerDismissed, setPickerDismissed] = useState(true);
+  const pickerDismissedRef = useRef(true);
+  const onPickerTransition = useCallback((dismissed: boolean) => {
+    pickerDismissedRef.current = dismissed;
+    setPickerDismissed(dismissed);
+  }, []);
+  const [focusSpeechSession, setFocusSpeechSession] = useState<NavigationStartupSession | null>(null);
   const spokenDestinationRef = useRef<string | null>(null);
   const speechGeometryRef = useRef<[number, number][] | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      screenFocusedRef.current = true;
-      navigationSpeech.setEnabled(!audioMutedRef.current);
+      foregroundRef.current = AppState.currentState === "active";
+      setForeground(foregroundRef.current);
+      navigationSpeech.setEnabled(foregroundRef.current);
       setIsFocused(true);
+      // Stop incompatible speech immediately on the native event, before React
+      // finishes rendering the provider's corresponding preference update.
+      const reader = AccessibilityInfo.addEventListener("screenReaderChanged", (enabled) => {
+        navigationSpeech.setMode(enabled ? "screen-reader" : "tts");
+      });
+      const appState = AppState.addEventListener("change", (state) => {
+        foregroundRef.current = state === "active";
+        setForeground(foregroundRef.current);
+        // Foreground detection is refreshed by SettingsProvider. Wait for it
+        // rather than reviving speech using a potentially stale OFF reading.
+        if (state !== "active") {
+          if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
+          navigationSpeech.setMode(null);
+        }
+        navigationSpeech.setEnabled(state === "active");
+      });
       return () => {
-        screenFocusedRef.current = false;
+        if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
         setIsFocused(false);
         navigationSpeech.setEnabled(false);
-        Speech.stop();
+        reader.remove();
+        appState.remove();
       };
     }, [navigationSpeech])
   );
+  const onVoiceListeningChange = useCallback((listening: boolean) => {
+    setSpeechListening(listening);
+    return navigationSpeech.setListening(listening);
+  }, [navigationSpeech]);
 
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
@@ -395,7 +432,14 @@ export function useMapNavigation(buildings: Building[]) {
     avoidIndoorRoutes,
     avoidInaccessibleCrosswalks,
     avoidStairs = false,
+    deviceAccessibility,
   } = useSettings();
+  const readerStatus = deviceAccessibility.detectionStatus.screenReaderEnabled;
+  const readerEnabled = deviceAccessibility.screenReaderEnabled;
+  useEffect(() => {
+    navigationSpeech.setMode(foreground && readerStatus === "available"
+      ? readerEnabled ? "screen-reader" : "tts" : null);
+  }, [foreground, readerStatus, readerEnabled, navigationSpeech]);
   const routingPreferencesRef = useRef({ navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks });
   routingPreferencesRef.current = { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
   const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean; avoidIndoorRoutes: boolean; avoidInaccessibleCrosswalks: boolean } | null>(null);
@@ -417,6 +461,9 @@ export function useMapNavigation(buildings: Building[]) {
     routeGeometryRef.current = null;
     isReroutingRef.current = false;
     navigationSpeech.cancel();
+    if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
+    startupSessionRef.current = null;
+    setStartupSession(null);
     spokenDestinationRef.current = null;
     speechGeometryRef.current = null;
     spokenStagesRef.current = {};
@@ -453,7 +500,7 @@ export function useMapNavigation(buildings: Building[]) {
   const toggleMute = useCallback(() => {
     const muted = !audioMutedRef.current;
     audioMutedRef.current = muted;
-    navigationSpeech.setEnabled(!muted && screenFocusedRef.current);
+    navigationSpeech.setMuted(muted);
     setIsAudioMuted(muted);
   }, [navigationSpeech]);
 
@@ -490,6 +537,7 @@ export function useMapNavigation(buildings: Building[]) {
       routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
     }
     const { accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routePolicyRef.current;
+    navigationSpeech.cancel();
     setRouteLoading(true);
     isReroutingRef.current = true;
     try {
@@ -572,23 +620,6 @@ export function useMapNavigation(buildings: Building[]) {
           point[0] !== previousGeometry[index][0] || point[1] !== previousGeometry[index][1]);
       if (newNavigation || geometryChanged) spokenStagesRef.current = {};
       speechGeometryRef.current = selectedRoute.geometry;
-      if (newNavigation) {
-        spokenDestinationRef.current = targetBuilding;
-        navigationSpeech.cancel();
-        const firstStep = steps[0];
-        const distance = firstStep
-          ? getDistanceToStepPoint(selectedRoute.geometry, 0, firstStep.pointIndex, activeCoords.latitude, activeCoords.longitude)
-          : selectedRoute.distance;
-        const instruction = firstStep
-          ? `${formatDirectionInstruction(firstStep, directionStyle)} in ${formatDistance(distance, distanceUnits)}`
-          : `Route distance ${formatDistance(distance, distanceUnits)}`;
-        const accepted = navigationSpeech.request(`Navigating to ${selectedBuilding.name}. ${instruction}.`, "startup");
-        if (accepted && firstStep) {
-          const stages = initialSpeechStages(distance);
-          if (firstStep.instruction === "Arrive at destination" && distance <= 5) stages.turn = true;
-          spokenStagesRef.current[firstStep.pointIndex] = stages;
-        }
-      }
     } catch (routeRequestError) {
       if (isCurrentRequest()) {
         // A failed new request must not leave an older route looking like its result.
@@ -695,6 +726,12 @@ export function useMapNavigation(buildings: Building[]) {
     routeRequestIdRef.current += 1;
     answerRouteAlternative(false);
     isRouteCancelledRef.current = false;
+    if (destinationBuildingRef.current !== buildingId || !startupSessionRef.current) {
+      if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
+      const session = { handled: false, cancelled: false };
+      startupSessionRef.current = session;
+      setStartupSession(session);
+    }
     destinationBuildingRef.current = buildingId;
     const { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
     const accessibleOnly = avoidStairs;
@@ -713,8 +750,87 @@ export function useMapNavigation(buildings: Building[]) {
     : null;
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
+  const currentGuidanceRef = useRef({ route, nextStep });
+  currentGuidanceRef.current = { route, nextStep };
+
+  // Moving to a different maneuver or route invalidates speech that described
+  // the old one, even when a newer urgent threshold has not yet been reached.
+  useEffect(() => () => navigationSpeech.clearGuidance(), [route, nextStep, navigationSpeech]);
+
   useEffect(() => {
-    if (!isFocused || navigationMode !== "accessibility") {
+    let active = true;
+    setFocusSpeechSession(null);
+    if (startupSession && isFocused && foreground && !speechListening && readerStatus === "available" && readerEnabled && !isAudioMuted) {
+      void navigationSpeech.readyForFocusGuidance().then((ready) => {
+        if (active && ready) setFocusSpeechSession(startupSession);
+      });
+    }
+    return () => { active = false; };
+  }, [startupSession, isFocused, foreground, speechListening, readerStatus, readerEnabled, isAudioMuted, navigationSpeech]);
+
+  const startupReady = !!startupSession && !startupSession.handled && !startupSession.cancelled &&
+    isFocused && foreground && !speechListening && readerStatus === "available" && readerEnabled &&
+    !isAudioMuted && focusSpeechSession === startupSession && pickerDismissed && !!route && !!routeDestinationBuilding &&
+    routeDestinationBuilding === destinationBuilding && !isRouteCancelledRef.current && !isReroutingRef.current;
+  const onStartupHandoff = useCallback(() => {
+    if (!startupReady || !startupSession || startupSession !== startupSessionRef.current ||
+        startupSession.handled || startupSession.cancelled || isRouteCancelledRef.current || !foregroundRef.current ||
+        audioMutedRef.current || !pickerDismissedRef.current || isReroutingRef.current ||
+        currentGuidanceRef.current.route !== route || destinationBuildingRef.current !== routeDestinationBuilding) return false;
+    startupSession.handled = true;
+    spokenDestinationRef.current = routeDestinationBuilding;
+    if (nextStep) {
+      const previous = spokenStagesRef.current[nextStep.pointIndex];
+      const stages = initialSpeechStages(distToNextStepMeters);
+      stages.haptics = previous?.haptics;
+      if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+      spokenStagesRef.current[nextStep.pointIndex] = stages;
+    }
+    navigationSpeech.noteFocusGuidance();
+    return true;
+  }, [startupReady, startupSession, routeDestinationBuilding, route, nextStep, distToNextStepMeters, navigationSpeech]);
+
+  // Recompute startup from current location once detection/recognition is ready.
+  // No captured startup string waits through asynchronous detection or recording.
+  useEffect(() => {
+    if (!isFocused || !foreground || speechListening || readerStatus !== "available" ||
+        !route || !routeDestinationBuilding || isRouteCancelledRef.current || isReroutingRef.current ||
+        spokenDestinationRef.current === routeDestinationBuilding) return;
+    // Screen-reader startup belongs exclusively to the visible summary focus.
+    if (readerEnabled && !isAudioMuted) {
+      if (startupSession && !startupSession.guidancePrepared && !startupSession.cancelled) {
+        startupSession.guidancePrepared = true;
+        if (nextStep) {
+          const stages = initialSpeechStages(distToNextStepMeters);
+          stages.haptics = spokenStagesRef.current[nextStep.pointIndex]?.haptics;
+          if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+          spokenStagesRef.current[nextStep.pointIndex] = stages;
+        }
+      }
+      return;
+    }
+    const instruction = nextStep
+      ? `${formatDirectionInstruction(nextStep, directionStyle)} in ${formatDistance(distToNextStepMeters, distanceUnits)}`
+      : `Route distance ${formatDistance(route.distance, distanceUnits)}`;
+    const name = buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination";
+    const accepted = isAudioMuted || navigationSpeech.request(`Navigating to ${name}. ${instruction}.`,
+      nextStep && distToNextStepMeters <= 5
+        ? nextStep.instruction === "Arrive at destination" ? "arrival" : "urgent" : "startup",
+      () => currentGuidanceRef.current.route === route && currentGuidanceRef.current.nextStep === nextStep);
+    if (accepted) {
+      if (startupSession) startupSession.handled = true;
+      spokenDestinationRef.current = routeDestinationBuilding;
+      if (nextStep && !isAudioMuted) {
+        const stages = initialSpeechStages(distToNextStepMeters);
+        if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+        spokenStagesRef.current[nextStep.pointIndex] = stages;
+      }
+    }
+  }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, routeDestinationBuilding,
+    nextStep, distToNextStepMeters, directionStyle, distanceUnits, buildings, isAudioMuted, navigationSpeech, startupSession]);
+
+  useEffect(() => {
+    if (!isFocused || !foreground || speechListening || isReroutingRef.current || navigationMode !== "accessibility") {
       return;
     }
 
@@ -751,7 +867,7 @@ export function useMapNavigation(buildings: Building[]) {
       direction = "left";
     }
 
-    if (isAudioMuted) return;
+    if (isAudioMuted || (readerEnabled && startupSession && !startupSession.handled && !startupSession.cancelled)) return;
     if (nextStep?.instruction === "Arrive at destination" && distToNextStepMeters <= 5) return;
     if (diff <= 15 || diff >= 345) return;
 
@@ -768,7 +884,7 @@ export function useMapNavigation(buildings: Building[]) {
     if (navigationSpeech.request(orientationMessage, "optional")) {
       orientationPromptRef.current = { direction: promptDir, timestamp: now };
     }
-  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, navigationMode, isFocused, nextStep, distToNextStepMeters, navigationSpeech]);
+  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, navigationMode, isFocused, foreground, speechListening, readerStatus, readerEnabled, nextStep, distToNextStepMeters, navigationSpeech, startupSession]);
 
   const repeatGuidanceRef = useRef({ nextStep, distToNextStepMeters, distanceUnits, directionStyle });
   useEffect(() => {
@@ -777,9 +893,10 @@ export function useMapNavigation(buildings: Building[]) {
 
   // Repeat only while idle; a stable interval reads the latest GPS distance.
   useEffect(() => {
-    if (!isFocused || navigationMode !== "accessibility" || !route || isAudioMuted || !repeatGuidanceEnabled) return;
+    if (!isFocused || !foreground || speechListening || navigationMode !== "accessibility" || !route || isAudioMuted || !repeatGuidanceEnabled) return;
     const intervalId = setInterval(() => {
-      if (isRouteCancelledRef.current) return;
+      if (isRouteCancelledRef.current || isReroutingRef.current ||
+          (readerEnabled && startupSession && !startupSession.handled && !startupSession.cancelled)) return;
       const current = repeatGuidanceRef.current;
       if (!current.nextStep) return;
       if (current.nextStep.instruction === "Arrive at destination" && current.distToNextStepMeters <= 5) return;
@@ -789,16 +906,18 @@ export function useMapNavigation(buildings: Building[]) {
       ), "optional");
     }, repeatGuidanceSeconds * 1000);
     return () => clearInterval(intervalId);
-  }, [isFocused, navigationMode, route, isAudioMuted, navigationSpeech, repeatGuidanceEnabled, repeatGuidanceSeconds]);
+  }, [isFocused, foreground, speechListening, navigationMode, route, isAudioMuted, navigationSpeech, repeatGuidanceEnabled, repeatGuidanceSeconds, readerEnabled, startupSession]);
 
   useEffect(() => {
-    if (!isFocused || !route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
+    if (!isFocused || !foreground || !route || !nextStep || !coordinates || isRouteCancelledRef.current || isReroutingRef.current) return;
     const stages = spokenStagesRef.current[nextStep.pointIndex] ?? {};
     spokenStagesRef.current[nextStep.pointIndex] = stages;
     
-    const speakPrompt = (text: string) => {
+    const speakPrompt = (text: string, stage: "m25" | "m5" | "turn") => {
       if (!isFocused) return;
-      if (Platform.OS !== "web") { 
+      const haptics = stages.haptics ??= {};
+      if (!haptics[stage] && Platform.OS !== "web") {
+        haptics[stage] = true;
         try { 
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
         } catch { 
@@ -809,29 +928,37 @@ export function useMapNavigation(buildings: Building[]) {
       // Still consume each haptic stage once while muted, as before. Muting
       // must not make every subsequent GPS sample vibrate/retry the same stage.
       if (audioMutedRef.current) return true;
-      return navigationSpeech.request(text, nextStep.instruction === "Arrive at destination" ? "arrival" : "maneuver");
+      if (readerEnabled && startupSession && !startupSession.handled && !startupSession.cancelled) {
+        if (stage === "m25" || readerStatus !== "available" || speechListening) return false;
+        startupSession.cancelled = true;
+      }
+      return navigationSpeech.request(text, nextStep.instruction === "Arrive at destination" ? "arrival"
+        : stage === "m25" ? "maneuver" : "urgent",
+        () => currentGuidanceRef.current.route === route && currentGuidanceRef.current.nextStep === nextStep);
     };
 
     if (nextStep.instruction === "Arrive at destination") {
       if (distToNextStepMeters <= 5 && !stages.turn) {
         const destinationName = route.destination?.label || "your destination";
-        if (speakPrompt(`You have arrived at ${destinationName}`)) stages.turn = true;
+        if (speakPrompt(`You have arrived at ${destinationName}`, "turn")) stages.turn = true;
       }
       return;
     }
 
     if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) {
       const distance = distanceUnits === "imperial" ? "80 feet" : "25 meters";
-      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`)) stages.m25 = true;
+      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`, "m25")) stages.m25 = true;
     } else if (distToNextStepMeters <= 5 && distToNextStepMeters > 2 && !stages.m5) {
       const distance = distanceUnits === "imperial" ? "15 feet" : "5 meters";
-      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`)) stages.m5 = true;
+      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`, "m5")) stages.m5 = true;
     } else if (distToNextStepMeters <= 2 && !stages.turn) {
-      if (speakPrompt(`${nextStepInstruction} now`)) stages.turn = true;
+      if (speakPrompt(`${nextStepInstruction} now`, "turn")) stages.turn = true;
     }
-  }, [isFocused, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech]);
+  }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech, startupSession]);
 
   return { 
+    navigationSpeech, onVoiceListeningChange, politeAnnouncement,
+    startupSession, startupReady, onStartupHandoff, onPickerTransition,
     coordinates, 
     mapCenter, 
     error, 

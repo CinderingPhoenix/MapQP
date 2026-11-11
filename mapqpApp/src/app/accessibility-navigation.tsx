@@ -1,3 +1,4 @@
+import NavigationAnnouncements from "../components/navigation-announcements";
 // accessibility-navigation.tsx
 
 import { useFocusEffect } from "expo-router";
@@ -99,6 +100,8 @@ export default function Home() {
     toggleMute,
     handleDestinationChange,
     handleCancelRoute,
+    navigationSpeech, onVoiceListeningChange, politeAnnouncement,
+    startupSession, startupReady, onStartupHandoff, onPickerTransition,
     handleRecenter,
     setShowRecenter,
   } = useMapNavigation(buildings);
@@ -217,7 +220,10 @@ export default function Home() {
           <View style={styles.routeHeaderRow}>
             <View style={{ flex: 1 }}>
               <CurrentNavigationSummary
-                destinationKey={routeDestinationBuilding}
+                startupAnnouncement
+                startupSession={startupSession}
+                startupReady={startupReady}
+                onStartupHandoff={onStartupHandoff}
                 destinationName={buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination"}
                 screenReaderEnabled={screenReaderEnabled}
                 expanded={directionsExpanded}
@@ -447,6 +453,8 @@ export default function Home() {
         </RecenterOverlay>
 
         <BuildingPicker
+          onPickerTransition={onPickerTransition}
+          navigationSpeech={navigationSpeech} onVoiceListeningChange={onVoiceListeningChange}
           onVoiceMapCommand={(command) => voiceMapRef.current?.voiceCommand(command, handleRecenter)
             ?? Promise.resolve("Map is still loading.")}
           buildings={buildings}
@@ -473,6 +481,7 @@ export default function Home() {
           </Text>
         )}
       </Animated.View>
+      <NavigationAnnouncements message={politeAnnouncement} />
       {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
   );

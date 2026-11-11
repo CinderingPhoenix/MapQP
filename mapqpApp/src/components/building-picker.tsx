@@ -1,6 +1,6 @@
 
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as Speech from "expo-speech";
+import type { NavigationSpeech } from "../utils/navigation-speech";
 import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
 import { parseVoiceMapCommand, type VoiceMapCommand } from "../utils/voice-map-command";
 import { useFocusEffect } from "expo-router";
@@ -8,7 +8,6 @@ import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
-  AccessibilityInfo,
   AppState,
   Keyboard,
   Modal,
@@ -53,7 +52,10 @@ type BuildingPickerProps = {
   placeholder: string;
   accessibilityControls?: boolean;
   onOpenSettings?: () => void;
+  onPickerTransition?: (dismissed: boolean) => void;
   onVoiceMapCommand?: (command: VoiceMapCommand) => Promise<string>;
+  navigationSpeech: NavigationSpeech;
+  onVoiceListeningChange: (listening: boolean) => Promise<void>;
 };
 
 export default React.memo(function BuildingPicker({
@@ -64,7 +66,10 @@ export default React.memo(function BuildingPicker({
   placeholder,
   accessibilityControls = false,
   onOpenSettings,
+  onPickerTransition,
   onVoiceMapCommand,
+  navigationSpeech,
+  onVoiceListeningChange,
 }: BuildingPickerProps) {
   const { fontSize, deviceAccessibility, configureRoutingPreferences } = useSettings();
   const {
@@ -115,6 +120,11 @@ export default React.memo(function BuildingPicker({
   const blurTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingModalSelection = useRef<string | null>(null);
+  useEffect(() => {
+    // Android does not deliver Modal.onDismiss.
+    if (Platform.OS !== "ios" && !isBuildingSelectorOpen) onPickerTransition?.(true);
+  }, [isBuildingSelectorOpen, onPickerTransition]);
+
 
   const handleSelectorDismiss = useCallback(() => {
     // iOS keeps Modal content mounted during dismissal. Reset only after the
@@ -122,8 +132,9 @@ export default React.memo(function BuildingPicker({
     setShowSavedOnly(false);
     const buildingId = pendingModalSelection.current;
     pendingModalSelection.current = null;
+    onPickerTransition?.(true);
     if (buildingId !== null) onChange(buildingId);
-  }, [onChange]);
+  }, [onChange, onPickerTransition]);
 
   const recentBuildings = recentSearchIds
     .map((id) => buildings.find((building) => building.id === id))
@@ -195,20 +206,23 @@ export default React.memo(function BuildingPicker({
       setQuery(building.name);
       void saveRecentSearch(building.id);
       setIsOpen(false);
-      if (!waitForModalDismissal) setShowSavedOnly(false);
+      if (!waitForModalDismissal) {
+        setShowSavedOnly(false);
+        onPickerTransition?.(true);
+      }
       setIsBuildingSelectorOpen(false);
       setIsInputFocused(false);
     },
-    [onChange, saveRecentSearch, isBuildingSelectorOpen]
+    [onChange, saveRecentSearch, isBuildingSelectorOpen, onPickerTransition]
   );
 
   const voiceCommandHandled = useRef(false);
   const voiceSession = useRef({ generation: 0, phase: "idle" as "idle" | "starting" | "listening" | "stopping", focused: false });
   const [voiceStatus, setVoiceStatus] = useState("");
+  const voiceFeedback = useRef<(message: string) => boolean>(() => false);
   const reportVoice = (message: string, generation = voiceSession.current.generation) => {
     if (!voiceSession.current.focused || AppState.currentState !== "active" || generation !== voiceSession.current.generation) return;
-    setVoiceStatus(message);
-    AccessibilityInfo.announceForAccessibility(message);
+    if (voiceFeedback.current(message)) setVoiceStatus(message);
   };
   const invalidateVoice = useCallback(() => {
     const session = voiceSession.current;
@@ -218,33 +232,30 @@ export default React.memo(function BuildingPicker({
     session.phase = wasListening ? "stopping" : session.phase === "starting" ? "idle" : session.phase;
     setIsListening(false);
     if (wasListening) ExpoSpeechRecognitionModule?.abort?.();
-  }, []);
+    if (session.phase === "idle") void onVoiceListeningChange(false);
+  }, [onVoiceListeningChange]);
   useFocusEffect(useCallback(() => {
-    if (!accessibilityControls) return;
     voiceSession.current.focused = true;
-    return () => { voiceSession.current.focused = false; invalidateVoice(); };
-  }, [accessibilityControls, invalidateVoice]));
+    return () => { pendingModalSelection.current = null; voiceSession.current.focused = false; invalidateVoice(); void onVoiceListeningChange(false); };
+  }, [invalidateVoice, onVoiceListeningChange]));
   useEffect(() => {
-    if (!accessibilityControls) return;
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state !== "active") invalidateVoice();
+      if (state !== "active") { invalidateVoice(); void onVoiceListeningChange(false); }
     });
     return () => subscription.remove();
-  }, [accessibilityControls, invalidateVoice]);
+  }, [invalidateVoice, onVoiceListeningChange]);
 
   // Speech recognition
   useSpeechRecognitionEvent("result", (event: any) => {
     const spokenText = event.results[0]?.transcript;
     if (!spokenText || voiceCommandHandled.current) return;
-    if (accessibilityControls && (voiceSession.current.phase !== "listening" || !voiceSession.current.focused || AppState.currentState !== "active")) return;
+    if (voiceSession.current.phase !== "listening" || !voiceSession.current.focused || AppState.currentState !== "active") return;
     // Wait for the complete phrase so partial commands cannot match a building.
-    if (accessibilityControls && !event.isFinal) return;
-    if (accessibilityControls) {
-      voiceCommandHandled.current = true;
-      voiceSession.current.phase = "stopping";
-      ExpoSpeechRecognitionModule?.stop?.();
-      setIsListening(false);
-    }
+    if (!event.isFinal) return;
+    voiceCommandHandled.current = true;
+    voiceSession.current.phase = "stopping";
+    ExpoSpeechRecognitionModule?.stop?.();
+    setIsListening(false);
     const command = spokenText.toLowerCase().replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, " ");
     if (accessibilityControls && /^(?:please )?(?:cancel|stop|end)(?: (?:the|my|current))? (?:route|navigation)(?: please)?$/.test(command)) {
       voiceCommandHandled.current = true;
@@ -268,12 +279,13 @@ export default React.memo(function BuildingPicker({
       setIsOpen(false);
       const labels = { avoidStairs: "Avoid stairs", avoidIndoorRoutes: "Avoid indoor routes",
         avoidInaccessibleCrosswalks: "Avoid inaccessible road crossings" };
+      const generation = voiceSession.current.generation;
       void configureRoutingPreferences({ [routingCommand.preference]: routingCommand.enabled })
         .then(() => {
-          Speech.speak(`${labels[routingCommand.preference]} turned ${routingCommand.enabled ? "on" : "off"}. Changes apply when you start a new route.`);
+          reportVoice(`${labels[routingCommand.preference]} turned ${routingCommand.enabled ? "on" : "off"}. Changes apply when you start a new route.`, generation);
         })
         .catch(() => {
-          Speech.speak("Could not save the routing preference. Please try again.");
+          reportVoice("Could not save the routing preference. Please try again.", generation);
         });
       return;
     }
@@ -337,8 +349,9 @@ export default React.memo(function BuildingPicker({
   useSpeechRecognitionEvent("end", () => {
     if (accessibilityControls) {
       if (voiceSession.current.phase === "listening" && !voiceCommandHandled.current) reportVoice("No command heard. Try again.");
-      voiceSession.current.phase = "idle";
     }
+    voiceSession.current.phase = "idle";
+    void onVoiceListeningChange(false);
     setIsListening(false);
   });
 
@@ -346,9 +359,9 @@ export default React.memo(function BuildingPicker({
     console.error("Speech recognition error:", event.error);
     if (accessibilityControls) {
       if (voiceSession.current.phase === "listening") reportVoice("Could not recognize a command. Try again.");
-      voiceCommandHandled.current = true;
-      voiceSession.current.phase = "stopping";
     }
+    voiceCommandHandled.current = true;
+    voiceSession.current.phase = "stopping";
     setIsListening(false);
   });
 
@@ -410,19 +423,17 @@ export default React.memo(function BuildingPicker({
 
   const handleVoiceSearch = async () => {
     if (value && !accessibilityControls) return;
-    if (accessibilityControls) {
-      if (!voiceSession.current.focused || AppState.currentState !== "active") return;
-      if (voiceSession.current.phase !== "idle") { invalidateVoice(); return; }
-      voiceSession.current.phase = "starting";
-      voiceSession.current.generation++;
-      setVoiceStatus("");
-    }
+    if (!voiceSession.current.focused || AppState.currentState !== "active") return;
+    if (voiceSession.current.phase !== "idle") { invalidateVoice(); return; }
+    voiceSession.current.phase = "starting";
+    voiceSession.current.generation++;
+    setVoiceStatus("");
     const generation = voiceSession.current.generation;
-    const canStart = () => !accessibilityControls || (generation === voiceSession.current.generation &&
-      voiceSession.current.focused && AppState.currentState === "active" && voiceSession.current.phase === "starting");
+    const canStart = () => generation === voiceSession.current.generation &&
+      voiceSession.current.focused && AppState.currentState === "active" && voiceSession.current.phase === "starting";
 
     if (!ExpoSpeechRecognitionModule?.isRecognitionAvailable) {
-      if (accessibilityControls) voiceSession.current.phase = "idle";
+      voiceSession.current.phase = "idle";
       Alert.alert(
         "Expo Go Limitation",
         "Voice search requires a custom development build and is disabled inside Expo Go."
@@ -435,7 +446,7 @@ export default React.memo(function BuildingPicker({
         !(await ExpoSpeechRecognitionModule.isRecognitionAvailable())
       ) {
         if (!canStart()) return;
-        if (accessibilityControls) voiceSession.current.phase = "idle";
+        voiceSession.current.phase = "idle";
         Alert.alert(
           "Unavailable",
           "Speech recognition is not available or supported on this device."
@@ -449,7 +460,7 @@ export default React.memo(function BuildingPicker({
           .granted
       ) {
         if (!canStart()) return;
-        if (accessibilityControls) voiceSession.current.phase = "idle";
+        voiceSession.current.phase = "idle";
         Alert.alert(
           "Permission required",
           "Microphone and speech recognition permissions are needed for voice search."
@@ -467,7 +478,13 @@ export default React.memo(function BuildingPicker({
       setQuery("");
       setIsOpen(false);
       voiceCommandHandled.current = false;
-      if (accessibilityControls) voiceSession.current.phase = "listening";
+      // Wait for app TTS to stop before opening the microphone. Do not release
+      // suspension on a final result: the native recognizer must emit end first.
+      await onVoiceListeningChange(true);
+      if (!canStart()) return;
+      voiceFeedback.current = navigationSpeech.feedbackReporter(() =>
+        generation === voiceSession.current.generation && voiceSession.current.focused && AppState.currentState === "active");
+      voiceSession.current.phase = "listening";
       setIsListening(true);
 
       ExpoSpeechRecognitionModule.start({
@@ -480,10 +497,9 @@ export default React.memo(function BuildingPicker({
         "Failed to start speech recognition:",
         voiceError
       );
-      if (accessibilityControls) {
-        if (generation !== voiceSession.current.generation) return;
-        voiceSession.current.phase = "idle";
-      }
+      if (generation !== voiceSession.current.generation) return;
+      voiceSession.current.phase = "idle";
+      void onVoiceListeningChange(false);
       setIsListening(false);
       Alert.alert(
         "Error",
@@ -649,6 +665,7 @@ export default React.memo(function BuildingPicker({
             style={styles.secondaryControl}
             onPress={() => {
               setShowSavedOnly(true);
+              onPickerTransition?.(false);
               setIsBuildingSelectorOpen(true);
             }}
             accessibilityRole="button"
@@ -868,6 +885,7 @@ export default React.memo(function BuildingPicker({
           onPress={() => {
             Keyboard.dismiss();
             setIsOpen(false);
+            onPickerTransition?.(false);
             setIsBuildingSelectorOpen(true);
           }}
           activeOpacity={0.75}
