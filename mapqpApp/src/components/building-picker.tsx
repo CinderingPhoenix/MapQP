@@ -21,6 +21,9 @@ import {
 import { Building, getSimilarityScore } from "../utils/map-logic";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
+import { COLOR_VISION_PALETTES } from "../theme/color-vision-palettes";
+import unityRoomData from "../data/uh-rooms.json";
+import type { IndoorRoom } from "../utils/indoor-types";
 
 let ExpoSpeechRecognitionModule: any = null;
 let useSpeechRecognitionEvent: (
@@ -49,6 +52,8 @@ type BuildingPickerProps = {
   placeholder: string;
   accessibilityControls?: boolean;
   onOpenSettings?: () => void;
+  rooms?: IndoorRoom[];
+  onRoomSelect?: (room: IndoorRoom) => void;
 };
 
 export default React.memo(function BuildingPicker({
@@ -59,8 +64,10 @@ export default React.memo(function BuildingPicker({
   placeholder,
   accessibilityControls = false,
   onOpenSettings,
+  rooms = unityRoomData.rooms,
+  onRoomSelect
 }: BuildingPickerProps) {
-  const { fontSize, deviceAccessibility, configureRoutingPreferences } = useSettings();
+  const { fontSize, deviceAccessibility, configureRoutingPreferences, colorVisionPreset } = useSettings();
   const {
     reduceMotionEnabled,
     boldTextEnabled,
@@ -86,6 +93,8 @@ export default React.memo(function BuildingPicker({
     borderColor: increasedContrast ? "#444" : undefined,
   };
 
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
+
   const { fontScale: systemFontScale } = useWindowDimensions();
   // A single-line destination field stays aligned with its action icons.
   // Use a responsive height, but never allow the selected name to wrap under the border.
@@ -109,15 +118,23 @@ export default React.memo(function BuildingPicker({
   const blurTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingModalSelection = useRef<string | null>(null);
+  const pendingRoomSelection = useRef<IndoorRoom | null>(null);
 
   const handleSelectorDismiss = useCallback(() => {
-    // iOS keeps Modal content mounted during dismissal. Reset only after the
-    // native transition is finished, without changing its outgoing title/list.
     setShowSavedOnly(false);
+
     const buildingId = pendingModalSelection.current;
+    const room = pendingRoomSelection.current;
+
     pendingModalSelection.current = null;
-    if (buildingId !== null) onChange(buildingId);
-  }, [onChange]);
+    pendingRoomSelection.current = null;
+
+    if (room !== null) {
+      onRoomSelect?.(room);
+    } else if (buildingId !== null) {
+      onChange(buildingId);
+    }
+  }, [onChange, onRoomSelect]);
 
   const recentBuildings = recentSearchIds
     .map((id) => buildings.find((building) => building.id === id))
@@ -175,6 +192,7 @@ export default React.memo(function BuildingPicker({
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
+      pendingRoomSelection.current = null;
 
       Keyboard.dismiss();
       // iOS restores the modal launcher's accessibility focus at dismissal.
@@ -194,6 +212,41 @@ export default React.memo(function BuildingPicker({
       setIsInputFocused(false);
     },
     [onChange, saveRecentSearch, isBuildingSelectorOpen]
+  );
+
+  const selectRoom = useCallback(
+    (room: IndoorRoom) => {
+      if (!onRoomSelect) return;
+
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+
+      Keyboard.dismiss();
+
+      const waitForModalDismissal =
+        Platform.OS === "ios" && isBuildingSelectorOpen;
+
+      pendingModalSelection.current = null;
+      pendingRoomSelection.current = waitForModalDismissal
+        ? room
+        : null;
+
+      setQuery(room.name);
+      setIsOpen(false);
+      setIsInputFocused(false);
+
+      if (!waitForModalDismissal) {
+        setShowSavedOnly(false);
+      }
+
+      setIsBuildingSelectorOpen(false);
+
+      if (!waitForModalDismissal) {
+        onRoomSelect(room);
+      }
+    },
+    [onRoomSelect, isBuildingSelectorOpen]
   );
 
   const voiceCommandHandled = useRef(false);
@@ -410,6 +463,24 @@ export default React.memo(function BuildingPicker({
     building.name.toLowerCase().includes(query.trim().toLowerCase())
   );
 
+  const roomSearchTerms = query
+  .trim()
+  .toLowerCase()
+  .split(/\s+/)
+  .filter(Boolean);
+
+  const matchingRooms = onRoomSelect
+    ? rooms.filter((room) => {
+      const searchableText =
+        `${room.name} ${room.roomNum} Unity Hall`
+          .toLowerCase();
+
+      return roomSearchTerms.every((term) =>
+        searchableText.includes(term)
+      );
+    })
+  : [];
+
   const renderBuildingRow = (
     building: Building,
     isSelected = false
@@ -479,6 +550,65 @@ export default React.memo(function BuildingPicker({
     );
   };
 
+  const renderRoomRow = (room: IndoorRoom) => {
+  const floors = [
+    ...new Set(
+      room.entrances.map((entrance) => entrance.floor)
+    ),
+  ].sort((a, b) => a - b);
+
+  const floorLabel =
+    `${floors.length === 1 ? "Floor" : "Floors"} ` +
+    floors.join(", ");
+
+  return (
+    <View
+      key={`unity-room-${room.roomNum}`}
+      style={[
+        styles.buildingRow,
+        increasedContrast && {
+          borderBottomColor: "#666",
+        },
+      ]}
+    >
+      <TouchableOpacity
+        style={styles.buildingRowMain}
+        onPress={() => selectRoom(room)}
+        accessibilityRole="button"
+        accessibilityLabel={`${room.name}, ${floorLabel}`}
+        activeOpacity={0.7}
+      >
+        <View style={{ flex: 1 }}>
+          <Text
+            maxFontSizeMultiplier={2.5}
+            style={[
+              styles.buildingRowText,
+              { fontSize: 16 * fontSize },
+              accessibleText,
+            ]}
+          >
+            {room.name}
+          </Text>
+
+          <Text
+            maxFontSizeMultiplier={2.5}
+            style={[
+              {
+                marginTop: 4,
+                fontSize: 13 * fontSize,
+                color: "#555",
+              },
+              accessibleText,
+            ]}
+          >
+            {floorLabel}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
   return (
     <View
       style={
@@ -519,7 +649,10 @@ export default React.memo(function BuildingPicker({
           <TouchableOpacity
             style={[
               styles.voiceControl,
-              isListening && styles.voiceControlListening,
+              isListening && styles.voiceControlListening, {
+                backgroundColor: isListening ? palette.surface : palette.primary,
+                borderColor: palette.border, borderWidth: 2
+              }
             ]}
             onPress={() => void handleVoiceSearch()}
             accessibilityRole="button"
@@ -534,7 +667,7 @@ export default React.memo(function BuildingPicker({
             <Ionicons
               name={isListening ? "mic" : "mic-outline"}
               size={36}
-              color="#fff"
+              color= {isListening ? palette.text : palette.onPrimary}
             />
 
             <Text key={`picker-text-3-${fontSize}-${systemFontScale}`}
@@ -542,7 +675,9 @@ export default React.memo(function BuildingPicker({
               style={[
                 styles.voiceControlLabel,
                 { fontSize: 14 * fontSize, lineHeight: Math.ceil(21 * fontSize), paddingVertical: 2 },
-                accessibleLightText,
+                accessibleLightText, {
+                  color: isListening ? palette.text : palette.onPrimary
+                }
               ]}
             >
               {isListening ? "Listening" : "Speak"}
@@ -883,13 +1018,47 @@ export default React.memo(function BuildingPicker({
               </View>
             )
           ) : (
-            matchingBuildings.map((building) =>
-              renderBuildingRow(
-                building,
-                value === building.id
-              )
-            )
-          )}
+  <>
+    {matchingBuildings.map((building) =>
+      renderBuildingRow(building, value === building.id)
+    )}
+
+    {matchingRooms.length > 0 && (
+      <>
+        <View style={styles.dropdownHeader}>
+          <Text
+            maxFontSizeMultiplier={2.5}
+            style={[
+              styles.dropdownHeaderText,
+              { fontSize: 12 * fontSize },
+              accessibleText,
+            ]}
+          >
+            Unity destinations
+          </Text>
+        </View>
+
+        {matchingRooms.map(renderRoomRow)}
+      </>
+    )}
+
+    {matchingBuildings.length === 0 &&
+      matchingRooms.length === 0 && (
+        <View style={styles.emptyState}>
+          <Text
+            maxFontSizeMultiplier={2.5}
+            style={[
+              styles.emptyStateText,
+              { fontSize: 14 * fontSize },
+              accessibleText,
+            ]}
+          >
+            No matching destinations.
+          </Text>
+        </View>
+      )}
+  </>
+)}
         </ScrollView>
       )}
 
@@ -999,19 +1168,74 @@ export default React.memo(function BuildingPicker({
             </TouchableOpacity>
           </View>
 
+          {!showSavedOnly && (
+  <TextInput
+    value={query}
+    onChangeText={setQuery}
+    placeholder="Search buildings or Unity rooms..."
+    accessibilityLabel="Search destinations"
+    autoCorrect={false}
+    maxFontSizeMultiplier={2.5}
+    style={[
+      styles.input,
+      {
+        marginHorizontal: 16,
+        marginTop: 12,
+        marginBottom: 8,
+        height: textBoxHeight,
+        fontSize: 16 * fontSize,
+      },
+      accessibleText,
+      accessibleBorder,
+    ]}
+  />
+)}
+
           <ScrollView
             contentContainerStyle={styles.selectorList}
             keyboardShouldPersistTaps="always"
           >
             {(showSavedOnly
-              ? savedBuildings
-              : buildings
-            ).map((building) =>
-              renderBuildingRow(
-                building,
-                value === building.id
-              )
-            )}
+  ? savedBuildings
+  : matchingBuildings
+).map((building) =>
+  renderBuildingRow(building, value === building.id)
+)}
+
+{!showSavedOnly && matchingRooms.length > 0 && (
+  <>
+    <View style={styles.dropdownHeader}>
+      <Text
+        maxFontSizeMultiplier={2.5}
+        style={[
+          styles.dropdownHeaderText,
+          { fontSize: 12 * fontSize },
+          accessibleText,
+        ]}
+      >
+        Unity destinations
+      </Text>
+    </View>
+
+    {matchingRooms.map(renderRoomRow)}
+  </>
+)}
+
+{!showSavedOnly &&
+  matchingBuildings.length === 0 &&
+  matchingRooms.length === 0 && (
+    <View style={styles.emptyState}>
+      <Text
+        style={[
+          styles.emptyStateText,
+          { fontSize: 14 * fontSize },
+          accessibleText,
+        ]}
+      >
+        No matching destinations.
+      </Text>
+    </View>
+  )}
 
             {showSavedOnly &&
               savedBuildings.length === 0 && (
