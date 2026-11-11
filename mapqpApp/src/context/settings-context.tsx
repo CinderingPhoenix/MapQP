@@ -86,6 +86,7 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
   repeatGuidanceEnabled: boolean;
   repeatGuidanceSeconds: number;
   accessibilitySettingsVersion: 5;
+  colorVisionPreset: ColorVisionPresets;
 };
 
 type SettingsContextType = AppSettings & {
@@ -107,6 +108,7 @@ type SettingsContextType = AppSettings & {
   deviceAccessibility: DeviceAccessibilitySettings;
   setAccessibilityPreference: (preference: AccessibilityPreference, enabled: boolean) => void;
   resetAccessibilitySettings: () => void;
+  setColorVisionPreset: (preset: ColorVisionPresets) => void;
 };
 
 const SETTINGS_STORAGE_KEY = "mapqp_settings";
@@ -127,6 +129,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   repeatGuidanceSeconds: 9,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
+  colorVisionPreset: "default",
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -165,6 +168,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setNavigationModeState(mode);
     if (mode === "accessibility") setSettingsAppearance("accessible");
   };
+
+  const [colorVisionPreset, setColorVisionPreset] = useState<ColorVisionPresets> (DEFAULT_SETTINGS.colorVisionPreset);
 
   const [accessibilityNeed, setAccessibilityNeed] = useState<AccessibilityNeed | null>(null);
 
@@ -296,6 +301,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           ) {
             setFontSize(parsedSettings.fontSize);
           }
+
+          if (isColorVisionPreset(parsedSettings.colorVisionPreset)) {
+            setColorVisionPreset(parsedSettings.colorVisionPreset);
+          }
         }
         setSettingsReadSucceeded(true);
       } catch (error) {
@@ -328,6 +337,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       fontSize,
       repeatGuidanceEnabled,
       repeatGuidanceSeconds,
+      colorVisionPreset,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
@@ -425,6 +435,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         deviceAccessibility,
         setAccessibilityPreference,
         resetAccessibilitySettings,
+        colorVisionPreset,
+        setColorVisionPreset,
       }}
     >
       {children}
@@ -443,3 +455,8 @@ export function useSettings() {
 
   return context;
 }
+
+export type ColorVisionPresets = "default" | "protanopia" | "deuteranopia" | "tritanopia" | "achromatopsia";
+
+function isColorVisionPreset (value: unknown ): value is ColorVisionPresets {
+  return ( value === "default" || value === "protanopia" || value === "deuteranopia" || value === "tritanopia" || value === "achromatopsia" ); }
