@@ -892,7 +892,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
               ]} />
             <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
-              description="Choose between simple turn instructions and exact turning angles."
+              description="Choose between natural (Turn Left/Right) or degrees (Turn Left/Right 90°)."
               options={[
                 { label: "Natural", accessibilityLabel: "Natural directions", hint: "Uses directions such as turn left or turn right",
                   selected: directionStyle === "natural", onPress: () => setDirectionStyle("natural") },

@@ -142,7 +142,7 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
         <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={`Collapse ${title}`}
           onPress={collapseFromBottom} activeOpacity={1}
           style={[s.collapseButton, increasedContrast && s.strongBoundary]}>
-          <BoldText accessible={false} style={s.flex}>Collapse {title}</BoldText>
+          <BoldText accessible={false} style={s.flex}>Collapse Section</BoldText>
           <MaterialCommunityIcons name="chevron-up" size={24}
             color={increasedContrast ? COLORS.contrastInk : COLORS.ink} accessible={false} allowFontScaling={false} />
         </TouchableOpacity>
@@ -404,14 +404,22 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           </Choices></View>
           <Divider important />
           <BoldText style={s.label}>Distance units</BoldText>
-          {([['imperial', 'Feet / Miles'], ['metric', 'Meters / Kilometers']] as const).map(([value, label], index) => <View key={value}>
-            {index > 0 && <Divider />}<TouchableOpacity style={[s.action, settings.distanceUnits === value && s.selected]}
-              accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: settings.distanceUnits === value, disabled }}
-              disabled={disabled} onPress={() => settings.setDistanceUnits(value)}>
-              {settings.distanceUnits === value && <MaterialCommunityIcons name="check" size={24} color={COLORS.panel} accessible={false} allowFontScaling={false} />}
-              <BoldText accessible={false} color={settings.distanceUnits === value ? COLORS.panel : COLORS.ink}>{label}</BoldText>
-            </TouchableOpacity>
-          </View>)}
+          <View style={s.choiceInset}>
+            <Choices>
+              <Choice
+                label="Feet / Miles"
+                selected={settings.distanceUnits === "imperial"}
+                disabled={disabled}
+                onPress={() => settings.setDistanceUnits("imperial")}
+              />
+              <Choice
+                label="Meters / Kilometers"
+                selected={settings.distanceUnits === "metric"}
+                disabled={disabled}
+                onPress={() => settings.setDistanceUnits("metric")}
+              />
+            </Choices>
+          </View>
           <Divider important /><BoldText style={s.label}>Direction style</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Natural: left/right. Degrees: turning angles.</BoldText>
           <View style={s.choiceInset}><Choices>
