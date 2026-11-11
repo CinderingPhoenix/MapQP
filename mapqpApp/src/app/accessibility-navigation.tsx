@@ -45,6 +45,9 @@ import { initRoutingGraph } from "../utils/routing";
 import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
+import {COLOR_VISION_PALETTES} from "../theme/color-vision-palettes";
+import type { IndoorRoom } from "../utils/indoor-types";
+
 export default function Home() {
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
@@ -66,8 +69,10 @@ export default function Home() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
 
-  const { distanceUnits, directionStyle, fontSize } = useSettings();
+  const { distanceUnits, directionStyle, fontSize, colorVisionPreset } = useSettings();
   const accessibilityPreferences = useAccessibilityPreferences();
+
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
 
   const screenReaderEnabled = accessibilityPreferences?.screenReaderEnabled ?? false;
   const reduceMotionEnabled = accessibilityPreferences?.reduceMotionEnabled ?? false;
@@ -101,6 +106,15 @@ export default function Home() {
     handleRecenter,
     setShowRecenter,
   } = useMapNavigation(buildings);
+
+  function handleRoomSelect(room: IndoorRoom) {
+  router.push({
+    pathname: "/indoor-navigation",
+    params: {
+      roomNum: room.roomNum,
+    },
+  });
+}
 
   // iOS can retain stale native text measurements after returning from Settings.
   useFocusEffect(
@@ -448,8 +462,9 @@ export default function Home() {
           buildings={buildings}
           value={destinationBuilding}
           onChange={handleDestinationChange}
+          onRoomSelect={handleRoomSelect}
           onCancel={handleCancelRoute}
-          placeholder="Search WPI destinations..."
+          placeholder="Search buildings or Unity rooms..."
           accessibilityControls
           onOpenSettings={() =>
             router.push({
