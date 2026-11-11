@@ -528,7 +528,7 @@ function SignalSection({ title, description, children, titleRef }: {
 }) {
   const signalStyles = useSignalStyles();
   return <View style={signalStyles.section}>
-    <SignalText textRef={titleRef} size={20} weight="600" color={SIGNAL.heading} accessibilityRole="header">{title}</SignalText>
+    <SignalText textRef={titleRef} size={24} weight="800" color={SIGNAL.heading} accessibilityRole="header">{title}</SignalText>
     {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
     {children}
   </View>;
@@ -852,21 +852,6 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   onPress={() => onNavigationModeChange("accessibility")} />
               </View>
             </View>
-            <SignalPreferenceRow label="Distance units" value={distanceUnits === "imperial" ? "Feet / miles" : "Meters / km"}
-              options={[
-                { label: "ft / mi", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
-                  selected: distanceUnits === "imperial", onPress: () => setDistanceUnits("imperial") },
-                { label: "m / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
-                  selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
-              ]} />
-            <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
-              description="Choose between simple turn instructions and exact turning angles."
-              options={[
-                { label: "Natural", accessibilityLabel: "Natural directions", hint: "Uses directions such as turn left or turn right",
-                  selected: directionStyle === "natural", onPress: () => setDirectionStyle("natural") },
-                { label: "Degrees", accessibilityLabel: "Degree based directions", hint: "Uses turning angles in degrees",
-                  selected: directionStyle === "degrees", onPress: () => setDirectionStyle("degrees") },
-              ]} />
           </SignalSection>
           <SignalSection title="Display & text">
             <SignalPreferenceRow label="Settings appearance" value={settingsAppearance === "standard" ? "Standard" : "Accessible"}
@@ -899,6 +884,21 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                 <SignalText size={25} weight="600" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
               </View>
             </View>
+            <SignalPreferenceRow label="Distance units" value={distanceUnits === "imperial" ? "Feet / miles" : "Meters / km"}
+              options={[
+                { label: "ft / mi", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
+                  selected: distanceUnits === "imperial", onPress: () => setDistanceUnits("imperial") },
+                { label: "m / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
+                  selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
+              ]} />
+            <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
+              description="Choose between simple turn instructions and exact turning angles."
+              options={[
+                { label: "Natural", accessibilityLabel: "Natural directions", hint: "Uses directions such as turn left or turn right",
+                  selected: directionStyle === "natural", onPress: () => setDirectionStyle("natural") },
+                { label: "Degrees", accessibilityLabel: "Degree based directions", hint: "Uses turning angles in degrees",
+                  selected: directionStyle === "degrees", onPress: () => setDirectionStyle("degrees") },
+              ]} />
           </SignalSection>
           <SignalSection title="Accessibility" description="Device settings take priority. MapQP switches add preferences when device settings are off.">
             <View accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceValue("screenReaderEnabled")}. Controlled by your device.`}
