@@ -179,6 +179,7 @@ function GuidanceRepetitionSettings() {
 const KEYS_TO_DELETE = [
   "mapqp_tutorial_shown_once",
   "mapqp_microsoft_session",
+  "mapqp_access_token",
   "mapqp_temp_code_session",
   "mapqp_temp_code_expires_at",
   "wpi_map_last_location",
@@ -963,8 +964,8 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           </SignalSection>
           <SignalSection title="App & support">
             <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
-              description="Opens the report form. Submission is not yet available."
-              accessibilityHint="Opens the bug reporting form. Submitting reports is not yet available."
+              description="Send a bug report to the mapQP team."
+              accessibilityHint="Opens the form to submit a bug report."
               onPress={() => router.push("/report-bug")} />
             <View style={[signalStyles.preferenceRow, stacked && signalStyles.stackedRow]}>
               <SignalText size={15} color={SIGNAL.status}>Route data version</SignalText>
