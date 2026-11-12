@@ -29,8 +29,9 @@ export function useModalDismissal(visible: boolean, onDismiss?: () => void) {
   };
 }
 
-export function AvoidStairsPrompt({ visible, onAnswered, onDismiss }: {
+export function AvoidStairsPrompt({ visible, onAnswered, onDismiss, defaultAvoidStairs }: {
   visible: boolean;
+  defaultAvoidStairs?: boolean;
   onAnswered: () => void;
   onDismiss: () => void;
 }) {
@@ -57,12 +58,12 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss }: {
   const previouslyVisible = useRef(false);
   useEffect(() => {
     if (visible && !previouslyVisible.current) {
-      setSelectedAvoidStairs(avoidStairs);
+      setSelectedAvoidStairs(defaultAvoidStairs ?? avoidStairs);
       setSelectedIndoor(avoidIndoorRoutes);
       setSelectedCrosswalks(avoidInaccessibleCrosswalks);
     }
     previouslyVisible.current = visible;
-  }, [visible, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks]);
+  }, [visible, defaultAvoidStairs, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks]);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {

@@ -3,6 +3,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type Ref } from "react";
 import {
   AccessibilityInfo,
+  Alert,
   KeyboardAvoidingView,
   Keyboard,
   Platform,
@@ -23,6 +24,9 @@ import {
   BUG_REPORT_CATEGORIES,
   BUG_REPORT_TEXT_LIMIT,
   validateBugReport,
+  collectBugReportMetadata,
+  prepareBugReport,
+  submitBugReport,
   type BugReportDraft,
   type BugReportCategory,
 } from "../utils/bug-reports";
@@ -52,7 +56,7 @@ function InlineError({ message, fontSize, bold, onLayout }: {
 
 export default function ReportBugPage() {
   useAuthGuard();
-  const { fontSize } = useSettings();
+  const { fontSize, navigationMode } = useSettings();
   const preferences = useAccessibilityPreferences();
   const contrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -182,8 +186,11 @@ export default function ReportBugPage() {
     category: null, description: "", stepsToReproduce: "",
   });
   const [checked, setChecked] = useState(false);
+  const submitting = useRef(false);
+  const [sending, setSending] = useState(false);
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const errors = validateBugReport(draft);
+  const submitDisabled = sending || Object.keys(errors).length > 0;
   const descriptionError = checked || descriptionTouched ? errors.description : undefined;
   const stepsError = checked ? errors.stepsToReproduce : undefined;
   const descriptionHelp = "What went wrong? Tell us what you expected to happen.";
@@ -215,7 +222,36 @@ export default function ReportBugPage() {
       setFocusRequest((previous) => ({ field, sequence: (previous?.sequence ?? 0) + 1 }));
     } else {
       setFocusRequest(null);
-      AccessibilityInfo.announceForAccessibility("Required fields are complete. Submission is not yet available. Nothing has been sent.");
+      AccessibilityInfo.announceForAccessibility("Required fields are complete. Your report is ready to submit.");
+    }
+  };
+
+  const sendReport = async () => {
+    if (submitting.current) return;
+    checkReport();
+    const report = prepareBugReport(draft, collectBugReportMetadata());
+    if (!report.valid) return;
+    submitting.current = true;
+    setSending(true);
+    try {
+      await submitBugReport(report.payload);
+      setDraft({ category: null, description: "", stepsToReproduce: "" });
+      setChecked(false);
+      setDescriptionTouched(false);
+      Alert.alert(
+        "Report sent",
+        "Your bug report was sent. Thank you.",
+        [{ text: "OK", onPress: () => router.replace(
+          navigationMode === "accessibility" ? "/accessibility-navigation" : "/standard-navigation"
+        ) }],
+        { cancelable: false },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to send your report. Please try again.";
+      Alert.alert("Report not sent", message);
+    } finally {
+      submitting.current = false;
+      setSending(false);
     }
   };
 
@@ -252,9 +288,9 @@ export default function ReportBugPage() {
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
             <View style={styles.noticeCopy}>
               <ReportText bold={preferences.boldTextEnabled} accessibilityRole="header"
-                style={[textStyle, styles.noticeTitle]}>Not sending reports yet</ReportText>
+                style={[textStyle, styles.noticeTitle]}>Report a problem</ReportText>
               <ReportText bold={preferences.boldTextEnabled} style={[textStyle, { fontSize: 15 * fontSize, lineHeight: Math.ceil(22 * fontSize) }]}>
-                You can check this form for missing information. Submission is not available yet, and nothing will be uploaded.
+                Submit this form to send a bug report to the mapQP team.
               </ReportText>
             </View>
           </View>
@@ -272,7 +308,7 @@ export default function ReportBugPage() {
             <ReportText bold={preferences.boldTextEnabled} style={textStyle}>Choose the closest match.</ReportText>
             <View style={[styles.categoryGroup, contrast && styles.highContrastBorder]} accessible={false} accessibilityRole="radiogroup" accessibilityLabel="Problem category, required">
               {BUG_REPORT_CATEGORIES.map(({ value, label }, index) => (
-                <TouchableOpacity key={value}
+                <TouchableOpacity key={value} disabled={sending}
                   style={[styles.category, index > 0 && styles.categorySeparator,
                     draft.category === value && styles.selectedCategory,
                     draft.category === value && contrast && styles.selectedCategoryContrast]}
@@ -280,7 +316,7 @@ export default function ReportBugPage() {
                   accessible accessibilityRole="radio" accessibilityLabel={label}
                   accessibilityHint={`Selects this problem category.${checked && errors.category ? ` ${errors.category}` : ""}`}
                   aria-invalid={Boolean(checked && errors.category)}
-                  accessibilityState={{ checked: draft.category === value }}>
+                  accessibilityState={{ checked: draft.category === value, disabled: sending }}>
                   <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
                     style={[styles.radio, contrast && styles.contrastRadio, draft.category === value && styles.radioSelected]}>
                     {draft.category === value && <View style={styles.radioDot} />}
@@ -311,7 +347,7 @@ export default function ReportBugPage() {
               <ReportText bold={preferences.boldTextEnabled} style={indicatorStyle} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Required</ReportText>
               </View>
               <ReportText bold={preferences.boldTextEnabled} style={formTextStyle}>{descriptionHelp}</ReportText>
-              <TextInput style={[inputStyle, descriptionError && styles.invalidInput]}
+              <TextInput editable={!sending} style={[inputStyle, descriptionError && styles.invalidInput]}
                 ref={descriptionRef}
                 onLayout={(event) => measureTarget("description", event)}
                 onFocus={() => beginEditing("description")}
@@ -340,7 +376,7 @@ export default function ReportBugPage() {
               <ReportText bold={preferences.boldTextEnabled} style={indicatorStyle} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Optional</ReportText>
               </View>
               <ReportText bold={preferences.boldTextEnabled} style={formTextStyle}>{stepsHelp}</ReportText>
-              <TextInput style={[inputStyle, stepsError && styles.invalidInput]} value={draft.stepsToReproduce}
+              <TextInput editable={!sending} style={[inputStyle, stepsError && styles.invalidInput]} value={draft.stepsToReproduce}
                 ref={stepsRef}
                 onLayout={(event) => measureTarget("stepsToReproduce", event)}
                 onFocus={() => beginEditing("stepsToReproduce")}
@@ -364,14 +400,13 @@ export default function ReportBugPage() {
           <View style={styles.actions}>
           <ReportText bold={preferences.boldTextEnabled} style={metaStyle}>
             Please do not include passwords, personal information, or precise location details.
-            When reporting becomes available, reports will include only your chosen category,
-            description, optional steps, platform, app version, and OS version when available.
-            GPS coordinates, navigation history, and account information are not attached.
+            Reports include your chosen category, description, optional steps, platform, and app version.
+            Reports are submitted using your signed-in session.
           </ReportText>
 
           <ReportText bold={preferences.boldTextEnabled} style={metaStyle}>Your draft is discarded when you leave.</ReportText>
           <TouchableOpacity activeOpacity={0.9} style={[styles.checkButton, contrast && styles.highContrastBorder]}
-            onPress={checkReport} accessibilityRole="button" accessibilityLabel="Check report"
+            onPress={checkReport} disabled={sending} accessibilityState={{ disabled: sending }} accessibilityRole="button" accessibilityLabel="Check report"
             accessibilityHint="Checks required fields without sending or saving your report">
             <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
@@ -379,16 +414,21 @@ export default function ReportBugPage() {
               style={[textStyle, styles.checkButtonText]}>Check report</ReportText>
           </TouchableOpacity>
           {checked && !Object.keys(errors).length && <ReportText bold={preferences.boldTextEnabled} style={textStyle}>
-            Required fields are complete. Submission is not yet available. Nothing has been sent.
+            Required fields are complete. Your report is ready to submit.
           </ReportText>}
-          <TouchableOpacity style={[styles.submitButton, contrast && styles.highContrastBorder]}
-            disabled accessibilityRole="button" accessibilityLabel="Submit Report, reporting is not yet available"
-            accessibilityState={{ disabled: true }}>
-            <ReportText bold={preferences.boldTextEnabled} style={[textStyle, styles.submitButtonText]}>
-              Submit Report
+          <TouchableOpacity style={[styles.submitButton, submitDisabled && styles.submitButtonDisabled,
+            contrast && styles.highContrastBorder]}
+            onPress={sendReport} disabled={submitDisabled} accessibilityRole="button" accessibilityLabel="Submit Report"
+            accessibilityHint={submitDisabled && !sending
+              ? "Choose a category and enter a description to submit your report."
+              : "Sends your bug report to the mapQP team."}
+            accessibilityState={{ disabled: submitDisabled, busy: sending }}>
+            <ReportText bold={preferences.boldTextEnabled} style={[textStyle, styles.submitButtonText,
+              submitDisabled && styles.submitButtonTextDisabled]}>
+              {sending ? "Sending report…" : "Submit Report"}
             </ReportText>
           </TouchableOpacity>
-          <ReportText bold={preferences.boldTextEnabled} style={[metaStyle, styles.centered]}>Sending reports is not yet available.</ReportText>
+          <ReportText bold={preferences.boldTextEnabled} style={[metaStyle, styles.centered]}>Reports are sent to the mapQP team.</ReportText>
           </View>
           </View>
         </ScrollView>
@@ -432,6 +472,8 @@ const styles = StyleSheet.create({
   actions: { borderTopWidth: 1, borderTopColor: "#D0CDC9", paddingTop: 20, gap: 12 },
   checkButton: { minHeight: 56, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: "#741B2B", backgroundColor: "#741B2B", flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center" },
   checkButtonText: { flexShrink: 1, color: "#FFFFFF", fontWeight: "700", textAlign: "center" },
-  submitButton: { minHeight: 56, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: "#70655F", backgroundColor: "#E6E2DC", alignItems: "center", justifyContent: "center" },
-  submitButtonText: { color: "#514B48", fontWeight: "700", textAlign: "center" },
+  submitButton: { minHeight: 56, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: "#70655F", backgroundColor: "#741B2B", alignItems: "center", justifyContent: "center" },
+  submitButtonDisabled: { borderColor: "#70655F", backgroundColor: "#E6E2DC" },
+  submitButtonTextDisabled: { color: "#514B48" },
+  submitButtonText: { color: "#FFFFFF", fontWeight: "700", textAlign: "center" },
 });
