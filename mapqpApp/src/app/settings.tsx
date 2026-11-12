@@ -59,7 +59,6 @@ const ACCESSIBILITY_CONTROLS: {
   { label: "Reduce Motion", preference: "reduceMotionEnabled", devicePreference: "reduceMotionEnabled", icon: "reduce-motion", description: "Reduces animations and movement in MapQP." },
   { label: "Bold Text", preference: "boldTextEnabled", devicePreference: "boldTextEnabled", icon: "format-bold", description: "Makes supported app text thicker and easier to read." },
   { label: "Increase Contrast", preference: "increaseContrastEnabled", devicePreference: "darkerSystemColorsEnabled", icon: "contrast-circle", description: "Increases contrast in supported interface elements to make them easier to distinguish." },
-  { label: "Reduce Transparency", preference: "reduceTransparencyEnabled", devicePreference: "reduceTransparencyEnabled", icon: "layers-outline", description: "Uses opaque backgrounds in supported interface elements to improve readability." },
 ];
 
 // Each appearance exposes one switch target; decoration never becomes a focus stop.
@@ -764,7 +763,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
     directionStyle, setDirectionStyle, fontSize, setFontSize, deviceAccessibility,
     customAccessibilityPreferences: savedAccessibilityPreferences, settingsLoaded, settingsReadSucceeded,
     setAccessibilityPreference, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks,
-    configureAvoidStairs, configureRoutingPreferences, repeatGuidanceEnabled, repeatGuidanceSeconds } = useSettings();
+    configureAvoidStairs, configureRoutingPreferences } = useSettings();
   const stacked = useSignalStacked();
   const { screenReaderEnabled, reduceMotionEnabled } = useAccessibilityPreferences();
   const increased = useSignalContrast();
@@ -940,26 +939,6 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   onValueChange={(enabled) => { if (!control.disabled) setAccessibilityPreference(preference, enabled); }} />
               </SignalSwitchRow>;
             })}
-          </SignalSection>
-          <SignalSection title="Spoken guidance">
-            <TouchableOpacity accessible accessibilityRole="button"
-              accessibilityLabel={`Instruction repetition, ${repeatGuidanceEnabled ? "On" : "Off"}, ${repeatGuidanceSeconds} seconds`}
-              accessibilityHint="Opens the Routing tab at Spoken guidance to change repetition and interval. For accessibility navigation."
-              onPress={() => {
-                guidanceLayout.current = { sections: false, guidance: false, content: false };
-                pendingGuidance.current = true; onTabChange("routing");
-              }} style={signalStyles.preferenceBlock}>
-              <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <SignalText weight="500" style={signalStyles.rowLabel}>Instruction repetition</SignalText>
-                <View style={[signalStyles.valueWithChevron, stacked && signalStyles.stackedValue]}>
-                  <SignalText size={15} weight="600" color={SIGNAL.accent}>{repeatGuidanceEnabled ? "On" : "Off"} · {repeatGuidanceSeconds} sec</SignalText>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color={SIGNAL.accent} allowFontScaling={false} />
-                </View>
-              </View>
-              <SignalText size={14} color={SIGNAL.muted} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Opens Routing controls for accessibility navigation.</SignalText>
-            </TouchableOpacity>
           </SignalSection>
           <SignalSection title="App & support">
             <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
