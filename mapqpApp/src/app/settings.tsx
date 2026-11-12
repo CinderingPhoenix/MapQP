@@ -950,7 +950,17 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
               <SignalText size={15} color={SIGNAL.status}>Route data version</SignalText>
               <SignalText size={15} color={SIGNAL.status}>v{mapVersion}</SignalText>
             </View>
-            <SignalActionRow label="Back to Home" accessibilityHint="Returns to the home screen." onPress={onHome} />
+            <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
+              accessibilityHint="Return to the MapQP home screen" onPress={onHome}
+              style={[signalStyles.homeAction, increased && signalStyles.homeActionContrast]}>
+              <MaterialCommunityIcons name="home-outline" size={24} color={SIGNAL.accent} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+              <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <SignalText weight="600">Return to Home</SignalText>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={SIGNAL.accent} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+            </TouchableOpacity>
           </SignalSection>
           <View style={signalStyles.deleteSection}>
             <SignalActionRow label="Delete all local data" accessibilityHint="Opens a confirmation dialog before deleting saved data"
@@ -1043,6 +1053,9 @@ const signalStyles = StyleSheet.create({
   sliderInput: { width: "100%", height: 48 },
   frequencyGroup: { gap: 12, paddingVertical: 12 },
   frequencyOptions: { flexDirection: "row", gap: 6 },
+  homeAction: { width: "100%", minHeight: 52, flexDirection: "row", alignItems: "center", gap: 12,
+    marginTop: 12, padding: 16, borderWidth: 1, borderColor: "#94877F", borderRadius: 12, backgroundColor: "#FFFFFF" },
+  homeActionContrast: { borderWidth: 2, borderColor: "#272423" },
   deleteSection: { gap: 4 },
   deleteAction: { minHeight: 48, borderWidth: 2, borderBottomWidth: 2, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
   routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: SIGNAL.divider, paddingLeft: 16, paddingVertical: 8 },

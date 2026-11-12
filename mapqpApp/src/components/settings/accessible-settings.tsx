@@ -348,18 +348,18 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
   return <SafeAreaView style={s.container}>
     <ScrollView contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
       <View style={s.header}>
-        <Action label="‹ Back to map" back onPress={onBack} />
+        <Action label="‹ Back To Map" back onPress={onBack} />
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
-        <Section title="Navigation mode"><Choices>
+        <Section title="Navigation Mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}
             disabled={disabled} onPress={() => onNavigationModeChange("standard")} />
           <Choice mode label="Accessibility" accessibilityLabel="Accessible navigation mode" selected={settings.navigationMode === "accessibility"}
             disabled={disabled} onPress={() => onNavigationModeChange("accessibility")} />
         </Choices></Section>
       <View style={s.accordions}>
-      <Accordion title="Display & text" icon={HEADER_ICONS.display}>
+      <Accordion title="Display & Text" icon={HEADER_ICONS.display}>
           <BoldText style={s.label}>Settings appearance</BoldText>
           <View style={s.choiceInset}><Choices>
             <Choice label="Standard" accessibilityLabel="Standard Settings appearance" selected={false} disabled={disabled}
@@ -428,7 +428,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           </Choices></View>
       </Accordion>
       <Accordion title="Accessibility" icon={HEADER_ICONS.accessibility}><AccessibilityPanel controls={accessibilityControls} /></Accordion>
-      <Accordion title="Routing & spoken guidance" icon={HEADER_ICONS.routing}>
+      <Accordion title="Routing & Spoken Guidance" icon={HEADER_ICONS.routing}>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>
           <ToggleRow label="Avoid stairs" icon="stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
@@ -449,17 +449,27 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           {!settings.repeatGuidanceEnabled && <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Enable repetition to change the interval. Your interval is saved.</BoldText>}
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>New directions are still spoken when repetition is off.</BoldText>
       </Accordion>
-      <Accordion title="App & support" icon={HEADER_ICONS.support}>
+      <Accordion title="App & Support" icon={HEADER_ICONS.support}>
           <BoldText style={s.label}>Support</BoldText>
           <Action label="Report a bug" description="Submission not yet available." onPress={() => router.push("/report-bug")} /><Divider />
           <View style={[s.infoRow, stacked && s.stackedRow]}><BoldText style={s.flex}>Route data version</BoldText><BoldText size={18} color={COLORS.secondary}>v{mapVersion}</BoldText></View>
-          <Divider important /><BoldText style={s.label}>Navigation</BoldText><Action label="Back to Home" onPress={onHome} />
           <Divider important /><BoldText style={s.label}>Data management</BoldText>
           <View style={s.collapseFooter}>
             <Action label="Delete all local data" description="Confirmation required." danger onPress={onDelete} />
           </View>
       </Accordion>
       </View>
+      <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
+        accessibilityHint="Returns to the MapQP landing page." onPress={onHome}
+        style={[s.homeAction, increasedContrast && s.homeActionContrast]}>
+        <MaterialCommunityIcons name="home-outline" size={28} color={COLORS.accent} accessible={false}
+          accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+        <View style={s.flex} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <BoldText size={22} weight="600">Return to Home</BoldText>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={28} color={COLORS.accent} accessible={false}
+          accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+      </TouchableOpacity>
     </ScrollView>
   </SafeAreaView>;
 }
@@ -468,6 +478,9 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingTop: 12, paddingBottom: 28, gap: 16 },
   header: { gap: 12 }, section: { gap: 12 }, accordions: { gap: 12 },
+  homeAction: { width: "100%", minHeight: 72, padding: 16, flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: "#94877F", borderRadius: 12 },
+  homeActionContrast: { borderWidth: 2, borderColor: COLORS.contrastOutline },
   accordionHeader: { minHeight: 72, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12,
     borderBottomWidth: 2, borderBottomColor: "transparent" },
   expandedHeader: { backgroundColor: "#F5ECEE", borderBottomColor: COLORS.accent, borderBottomWidth: 3 },
