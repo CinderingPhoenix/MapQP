@@ -860,6 +860,62 @@
     /**
      * Updates user position and route geometry.
      */
+    // Display-only estimates: never sent to the native routing/speech hook.
+    var motionTimer = null;
+    var motionEnabled = false;
+    var motionTimestamp = null;
+    var motionDeadline = 0;
+    var motionRouteKey = null;
+    function drawMotionPosition(point) {
+      if (!map || !marker || !circle || !point) return;
+      marker.setLatLng(point);
+      circle.setLatLng(point);
+      if (isHeadingFocused && !window.manualCameraExploration) {
+        map.panTo(point, { animate: false });
+      }
+    }
+    function stopMotion() {
+      if (motionTimer !== null) clearInterval(motionTimer);
+      motionTimer = null;
+      motionEnabled = false;
+      motionTimestamp = null;
+      if (window.positionInterpolator) window.positionInterpolator.reset();
+    }
+    window.updateMotionSample = function(fix, geometry, enabled) {
+      if (!window.positionInterpolator) return;
+      if (!enabled || document.hidden) {
+        stopMotion();
+        drawMotionPosition([fix.latitude, fix.longitude]);
+        return;
+      }
+      if (fix.timestamp !== motionTimestamp) {
+        motionTimestamp = fix.timestamp;
+        motionDeadline = Date.now() + 3600;
+      }
+      var routeKey = JSON.stringify(geometry);
+      if (routeKey !== motionRouteKey) {
+        window.positionInterpolator.reset();
+        motionRouteKey = routeKey;
+      }
+      motionEnabled = true;
+      window.positionInterpolator.update(fix, geometry, Date.now());
+      if (motionTimer === null && Date.now() < motionDeadline) {
+        // Ten frames/sec gives continuous walking motion without a 60fps loop
+        // or repeated React/WebView bridge traffic.
+        motionTimer = setInterval(function() {
+          if (document.hidden) { stopMotion(); return; }
+          drawMotionPosition(window.positionInterpolator.sample(Date.now()));
+          if (Date.now() >= motionDeadline) {
+            clearInterval(motionTimer); motionTimer = null;
+          }
+        }, 100);
+      }
+    };
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) stopMotion();
+    });
+    window.addEventListener('pagehide', stopMotion);
+
     window.updateMap = function(
       userLat,
       userLng,
@@ -870,11 +926,13 @@
 
       var userLatLng = [userLat, userLng];
 
-      marker.setLatLng(userLatLng);
-      circle.setLatLng(userLatLng);
+      if (!motionEnabled) {
+        marker.setLatLng(userLatLng);
+        circle.setLatLng(userLatLng);
+      }
       circle.setRadius(acc);
 
-      if (isHeadingFocused) {
+      if (isHeadingFocused && !motionEnabled) {
         map.setView(
           userLatLng,
           Math.max(map.getZoom(), 32),

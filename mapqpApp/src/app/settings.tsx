@@ -270,6 +270,7 @@ export default function SettingsPage() {
   const {
     settingsAppearance,
     setSettingsAppearance,
+    setBatterySaverEnabled,
     navigationMode,
     setNavigationMode,
     setHasSelectedMode,
@@ -430,6 +431,7 @@ export default function SettingsPage() {
                 resetAvoidStairsPreference();
                 setFontSize(1);
                 setSettingsAppearance("standard");
+                setBatterySaverEnabled(false);
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -765,7 +767,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
     directionStyle, setDirectionStyle, fontSize, setFontSize, deviceAccessibility,
     customAccessibilityPreferences: savedAccessibilityPreferences, settingsLoaded, settingsReadSucceeded,
     setAccessibilityPreference, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks,
-    configureAvoidStairs, configureRoutingPreferences, repeatGuidanceEnabled, repeatGuidanceSeconds } = useSettings();
+    configureAvoidStairs, configureRoutingPreferences, repeatGuidanceEnabled, repeatGuidanceSeconds, batterySaverEnabled, setBatterySaverEnabled } = useSettings();
   const stacked = useSignalStacked();
   const { screenReaderEnabled, reduceMotionEnabled } = useAccessibilityPreferences();
   const increased = useSignalContrast();
@@ -841,6 +843,13 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
       }}
         style={signalStyles.sections}>
         {activeTab === "general" ? <>
+          <SignalSection title="Battery">
+            <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline"
+              description="Uses fewer location updates, less compass activity, and fewer animations. Your screen can sleep; navigation may pause while locked or in the background.">
+              <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
+                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Turn guidance stays on." />
+            </SignalSwitchRow>
+          </SignalSection>
           <SignalSection title="Navigation">
             <View style={signalStyles.modeGroup}>
               <SignalText weight="600">Navigation mode</SignalText>
