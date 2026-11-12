@@ -980,17 +980,17 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           </View>
         </> : <>
           <SignalSection title="Route preferences" description="Changes apply when you start a new route.">
-            <SignalSwitchRow label="Avoid stairs" icon="stairs" description="Use paths and building entrances marked accessible in campus data.">
-              <SignalSwitch value={avoidStairs} disabled={disabled} accessibilityLabel="Avoid Stairs & Use Accessible Entrances"
-                accessibilityHint="Uses paths and building entrances marked accessible in the map data. Changes apply when you start a new route."
+            <SignalSwitchRow label="Avoid stairs" icon="stairs" description="Avoid stairs and inaccessible building entrances.">
+              <SignalSwitch value={avoidStairs} disabled={disabled} accessibilityLabel="Avoid stairs"
+                accessibilityHint="Avoid stairs and inaccessible building entrances. Changes apply when you start a new route."
                 onValueChange={(enabled) => { if (!disabled) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
             </SignalSwitchRow>
             {([
-              { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid indoor walkways", accessibilityLabel: "Avoid Indoor Navigation", value: avoidIndoorRoutes,
-                description: "Exclude indoor links in route data.", hint: "Excludes indoor walkways." },
+              { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid routes through buildings", accessibilityLabel: "Avoid routes through buildings", value: avoidIndoorRoutes,
+                description: "Don't use buildings as a way to reach another destination.", hint: "Don't use buildings as a way to reach another destination." },
               { key: "avoidInaccessibleCrosswalks", icon: "walk", label: "Accessible crossings only", accessibilityLabel: "Avoid Inaccessible Road Crossings",
-                value: avoidInaccessibleCrosswalks, description: "Avoid crossings not marked accessible in campus data.",
-                hint: "Allows only road crossings marked accessible when enabled." },
+                value: avoidInaccessibleCrosswalks, description: "Avoid crosswalks that don't have audible indicators.",
+                hint: "Avoid crosswalks that don't have audible indicators." },
             ] as const).map(({ key, icon, label, accessibilityLabel, value, description, hint }) => <SignalSwitchRow key={key} label={label} icon={icon} description={description}>
               <SignalSwitch value={value} disabled={disabled} accessibilityLabel={accessibilityLabel} accessibilityHint={hint}
                 onValueChange={(enabled) => { if (!disabled) void configureRoutingPreferences({ [key]: enabled }).catch(() =>
