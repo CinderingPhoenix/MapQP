@@ -1,13 +1,16 @@
+
 import type { ReactNode } from "react";
 import { Pressable } from "react-native";
-import { useNavigationStartFocus } from "../hooks/use-navigation-start-focus";
-
-// Stage 1: keep the proven focus/layout implementation available for rollback
-// while Expo Speech + VoiceOver coexistence is verified on a physical iPhone.
-const AUTOMATIC_SUMMARY_FOCUS_ENABLED = false;
+import {
+  useNavigationStartFocus,
+  type NavigationStartupSession,
+} from "../hooks/use-navigation-start-focus";
 
 type Props = {
-  destinationKey: string | null;
+  startupSession: NavigationStartupSession | null;
+  startupReady: boolean;
+  onStartupHandoff: () => boolean;
+  startupAnnouncement?: boolean;
   destinationName: string;
   screenReaderEnabled: boolean;
   instruction: string;
@@ -19,26 +22,46 @@ type Props = {
 // Keep the current direction/distance mounted above the upcoming list in both
 // modes. Group only this control; Cancel and list entries remain separate.
 export default function CurrentNavigationSummary({
-  destinationKey, destinationName, screenReaderEnabled, instruction,
-  expanded, onToggleDirections, children,
+  startupSession,
+  startupReady,
+  onStartupHandoff,
+  startupAnnouncement = false,
+  destinationName,
+  screenReaderEnabled,
+  instruction,
+  expanded,
+  onToggleDirections,
+  children,
 }: Props) {
+  const startupMessage =
+    `Navigating to ${destinationName}. ${instruction}.`;
+
   const { summaryRef, onSummaryLayout } = useNavigationStartFocus(
-    destinationKey, destinationName, screenReaderEnabled,
-    AUTOMATIC_SUMMARY_FOCUS_ENABLED,
+    startupSession,
+    startupReady && screenReaderEnabled,
+    onStartupHandoff,
+    startupAnnouncement ? startupMessage : undefined,
   );
+
   return (
     <Pressable
       ref={summaryRef}
       onLayout={onSummaryLayout}
       accessible
       accessibilityRole="button"
-      accessibilityLabel={instruction}
+      accessibilityLabel={startupMessage}
       accessibilityState={{ expanded }}
-      accessibilityHint={expanded
-        ? "Double tap to collapse upcoming directions"
-        : "Double tap to show all upcoming directions"}
+      accessibilityHint={
+        expanded
+          ? "Double tap to collapse upcoming directions"
+          : "Double tap to show all upcoming directions"
+      }
       onPress={onToggleDirections}
-      style={({ pressed }) => ({ minHeight: 48, justifyContent: "center", opacity: pressed ? 0.7 : 1 })}
+      style={({ pressed }) => ({
+        minHeight: 48,
+        justifyContent: "center",
+        opacity: pressed ? 0.7 : 1,
+      })}
     >
       {children}
     </Pressable>

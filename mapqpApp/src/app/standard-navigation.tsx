@@ -1,3 +1,4 @@
+import NavigationAnnouncements from "../components/navigation-announcements";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
@@ -123,6 +124,8 @@ export default function Home() {
     toggleMute,
     handleDestinationChange,
     handleCancelRoute,
+    navigationSpeech, onVoiceListeningChange, politeAnnouncement,
+    startupSession, startupReady, onStartupHandoff, onPickerTransition,
     handleRecenter,
     setShowRecenter,
   } = useMapNavigation(buildings);
@@ -214,7 +217,10 @@ export default function Home() {
           ]}
         >
           <CurrentNavigationSummary
-            destinationKey={routeDestinationBuilding}
+            startupAnnouncement
+            startupSession={startupSession}
+            startupReady={startupReady}
+            onStartupHandoff={onStartupHandoff}
             destinationName={buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination"}
             screenReaderEnabled={screenReaderEnabled}
             expanded={directionsExpanded}
@@ -418,6 +424,8 @@ export default function Home() {
           </TouchableOpacity>
         </RecenterOverlay>
         <BuildingPicker
+          onPickerTransition={onPickerTransition}
+          navigationSpeech={navigationSpeech} onVoiceListeningChange={onVoiceListeningChange}
           buildings={buildings}
           value={destinationBuilding}
           onChange={handleDestinationChange}
@@ -426,6 +434,7 @@ export default function Home() {
         />
         {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>
+      <NavigationAnnouncements message={politeAnnouncement} />
       {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
   );
