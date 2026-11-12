@@ -1,6 +1,4 @@
 import NavigationAnnouncements from "../components/navigation-announcements";
-// accessibility-navigation.tsx
-
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";

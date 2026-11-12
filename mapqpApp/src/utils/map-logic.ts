@@ -1,6 +1,4 @@
 import type { NavigationStartupSession } from "../hooks/use-navigation-start-focus";
-// map-logic.ts
-
 import { useSettings } from "@/context/settings-context";
 import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";

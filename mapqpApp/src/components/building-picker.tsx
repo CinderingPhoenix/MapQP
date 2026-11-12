@@ -1,4 +1,3 @@
-
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { NavigationSpeech } from "../utils/navigation-speech";
 import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
