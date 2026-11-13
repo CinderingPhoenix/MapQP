@@ -67,10 +67,13 @@
       animation: none !important;
     }
 
-    .compass-control.accessibility-compass-control {
-      width: 72px !important;
-      height: 72px !important;
-      line-height: 72px !important;
+    .compass-control.accessibility-compass-control,
+    .mute-control.accessibility-mute-control {
+      box-sizing: border-box;
+      padding: 0;
+      width: 80px !important;
+      height: 80px !important;
+      line-height: 80px !important;
     }
 
     .accessibility-compass-control .compass-icon {
@@ -92,6 +95,8 @@
       justify-content: center;
       margin-top: 12px !important;
     }
+
+    .accessibility-mute-control svg { width: 40px; height: 40px; }
 
     /* Destination uses a square shape, not color alone. */
     .destination-marker-shape {
@@ -626,7 +631,9 @@
         onAdd: function(map) {
           var container = L.DomUtil.create(
             'button',
-            'leaflet-bar leaflet-control mute-control'
+            accessibilityMode
+              ? 'leaflet-bar leaflet-control mute-control accessibility-mute-control'
+              : 'leaflet-bar leaflet-control mute-control'
           );
 
           container.type = 'button';
