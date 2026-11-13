@@ -352,6 +352,11 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
+        <Section title="Battery">
+          <ToggleRow label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
+            onChange={settings.setBatterySaverEnabled}
+            description="Uses fewer location updates, less compass activity, and fewer animations. Your screen can sleep; navigation may pause while locked or in the background. Turn guidance stays on." />
+        </Section>
         <Section title="Navigation mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}
             disabled={disabled} onPress={() => onNavigationModeChange("standard")} />
@@ -431,9 +436,9 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
       <Accordion title="Routing & spoken guidance" icon={HEADER_ICONS.routing}>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>
-          <ToggleRow label="Avoid stairs" icon="stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
-          <ToggleRow label="Avoid indoor walkways" icon="office-building" value={settings.avoidIndoorRoutes} disabled={disabled} onChange={(value) => saveRoute("avoidIndoorRoutes", value)} /><Divider />
-          <ToggleRow label="Accessible road crossings only" icon="walk" value={settings.avoidInaccessibleCrosswalks} disabled={disabled} onChange={(value) => saveRoute("avoidInaccessibleCrosswalks", value)} />
+          <ToggleRow label="Avoid stairs" description="Avoid stairs." icon="stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
+          <ToggleRow label="Avoid routes through buildings" description="Don?t use buildings as a way to reach another destination." icon="office-building" value={settings.avoidIndoorRoutes} disabled={disabled} onChange={(value) => saveRoute("avoidIndoorRoutes", value)} /><Divider />
+          <ToggleRow label="Accessible road crossings only" description="Avoid crosswalks that don't have audible signals for visually impaired people." icon="walk" value={settings.avoidInaccessibleCrosswalks} disabled={disabled} onChange={(value) => saveRoute("avoidInaccessibleCrosswalks", value)} />
           <Divider important /><BoldText style={s.label}>Spoken guidance</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>For accessibility navigation.</BoldText>
           <ToggleRow label="Repeat spoken instructions" value={settings.repeatGuidanceEnabled} disabled={disabled} onChange={settings.setRepeatGuidanceEnabled} /><Divider />

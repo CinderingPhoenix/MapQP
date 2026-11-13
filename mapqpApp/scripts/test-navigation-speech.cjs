@@ -106,7 +106,7 @@ test('a new route waits for native stop completion and cannot be canceled by an 
 
 // Execute the real map hook and formatting/direction-generation code. Inject
 // processed GPS state at the speech boundary; filtering and routing are separate.
-function navigationHarness({ mode = 'standard', reader = false, routing, alert } = {}) {
+function navigationHarness({ mode = 'standard', reader = false, routing, alert, saver = false } = {}) {
   const h = engineHarness();
   const slots = [];
   const stateSlots = new Map();
@@ -114,6 +114,7 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert }
   let stateCursor = 0;
   let dirty = true;
   let result;
+  const positions = [], headings = [];
   let now = 100000;
   const effects = [];
   const intervals = new Map();
@@ -157,18 +158,24 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert }
   const module = compile('utils/map-logic.ts', {
     react,
     'expo-router': { useFocusEffect: (callback) => react.useEffect(callback, [callback]) },
-    '@/context/settings-context': { useSettings: () => ({ distanceUnits: 'metric', directionStyle: 'natural', navigationMode: mode, deviceAccessibility: { screenReaderEnabled: reader } }) },
+    '@/context/settings-context': { useSettings: () => ({ batterySaverEnabled: saver, repeatGuidanceEnabled: true, repeatGuidanceSeconds: 9, distanceUnits: 'metric', directionStyle: 'natural', navigationMode: mode, deviceAccessibility: { screenReaderEnabled: reader, detectionStatus: { screenReaderEnabled: "available" } } }) },
     // Kept as a trap if a VoiceOver-specific speech branch is reintroduced.
     '@/hooks/use-device-accessibility': { useDeviceAccessibility: () => ({ screenReaderEnabled: reader }) },
     'expo-speech': h.engine,
     'expo-secure-store': { getItemAsync: async () => null, setItemAsync: async () => {} },
     'expo-haptics': { impactAsync: async () => {}, ImpactFeedbackStyle: { Medium: 'Medium' } },
     'expo-location': {
-      Accuracy: { BestForNavigation: 1 }, requestForegroundPermissionsAsync: async () => ({ status: 'granted' }),
-      watchPositionAsync: async () => ({ remove() {} }), watchHeadingAsync: async () => ({ remove() {} }),
+      Accuracy: { BestForNavigation: 1, High: 2, Balanced: 3 }, requestForegroundPermissionsAsync: async () => ({ status: 'granted' }),
+      watchPositionAsync: async (options) => {
+        const watch = { options, removed: false, remove() { this.removed = true; } };
+        positions.push(watch); return watch;
+      }, watchHeadingAsync: async () => {
+        const watch = { removed: false, remove() { this.removed = true; } };
+        headings.push(watch); return watch;
+      },
     },
-    'react-native': { Alert: { alert: alert || (() => {}) }, Platform: { OS: 'ios' }, Vibration: { vibrate() {} }, AccessibilityInfo: {
-      announceForAccessibility() { accessibilityCalls++; }, announceForAccessibilityWithOptions() { accessibilityCalls++; },
+    'react-native': { AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Alert: { alert: alert || (() => {}) }, Platform: { OS: 'ios' }, Vibration: { vibrate() {} }, AccessibilityInfo: {
+      addEventListener: () => ({ remove() {} }), announceForAccessibility() { accessibilityCalls++; }, announceForAccessibilityWithOptions() { accessibilityCalls++; },
     } },
     './routing': { ...compile('utils/routing.ts', {}), routeBetween: async (...args) => {
       if (routing) await routing(...args);
@@ -196,7 +203,9 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert }
   function inject(name, value) { slots[stateSlots.get(name)].value = value; dirty = true; }
   render();
   return {
-    h, module, intervals, flush,
+    h, module, intervals, flush, positions, headings,
+    async setSaver(value) { saver = value; dirty = true; await flush(); },
+    async setForeground(value) { inject("foreground", value); await flush(); },
     get result() { return result; },
     get accessibilityCalls() { return accessibilityCalls; },
     async start(latitude = 0, longitude = 0) {
@@ -356,3 +365,36 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(h.spoken.map((item) => item.text), ['startup', 'maneuver', 'arrival', 'optional']);
   });
 }
+
+test('battery saver reduces tracking, suspends hidden GPS and restores normal tracking', async () => {
+  const n = navigationHarness({ saver: true });
+  await n.flush();
+  assert.equal(n.positions.at(-1).options.accuracy, 2);
+  assert.equal(n.headings.length, 0);
+  await n.position(0, 0);
+  assert.equal(n.positions.at(-1).options.accuracy, 3);
+  assert.equal(n.positions.at(-1).options.timeInterval, 10000);
+  await n.start();
+  assert.equal(n.positions.at(-1).options.accuracy, 2);
+  assert.equal(n.positions.at(-1).options.timeInterval, 2000);
+  assert.equal(n.h.spoken.length, 1, 'turn guidance remains available');
+  const watch = n.positions.at(-1);
+  await n.setForeground(false);
+  assert.equal(watch.removed, true);
+  await n.setForeground(true);
+  await n.setSaver(false);
+  assert.equal(n.positions.at(-1).options.accuracy, 1);
+  assert.equal(n.positions.at(-1).options.timeInterval, 250);
+  assert.equal(n.headings.at(-1).removed, false);
+});
+
+test('battery saver retains compass guidance during accessible navigation', async () => {
+  const n = navigationHarness({ saver: true, mode: 'accessibility' });
+  await n.flush();
+  assert.equal(n.headings.length, 0);
+  await n.start();
+  assert.equal(n.headings.length, 1);
+  n.result.handleCancelRoute();
+  await n.flush();
+  assert.equal(n.headings[0].removed, true);
+});

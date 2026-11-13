@@ -1,5 +1,3 @@
-// tutorial-modal.tsx
-
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useState, useEffect, type ComponentProps } from "react";
@@ -399,10 +397,11 @@ const tutorialModes = [
 interface TutorialModalProps {
   visible: boolean;
   onClose: () => void;
+  onReportBug: () => void;
   onDismiss?: () => void;
 }
 
-export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProps) {
+export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: TutorialModalProps) {
   const nativeDismiss = useModalDismissal(visible, onDismiss);
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const { fontSize } = useSettings();
@@ -483,9 +482,13 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
       <View style={[styles.modalOverlay, preferences.reduceTransparencyEnabled && styles.opaqueOverlay]}>
         <View style={styles.tutorialCard}>
           <View style={styles.header}>
-            <Text accessibilityRole="header" style={[styles.headerTitle, textStyle(styles.headerTitle)]}>MapQP Tutorial</Text>
-            <TouchableOpacity style={styles.skipButton} onPress={onClose} accessible accessibilityRole="button" accessibilityLabel="Skip Tutorial">
-              <Text style={[styles.skipText, textStyle(styles.skipText)]}>Skip Tutorial</Text>
+            <Text accessibilityRole="header" style={[styles.headerTitle, textStyle(styles.headerTitle)]}>Tutorial &amp; Bug Reports</Text>
+            <TouchableOpacity style={styles.skipButton}
+              onPress={selectedTopic === null ? onClose : () => { setCurrentPage(0); setSelectedTopic(null); }}
+              accessible accessibilityRole="button"
+              accessibilityLabel={selectedTopic === null ? "Skip Tutorial" : "Back to tutorial topics"}
+              accessibilityHint={selectedTopic === null ? "Closes the tutorial." : "Returns to the main tutorial screen."}>
+              <Text style={[styles.skipText, textStyle(styles.skipText)]}>{selectedTopic === null ? "Skip Tutorial" : "Back"}</Text>
             </TouchableOpacity>
           </View>
 
@@ -525,6 +528,18 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
                   <Text style={styles.topicTitle}>{topic.label}</Text>
                 </TouchableOpacity>
               ))}
+              </View>
+              <View style={styles.bugReportSection}>
+                <TouchableOpacity style={[styles.bugReportButton, contrastBorder]} onPress={onReportBug}
+                  accessible accessibilityRole="button" accessibilityLabel="Report a Bug"
+                  accessibilityHint="Closes the tutorial and opens the bug reporting form.">
+                  <MaterialCommunityIcons name="bug-outline" size={24} color="#FFFFFF"
+                    accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+                  <Text style={[styles.nextButtonText, textStyle(styles.nextButtonText, "onControl")]}>Report a Bug</Text>
+                </TouchableOpacity>
+                <Text style={[styles.description, textStyle(styles.description)]}>
+                  Found a problem? Send us a bug report. You can also find Report a Bug at the bottom of the Settings page.
+                </Text>
               </View>
             </ScrollView>
           ) : (
@@ -634,6 +649,9 @@ export function TutorialModal({ visible, onClose, onDismiss }: TutorialModalProp
 }
 
 const styles = StyleSheet.create({
+  bugReportSection: { gap: 12, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 20 },
+  bugReportButton: { minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: "#AC2B37",
+    flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8 },
   topicContent: { paddingHorizontal: 24, paddingBottom: 24, gap: 16 },
   topicGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   topicButton: { flexGrow: 1, flexBasis: "45%", minHeight: 112, padding: 12,
