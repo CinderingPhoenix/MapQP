@@ -35,7 +35,8 @@ import { useKeyLockout } from '../hooks/use-key-lockout';
 import { useAccessibilityPreferences } from '../hooks/use-accessibility-preferences';
 import { isServerOnline, setServerOnline } from '../utils/server-status';
 import { ensureBackendSession } from '../utils/backend-session';
-import { initRoutingGraph } from '../utils/routing';
+import { initRoutingGraph, validateMapData } from '../utils/routing';
+import { isReviewSession, REVIEW_LOGIN_CODE } from '../utils/review-access';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
@@ -306,7 +307,8 @@ export default function LoadingScreen({
         const localAccessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
 
         const expiry = Number(await SecureStore.getItemAsync(TEMP_CODE_EXPIRES_AT_KEY));
-        const validTempSession = savedTempCode && localAccessToken && Number.isFinite(expiry) && expiry > Date.now();
+        const validTempSession = isReviewSession(savedTempCode)
+          || (savedTempCode && localAccessToken && Number.isFinite(expiry) && expiry > Date.now());
         if (savedTempCode && !validTempSession && !msSession) {
           await Promise.all([
             SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY),
@@ -424,13 +426,28 @@ export default function LoadingScreen({
   const handleCodeLogin = async () => {
     if (isLockedOut || verificationCode.length !== 6 || isVerifyingCode) return;
 
-    if (!API_BASE_URL) {
+    if (!API_BASE_URL && !isReviewSession(verificationCode)) {
       Alert.alert('Server Offline', 'API_BASE_URL is not configured.');
       return;
     }
 
     setIsVerifyingCode(true);
     try {
+      if (isReviewSession(verificationCode)) {
+        // Review access is local and intentionally has no expiration or backend token.
+        await Promise.all([
+          SecureStore.deleteItemAsync(AUTH_STORAGE_KEY),
+          SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
+          SecureStore.deleteItemAsync(TEMP_CODE_EXPIRES_AT_KEY),
+        ]);
+        await SecureStore.setItemAsync(TEMP_CODE_STORAGE_KEY, REVIEW_LOGIN_CODE);
+        await registerSuccess();
+        setIsAuthenticated(true);
+        setShowLogin(false);
+        await prepareAndContinue();
+        return;
+      }
+
       const res = await fetch(`${API_BASE_URL}/auth/temp-login/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -541,6 +558,9 @@ export default function LoadingScreen({
           <View style={styles.loginCard}>
             <Text style={styles.loginTitle}>WPI login required</Text>
             <Text style={styles.loginMessage}>Sign in with your WPI Microsoft account or enter a temporary code to continue.</Text>
+            {AUTH_CONFIGURATION_MISSING && (
+              <Text style={styles.loginMessage}>Microsoft login is unavailable. Enter an access code to continue.</Text>
+            )}
 
             <Pressable
               accessibilityRole="button"
@@ -592,15 +612,6 @@ export default function LoadingScreen({
             </Pressable>
           </View>
         </KeyboardAvoidingView>
-      )}
-
-      {AUTH_CONFIGURATION_MISSING && (
-        <View style={styles.loginOverlay}>
-          <View style={styles.loginCard}>
-            <Text style={styles.loginTitle}>Configuration not found</Text>
-            <Text style={styles.loginMessage}>Microsoft login configuration could not be found.</Text>
-          </View>
-        </View>
       )}
 
       {showSpinner && !showLogin && (

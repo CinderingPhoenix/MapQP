@@ -4,6 +4,7 @@ import { AppState, StyleSheet, Text } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
+import { isReviewSession } from "../utils/review-access";
 
 // Display only: never writes or renews the session deadline.
 export function TemporarySessionNotice() {
@@ -19,7 +20,7 @@ export function TemporarySessionNotice() {
     ]).then(([code, expiry]) => {
       if (active) {
         const value = Number(expiry);
-        setDeadline(code && expiry && Number.isFinite(value) ? value : null);
+        setDeadline(code && !isReviewSession(code) && expiry && Number.isFinite(value) ? value : null);
         setNow(Date.now());
       }
     }).catch(() => { if (active) setDeadline(null); });
