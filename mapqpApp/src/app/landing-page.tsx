@@ -40,6 +40,7 @@ export default function LandingPage() {
   const focused = useIsFocused();
   const mounted = useRef(true);
   const tutorialClosing = useRef(false);
+  const reportBugAfterTutorial = useRef(false);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -197,9 +198,11 @@ export default function LandingPage() {
             </View>
           </View>
 
+          <View style={styles.quickActionsContainer}>
+          <View style={[styles.quickActions, increasedContrast && styles.quickActionsHighContrast]}>
           {/* Settings Button */}
           <TouchableOpacity
-            style={[styles.settingsButton, { top: insets.top + 130, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            style={[styles.quickActionButton, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
             onPress={() => router.push("/settings")}
             activeOpacity={0.7}
             accessible
@@ -207,21 +210,33 @@ export default function LandingPage() {
             accessibilityLabel="Settings"
             accessibilityHint="Opens the application settings"
           >
-            <Ionicons name="settings-outline" size={28} color="#172033" />
+            <Ionicons name="settings-outline" size={24} color="#172033" accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            <Text style={[styles.quickActionText, boldTextEnabled && { fontWeight: "900" },
+              increasedContrast && { color: "#000" }]}>Settings</Text>
+            <Ionicons name="chevron-forward" size={20} color="#172033" accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
 
+          <View style={[styles.quickActionDivider, increasedContrast && { backgroundColor: "#172033" }]} />
           {/* Reopen Tutorial Button */}
           <TouchableOpacity
-            style={[styles.tutorialButton, { top: insets.top + 195, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            style={[styles.quickActionButton,
+              increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
             onPress={() => { initialFocusHandled.current = false; setTutorialDismissed(false); setShowTutorial(true); }}
             activeOpacity={0.7}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Tutorial"
-            accessibilityHint="Reopens the app tutorial"
+            accessible accessibilityRole="button" accessibilityLabel="Tutorial & Bug Reports"
+            accessibilityHint="Opens tutorials and the option to report a bug."
           >
-            <Ionicons name="help-circle-outline" size={28} color="#172033" />
+            <Ionicons name="book-outline" size={24} color="#172033" accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            <Text style={[styles.quickActionText, boldTextEnabled && { fontWeight: "900" },
+              increasedContrast && { color: "#000" }]}>Tutorial &amp; Bug Reports</Text>
+            <Ionicons name="chevron-forward" size={20} color="#172033" accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
+          </View>
+          </View>
 
           <ScrollView
             key={`landing-scroll-${stackButtons ? "stacked" : "row"}-${fontScale.toFixed(2)}`}
@@ -323,16 +338,25 @@ export default function LandingPage() {
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
+
             </View>
           </ScrollView>
         </SafeAreaView>
       </View>
 
       {/* First-time Tutorial Modal Component */}
-      <TutorialModal visible={tutorialVisible} onClose={handleDismissTutorial} onDismiss={() => {
+      <TutorialModal visible={tutorialVisible} onClose={handleDismissTutorial}
+        onReportBug={() => {
+          reportBugAfterTutorial.current = true;
+          void handleDismissTutorial();
+        }} onDismiss={() => {
         if (!showTutorial && mounted.current) {
           initialFocusHandled.current = false;
           setTutorialDismissed(true);
+          if (reportBugAfterTutorial.current) {
+            reportBugAfterTutorial.current = false;
+            if (navigation.isFocused()) router.push("/report-bug");
+          }
         }
       }} />
       <AvoidStairsPrompt visible={promptVisible}
@@ -366,7 +390,7 @@ const styles = StyleSheet.create({
   mapImage: { transform: [{ scale: 1 }] },
   contentScroll: { flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: "flex-end" },
-  presetArea: { paddingHorizontal: 18, paddingBottom: 26, paddingTop: 30 },
+  presetArea: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 18, paddingBottom: 26, paddingTop: 30 },
   presetLabel: {
     transform: [{ translateY: 10 }],
     alignSelf: "stretch",
@@ -472,20 +496,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 5, borderTopRightRadius: 5,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
-  settingsButton: {
-    position: "absolute",
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
-    justifyContent: "center", alignItems: "center", zIndex: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2, shadowRadius: 5, elevation: 5,
+  quickActionsContainer: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 18, paddingTop: 16 },
+  quickActions: { borderRadius: 20, backgroundColor: "#F8FAFC",
+    borderWidth: 1, borderColor: "#CBD5E1", overflow: "hidden",
   },
-  tutorialButton: {
-    position: "absolute",
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
-    justifyContent: "center", alignItems: "center", zIndex: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2, shadowRadius: 5, elevation: 5,
+  quickActionsHighContrast: { borderWidth: 2, borderColor: "#172033", backgroundColor: "#FFFFFF" },
+  quickActionDivider: { height: 1, backgroundColor: "#CBD5E1", marginHorizontal: 18 },
+  quickActionText: {
+    flex: 1, color: "#172033", fontSize: 15, fontWeight: "600",
+  },
+  quickActionButton: {
+    minHeight: 56, paddingHorizontal: 18, paddingVertical: 14, gap: 12,
+    flexDirection: "row", alignItems: "center",
   },
 });
