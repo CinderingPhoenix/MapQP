@@ -55,6 +55,7 @@ export function resolveAccessibilityPreferences(
 }
 
 export function useAccessibilityPreferences() {
-  const { deviceAccessibility, customAccessibilityPreferences, settingsLoaded } = useSettings();
-  return resolveAccessibilityPreferences(deviceAccessibility, customAccessibilityPreferences, settingsLoaded);
+  const { deviceAccessibility, customAccessibilityPreferences, settingsLoaded, batterySaverEnabled } = useSettings();
+  return { ...resolveAccessibilityPreferences(deviceAccessibility, customAccessibilityPreferences, settingsLoaded),
+    reduceMotionEnabled: batterySaverEnabled || deviceAccessibility.reduceMotionEnabled || customAccessibilityPreferences.reduceMotionEnabled };
 }

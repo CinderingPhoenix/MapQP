@@ -1,7 +1,10 @@
+import { createPositionInterpolator } from "../utils/position-interpolation";
+import { useSettings } from "../context/settings-context";
+import { useFocusEffect } from "expo-router";
 import { Asset } from "expo-asset";
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import type { VoiceMapCommand } from "../utils/voice-map-command";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { AppState, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 import MapControls, { MAP_CONTROLS_HEIGHT, MAP_CONTROLS_WIDTH, MAP_ZOOM_CONTROLS_WIDTH, type CameraAction, type CameraState } from "./map-controls";
@@ -18,6 +21,9 @@ type LocationMapProps = {
   userLatitude?: number;
   userLongitude?: number;
   accuracy: number;
+  speed?: number | null;
+  positionHeading?: number | null;
+  positionTimestamp?: number;
   heading?: number | null;
   route?: any;
   directionsExpanded?: boolean;
@@ -39,6 +45,9 @@ export default function LocationMap({
   userLatitude,
   userLongitude,
   accuracy,
+  speed,
+  positionHeading,
+  positionTimestamp,
   heading,
   route,
   directionsExpanded = false,
@@ -52,6 +61,22 @@ export default function LocationMap({
   controlsTop = 132,
   controlsBottom = 160,
 }: LocationMapProps) {
+  const { batterySaverEnabled, deviceAccessibility, customAccessibilityPreferences } = useSettings();
+  const [focused, setFocused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState === "active");
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    setForeground(AppState.currentState === "active");
+    return () => setFocused(false);
+  }, []));
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => setForeground(state === "active"));
+    return () => subscription.remove();
+  }, []);
+  // Battery saver reduces decorative motion, but only explicit user/device
+  // Reduce Motion settings suppress this position smoothing.
+  const smoothPosition = batterySaverEnabled && focused && foreground &&
+    !deviceAccessibility.reduceMotionEnabled && !customAccessibilityPreferences.reduceMotionEnabled;
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView<{}>>(null);
   const [mapHeight, setMapHeight] = useState(0);
@@ -144,6 +169,18 @@ export default function LocationMap({
 
   const currentMarkerLat = userLatitude ?? latitude;
   const currentMarkerLng = userLongitude ?? longitude;
+  const motionScript = `
+    if (window.updateMotionSample) window.updateMotionSample(${JSON.stringify({
+      latitude: currentMarkerLat, longitude: currentMarkerLng,
+      accuracy, speed, heading: positionHeading != null && positionHeading >= 0 ? positionHeading : heading,
+      timestamp: positionTimestamp,
+    })}, ${JSON.stringify(route?.geometry ?? null)}, ${smoothPosition});
+    true;
+  `;
+  useEffect(() => {
+    if (camera.ready) webViewRef.current?.injectJavaScript(motionScript);
+  }, [motionScript, camera.ready]);
+
 
   // Robust asset loader ensuring the file is downloaded locally before passing URI to WebView
   useEffect(() => {
@@ -189,6 +226,10 @@ export default function LocationMap({
 
 
   const handleLoadEnd = () => {
+    webViewRef.current?.injectJavaScript(`
+      window.positionInterpolator = (${createPositionInterpolator.toString()})();
+      true;
+    `);
     webViewRef.current?.injectJavaScript(visualPreferencesScript);
     webViewRef.current?.injectJavaScript(`
       if (window.setReduceMotion) {
@@ -213,6 +254,7 @@ export default function LocationMap({
       true;
     `);
     webViewRef.current?.injectJavaScript(controlPositionScript);
+    webViewRef.current?.injectJavaScript(motionScript);
   };
 
   const latestPosition = useRef({ currentMarkerLat, currentMarkerLng, accuracy, route });

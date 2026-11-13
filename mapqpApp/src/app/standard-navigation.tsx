@@ -2,7 +2,7 @@ import NavigationAnnouncements from "../components/navigation-announcements";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
-import { useKeepAwake } from "expo-keep-awake";
+import { NavigationKeepAwake } from "../components/navigation-keep-awake";
 import {
   Animated,
   Keyboard,
@@ -44,7 +44,6 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
-  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(windowHeight);
@@ -383,6 +382,9 @@ export default function Home() {
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            speed={coordinates?.speed}
+            positionHeading={coordinates?.heading}
+            positionTimestamp={coordinates?.timestamp}
             heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
@@ -434,6 +436,7 @@ export default function Home() {
         />
         {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>
+      <NavigationKeepAwake />
       <NavigationAnnouncements message={politeAnnouncement} />
       {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>

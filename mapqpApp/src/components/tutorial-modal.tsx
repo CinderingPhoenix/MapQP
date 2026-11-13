@@ -1,5 +1,3 @@
-// tutorial-modal.tsx
-
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useState, useEffect, type ComponentProps } from "react";

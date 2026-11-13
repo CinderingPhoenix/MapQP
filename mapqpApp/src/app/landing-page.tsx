@@ -1,5 +1,3 @@
-// landing-page.tsx
-
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useIsFocused, useNavigation, type NativeStackNavigationProp } from "expo-router";

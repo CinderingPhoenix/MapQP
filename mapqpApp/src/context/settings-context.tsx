@@ -83,6 +83,7 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
   avoidStairs: boolean;
   hasAnsweredAvoidStairsPrompt: boolean;
   fontSize: number;
+  batterySaverEnabled: boolean;
   repeatGuidanceEnabled: boolean;
   repeatGuidanceSeconds: number;
   accessibilitySettingsVersion: 5;
@@ -96,6 +97,7 @@ type SettingsContextType = AppSettings & {
   setDistanceUnits: (units: DistanceUnits) => void;
   setDirectionStyle: (style: DirectionStyle) => void;
   setFontSize: (size: number) => void;
+  setBatterySaverEnabled: (enabled: boolean) => void;
   setRepeatGuidanceEnabled: (enabled: boolean) => void;
   setRepeatGuidanceSeconds: (seconds: number) => void;
   setAvoidStairs: (enabled: boolean) => void;
@@ -123,6 +125,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   avoidInaccessibleCrosswalks: false,
   hasAnsweredAvoidStairsPrompt: false,
   fontSize: 1,
+  batterySaverEnabled: false,
   repeatGuidanceEnabled: true,
   repeatGuidanceSeconds: 9,
   accessibilitySettingsVersion: 5,
@@ -209,6 +212,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
   const [repeatGuidanceEnabled, setRepeatGuidanceEnabled] = useState(DEFAULT_SETTINGS.repeatGuidanceEnabled);
   const [repeatGuidanceSeconds, setRepeatGuidanceSeconds] = useState(DEFAULT_SETTINGS.repeatGuidanceSeconds);
+  const [batterySaverEnabled, setBatterySaverEnabled] = useState(DEFAULT_SETTINGS.batterySaverEnabled);
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -236,6 +240,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if ([5, 9, 15, 30, 60].includes(parsedSettings.repeatGuidanceSeconds ?? 0)) {
             setRepeatGuidanceSeconds(parsedSettings.repeatGuidanceSeconds!);
           }
+          if (typeof parsedSettings.batterySaverEnabled === "boolean") setBatterySaverEnabled(parsedSettings.batterySaverEnabled);
           const accessibility = restoreAccessibilitySettings(parsedSettings);
           setAccessibilitySettings({
             customAccessibilityPreferences: {
@@ -326,6 +331,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       avoidInaccessibleCrosswalks,
       hasAnsweredAvoidStairsPrompt: routingPreference.hasAnsweredAvoidStairsPrompt,
       fontSize,
+      batterySaverEnabled,
       repeatGuidanceEnabled,
       repeatGuidanceSeconds,
       accessibilitySettingsVersion: 5,
@@ -382,6 +388,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     avoidStairs,
     routingPreference,
     fontSize,
+    batterySaverEnabled,
     repeatGuidanceEnabled,
     repeatGuidanceSeconds,
     settingsLoaded,
@@ -410,13 +417,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         resetAvoidStairsPreference,
         settingsReadSucceeded,
         fontSize,
-      repeatGuidanceEnabled,
-      repeatGuidanceSeconds,
+        batterySaverEnabled,
+        repeatGuidanceEnabled,
+        repeatGuidanceSeconds,
         setNavigationMode,
         setHasSelectedMode,
         setDistanceUnits,
         setDirectionStyle,
         setFontSize,
+        setBatterySaverEnabled,
         setRepeatGuidanceEnabled,
         setRepeatGuidanceSeconds,
         settingsLoaded,

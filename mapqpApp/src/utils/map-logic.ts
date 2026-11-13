@@ -1,6 +1,4 @@
 import type { NavigationStartupSession } from "../hooks/use-navigation-start-focus";
-// map-logic.ts
-
 import { useSettings } from "@/context/settings-context";
 import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
@@ -433,7 +431,12 @@ export function useMapNavigation(buildings: Building[]) {
     avoidInaccessibleCrosswalks,
     avoidStairs = false,
     deviceAccessibility,
+    batterySaverEnabled = false,
   } = useSettings();
+  const trackingEnabled = isFocused && foreground;
+  const hasActiveRoute = route !== null;
+  const needsPreciseLocation = hasActiveRoute || coordinates === null;
+  const lastLocationSave = useRef(0);
   const readerStatus = deviceAccessibility.detectionStatus.screenReaderEnabled;
   const readerEnabled = deviceAccessibility.screenReaderEnabled;
   useEffect(() => {
@@ -654,10 +657,17 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
+    if (!trackingEnabled) return;
     const initializeLocation = async () => {
       const permissions = await Location.requestForegroundPermissionsAsync();
       if (permissions.status !== "granted") { if (isMounted) setError("Location permission is required to plan a route."); return; }
-      subscription = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 250, distanceInterval: 0, mayShowUserSettingsDialog: true }, (location) => {
+      if (!isMounted) return;
+      subscription = await Location.watchPositionAsync({
+        accuracy: batterySaverEnabled ? needsPreciseLocation ? Location.Accuracy.High : Location.Accuracy.Balanced : Location.Accuracy.BestForNavigation,
+        timeInterval: batterySaverEnabled ? hasActiveRoute ? 2000 : 10000 : 250,
+        distanceInterval: batterySaverEnabled ? needsPreciseLocation ? 2 : 10 : 0,
+        mayShowUserSettingsDialog: true,
+      }, (location) => {
         if (!isMounted) return;
         const processed = processAdvancedCoordinates({ ...location.coords, accuracy: location.coords.accuracy || 0, timestamp: location.timestamp } as Coordinates, kalmanStateRef);
         if (!processed) return;
@@ -673,7 +683,10 @@ export function useMapNavigation(buildings: Building[]) {
         const displayedCoordinates = { ...processed, latitude: displayLat, longitude: displayLng };
         setCoordinates(displayedCoordinates);
         if (!showRecenterRef.current) setMapCenter({ latitude: displayLat, longitude: displayLng });
-        SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        if (!batterySaverEnabled || Date.now() - lastLocationSave.current >= 30000) {
+          lastLocationSave.current = Date.now();
+          SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        }
         if (newRouteIndex !== currentRouteIndexRef.current) setCurrentRouteIndex(newRouteIndex);
         if (!initialLocationSet.current) { setMapCenter({ latitude: displayLat, longitude: displayLng }); initialLocationSet.current = true; }
         if (routeGeometryRef.current && !isReroutingRef.current && destinationBuildingRef.current) {
@@ -684,15 +697,17 @@ export function useMapNavigation(buildings: Building[]) {
         }
         setError("");
       });
+      if (!isMounted) subscription.remove();
     };
     initializeLocation().catch((locationError) => { if (isMounted) setError(locationError instanceof Error ? locationError.message : "Unable to access your location."); });
     return () => { isMounted = false; subscription?.remove(); };
-  }, []);
+  }, [trackingEnabled, batterySaverEnabled, batterySaverEnabled && needsPreciseLocation, batterySaverEnabled && hasActiveRoute]);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
+    if (!trackingEnabled || (batterySaverEnabled && (navigationMode !== "accessibility" || !hasActiveRoute))) return;
     Location.watchHeadingAsync((headingData) => {
       if (!isMounted) return;
       const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
@@ -710,7 +725,7 @@ export function useMapNavigation(buildings: Building[]) {
       isMounted = false;
       subscription?.remove();
     };
-  }, []);
+  }, [trackingEnabled, batterySaverEnabled, batterySaverEnabled && navigationMode, batterySaverEnabled && hasActiveRoute]);
 
   useEffect(() => {
     if (!destinationBuilding || !coordinates) return;

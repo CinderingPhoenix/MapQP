@@ -352,6 +352,11 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
+        <Section title="Battery">
+          <ToggleRow label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
+            onChange={settings.setBatterySaverEnabled}
+            description="Uses fewer location updates, less compass activity, and fewer animations. Your screen can sleep; navigation may pause while locked or in the background. Turn guidance stays on." />
+        </Section>
         <Section title="Navigation mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}
             disabled={disabled} onPress={() => onNavigationModeChange("standard")} />
