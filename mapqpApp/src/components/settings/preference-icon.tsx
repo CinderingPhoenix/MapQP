@@ -1,3 +1,4 @@
+import { useColorVisionPalette, useColorVisionStyles } from "../../hooks/use-color-vision-palette";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 
@@ -11,6 +12,8 @@ const ROUTE_ICON_COLORS: Partial<Record<PreferenceIconName, string>> = {
 
 // Shared decorative artwork; keep the Accessible Settings dimensions and geometry.
 export function PreferenceIcon({ name }: { name: PreferenceIconName }) {
+  const vision = useColorVisionPalette();
+  const s = useColorVisionStyles(baseStyles);
   const iconSize = 32;
   const stroke = iconSize * 0.055, circleRadius = iconSize * 0.25, dotSize = iconSize * 0.06;
   const diameter = circleRadius * 2 + stroke;
@@ -28,13 +31,13 @@ export function PreferenceIcon({ name }: { name: PreferenceIconName }) {
         left: iconSize * 0.65 - diameter / 2, top: (iconSize - diameter) / 2,
         borderRadius: diameter / 2, borderWidth: stroke }} />
     </View> : <View style={[s.iconTile, { backgroundColor:
-      ROUTE_ICON_COLORS[name] ?? (name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF") }]}>
-      <MaterialCommunityIcons name={name} size={25} color="#FFFFFF" accessible={false} allowFontScaling={false} />
+      vision.color(ROUTE_ICON_COLORS[name] ?? (name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF"), "backgroundColor") }]}>
+      <MaterialCommunityIcons name={name} size={25} color={vision.color("#FFFFFF", "iconColor")} accessible={false} allowFontScaling={false} />
     </View>}
   </View>;
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   icon: { width: 32, height: 32, flexShrink: 0 }, motionTile: { backgroundColor: "#30D158" },
   iconTile: { width: 32, height: 32, borderRadius: 7, alignItems: "center", justifyContent: "center" },
 });

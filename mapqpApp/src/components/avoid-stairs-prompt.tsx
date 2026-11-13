@@ -1,3 +1,4 @@
+import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -35,6 +36,8 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss, defaultAvoid
   onAnswered: () => void;
   onDismiss: () => void;
 }) {
+  const vision = useColorVisionPalette();
+  const styles = useColorVisionStyles(baseStyles, { title: "highlightedHeading" });
   const { fontSize, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks, configureRoutingPreferences } = useSettings();
   const [selectedAvoidStairs, setSelectedAvoidStairs] = useState(avoidStairs);
   const [selectedIndoor, setSelectedIndoor] = useState(avoidIndoorRoutes);
@@ -125,7 +128,7 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss, defaultAvoid
                   accessibilityRole="switch" accessibilityLabel={label}
                   accessibilityHint={`${hint} Saved when you press Continue.`}
                   accessibilityState={{ checked: value, disabled }}
-                  trackColor={{ false: "#636366", true: "#761723" }} thumbColor="#FFFFFF" ios_backgroundColor="#636366" />
+                  trackColor={{ false: vision.color("#636366", "backgroundColor"), true: vision.color("#761723", "backgroundColor") }} thumbColor={vision.color("#FFFFFF", "thumbColor")} ios_backgroundColor={vision.color("#636366", "ios_backgroundColor")} />
               </View>
             </View>;
           })}
@@ -149,7 +152,7 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss, defaultAvoid
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.65)", justifyContent: "center", alignItems: "center", padding: 20 },
   card: {
     backgroundColor: "#FFFFFF", borderRadius: 28, width: "100%", maxWidth: 380,

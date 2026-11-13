@@ -1,3 +1,4 @@
+import { restoreColorVisionPreset, type ColorVisionPreset } from "../theme/color-vision-palettes";
 import type { RoutingPreferences } from "../utils/routing";
 import * as SecureStore from "expo-secure-store";
 import {
@@ -74,6 +75,7 @@ export function restoreAccessibilitySettings(value: unknown): AccessibilitySetti
 }
 
 type AppSettings = AccessibilitySettings & RoutingPreferences & {
+  colorVisionPreset: ColorVisionPreset;
   settingsAppearance: SettingsAppearance;
   navigationMode: NavigationMode;
   accessibilityNeed: AccessibilityNeed | null;
@@ -89,6 +91,7 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
 };
 
 type SettingsContextType = AppSettings & {
+  setColorVisionPreset: (preset: ColorVisionPreset) => void;
   setSettingsAppearance: (appearance: SettingsAppearance) => void;
   setNavigationMode: (mode: NavigationMode) => void;
   setAccessibilityNeed: (need: AccessibilityNeed) => void;
@@ -112,6 +115,7 @@ type SettingsContextType = AppSettings & {
 const SETTINGS_STORAGE_KEY = "mapqp_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
+  colorVisionPreset: "default",
   settingsAppearance: "standard",
   navigationMode: "standard",
   accessibilityNeed: null,
@@ -155,6 +159,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     setSettingsReadSucceeded(true);
   };
+  const [colorVisionPreset, setColorVisionPreset] = useState<ColorVisionPreset>("default");
   const [settingsAppearance, setSettingsAppearance] = useState<SettingsAppearance>(DEFAULT_SETTINGS.settingsAppearance);
   const [navigationMode, setNavigationModeState] = useState<NavigationMode>(
     DEFAULT_SETTINGS.navigationMode
@@ -289,6 +294,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setRoutingPreference({ avoidStairs: false, avoidIndoorRoutes: parsedSettings.avoidIndoorRoutes === true, avoidInaccessibleCrosswalks: parsedSettings.avoidInaccessibleCrosswalks === true, hasAnsweredAvoidStairsPrompt: parsedSettings.hasAnsweredAvoidStairsPrompt, revision: 0 });
           }
 
+          setColorVisionPreset(restoreColorVisionPreset(parsedSettings.colorVisionPreset));
+
           if (
             typeof parsedSettings.fontSize === "number" &&
             parsedSettings.fontSize >= 0.8 &&
@@ -315,6 +322,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     const settings: AppSettings = {
+      colorVisionPreset,
       settingsAppearance,
       navigationMode,
       accessibilityNeed,
@@ -373,6 +381,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
     });
   }, [
+    colorVisionPreset,
     settingsAppearance,
     navigationMode,
     accessibilityNeed,
@@ -392,6 +401,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsContext.Provider
       value={{
+        colorVisionPreset, setColorVisionPreset,
         settingsAppearance,
         setSettingsAppearance,
         navigationMode,

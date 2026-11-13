@@ -1,3 +1,4 @@
+import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +17,8 @@ export function RouteAlternativePrompt({ relaxed, onAnswer }: {
   relaxed: (keyof RoutingPreferences)[];
   onAnswer: (accepted: boolean) => void;
 }) {
+  const vision = useColorVisionPalette();
+  const styles = useColorVisionStyles(baseStyles, { heading: "highlightedHeading", cancelText: "accentText" });
   const { fontSize } = useSettings();
   const { screenReaderEnabled, boldTextEnabled } = useAccessibilityPreferences();
   const heading = useRef<React.ElementRef<typeof Text>>(null);
@@ -76,7 +79,7 @@ export function RouteAlternativePrompt({ relaxed, onAnswer }: {
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, backgroundColor: "rgba(0,0,0,0.7)" },
   card: { width: "100%", maxWidth: 480, maxHeight: "90%", backgroundColor: "#FFFFFF", borderRadius: 24, overflow: "hidden", flexShrink: 1 },
   scroll: { flexGrow: 0, flexShrink: 1 },

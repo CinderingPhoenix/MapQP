@@ -1,3 +1,4 @@
+import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { NavigationSpeech } from "../utils/navigation-speech";
@@ -71,6 +72,8 @@ export default React.memo(function BuildingPicker({
   navigationSpeech,
   onVoiceListeningChange,
 }: BuildingPickerProps) {
+  const vision = useColorVisionPalette();
+  const styles = useColorVisionStyles(baseStyles, { listeningActiveText: "accentText", buildingSelectorText: "accentText", buildingRowTextSelected: "accentText", selectorTitle: "highlightedHeading", modalTabTextActive: "accentText" });
   const { fontSize, deviceAccessibility, configureRoutingPreferences } = useSettings();
   const {
     reduceMotionEnabled,
@@ -84,17 +87,17 @@ export default React.memo(function BuildingPicker({
   const deviceBoldTextEnabled = deviceAccessibility.boldTextEnabled;
   const accessibleText = {
     fontWeight: boldTextEnabled ? ("700" as const) : undefined,
-    color: increasedContrast ? "#111" : undefined,
+    color: vision.color(increasedContrast ? "#111" : undefined, "color"),
   };
   const accessibleAccentText = {
     fontWeight: boldTextEnabled ? ("700" as const) : undefined,
-    color: increasedContrast ? "#10434b" : undefined,
+    color: vision.textColor(increasedContrast ? "#10434b" : undefined, "accentText"),
   };
   const accessibleLightText = {
     fontWeight: boldTextEnabled ? ("800" as const) : undefined,
   };
   const accessibleBorder = {
-    borderColor: increasedContrast ? "#444" : undefined,
+    borderColor: vision.color(increasedContrast ? "#444" : undefined, "borderColor"),
   };
 
   const { fontScale: systemFontScale } = useWindowDimensions();
@@ -529,8 +532,9 @@ export default React.memo(function BuildingPicker({
         style={[
           styles.buildingRow,
           isSelected && styles.buildingRowSelected,
-          isSelected && increasedContrast && { borderLeftWidth: 4, borderLeftColor: "#10434b" },
-          { borderBottomColor: increasedContrast ? "#666" : undefined },
+          isSelected && vision.monochrome && { backgroundColor: vision.palette.primary },
+          isSelected && increasedContrast && { borderLeftWidth: 4, borderLeftColor: vision.color("#10434b", "borderLeftColor") },
+          { borderBottomColor: vision.color(increasedContrast ? "#666" : undefined, "borderBottomColor") },
         ]}
       >
         <TouchableOpacity
@@ -545,6 +549,7 @@ export default React.memo(function BuildingPicker({
               { fontSize: 16 * fontSize },
               isSelected && styles.buildingRowTextSelected,
               accessibleText,
+              isSelected && vision.monochrome && { color: "#FFFFFF" },
             ]}
           >
             {building.name}
@@ -554,14 +559,14 @@ export default React.memo(function BuildingPicker({
             <Ionicons
               name="checkmark"
               size={20}
-              color="#1d5962"
+              color={isSelected && vision.monochrome ? "#FFFFFF" : vision.color("#1d5962", "iconColor")}
               style={{ marginRight: 6 }}
             />
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.starIconButton, increasedContrast && { borderWidth: 1, borderColor: "#555", borderRadius: 8 }]}
+          style={[styles.starIconButton, increasedContrast && { borderWidth: 1, borderColor: vision.color("#555", "borderColor"), borderRadius: 8 }]}
           onPress={() => void toggleSaveBuilding(building.id)}
           hitSlop={{
             top: 10,
@@ -579,7 +584,7 @@ export default React.memo(function BuildingPicker({
           <Ionicons
             name={isSaved ? "star" : "star-outline"}
             size={22}
-            color={increasedContrast ? (isSaved ? "#805500" : "#333") : (isSaved ? "#f1c40f" : "#888")}
+            color={isSelected && vision.monochrome ? "#FFFFFF" : vision.color(increasedContrast ? (isSaved ? "#805500" : "#333") : (isSaved ? "#f1c40f" : "#888"), "iconColor")}
           />
         </TouchableOpacity>
       </View>
@@ -595,7 +600,7 @@ export default React.memo(function BuildingPicker({
       }
     >
       {accessibilityControls && voiceStatus !== "" && (
-        <Text style={[{ fontSize: 14 * fontSize, color: "#111827", padding: 8 }, accessibleText]}>
+        <Text style={[{ fontSize: 14 * fontSize, color: vision.color("#111827", "color"), padding: 8 }, accessibleText]}>
           {voiceStatus}
         </Text>
       )}
@@ -608,11 +613,11 @@ export default React.memo(function BuildingPicker({
             accessibilityLabel="Open settings"
             activeOpacity={0.75}
           >
-            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}>
+            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: vision.color("#444", "borderColor"), borderWidth: 2 }]}>
               <Ionicons
                 name="settings-outline"
                 size={27}
-                color="#333"
+                color={vision.color("#333", "iconColor")}
               />
             </View>
 
@@ -632,6 +637,7 @@ export default React.memo(function BuildingPicker({
             style={[
               styles.voiceControl,
               isListening && styles.voiceControlListening,
+              { backgroundColor: vision.controlSurface(isListening ? "#801f29" : "#D00000") },
             ]}
             onPress={() => void handleVoiceSearch()}
             accessibilityRole="button"
@@ -646,7 +652,7 @@ export default React.memo(function BuildingPicker({
             <Ionicons
               name={isListening ? "mic" : "mic-outline"}
               size={36}
-              color="#fff"
+              color={vision.color("#fff", "iconColor")}
             />
 
             <Text key={`picker-text-3-${fontSize}-${systemFontScale}`}
@@ -672,8 +678,8 @@ export default React.memo(function BuildingPicker({
             accessibilityLabel="View saved locations"
             activeOpacity={0.75}
           >
-            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}>
-              <Ionicons name="star" size={27} color={increasedContrast ? "#805500" : "#f1c40f"} />
+            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: vision.color("#444", "borderColor"), borderWidth: 2 }]}>
+              <Ionicons name="star" size={27} color={vision.color(increasedContrast ? "#805500" : "#f1c40f", "iconColor")} />
             </View>
 
             <Text key={`picker-text-4-${fontSize}-${systemFontScale}`}
@@ -709,7 +715,7 @@ export default React.memo(function BuildingPicker({
               <Ionicons
                 name="mic"
                 size={24 * fontSize}
-                color="#1d5962"
+                color={vision.color("#1d5962", "iconColor")}
               />
 
               <Text key={`picker-text-5-${fontSize}-${systemFontScale}`}
@@ -744,8 +750,8 @@ export default React.memo(function BuildingPicker({
                   },
                   { flex: stackedSearchActions ? 0 : 1, minWidth: 0 },
                   value !== "" && {
-                    backgroundColor: "#f9f9f9",
-                    color: "#333",
+                    backgroundColor: vision.color("#f9f9f9", "backgroundColor"),
+                    color: vision.color("#333", "color"),
                   },
                   accessibleText,
                   accessibleBorder,
@@ -811,9 +817,7 @@ export default React.memo(function BuildingPicker({
                       showSavedOnly ? "star" : "star-outline"
                     }
                     size={20}
-                    color={
-                      showSavedOnly ? "#f1c40f" : "#666"
-                    }
+                    color={vision.color(showSavedOnly ? "#f1c40f" : "#666", "iconColor")}
                   />
                 </TouchableOpacity>
 
@@ -821,7 +825,9 @@ export default React.memo(function BuildingPicker({
                 <TouchableOpacity
                   style={[
                     styles.actionIconButton,
-                    value !== "" && { opacity: 0.4 },
+                    value !== "" && (vision.monochrome
+                      ? { backgroundColor: vision.palette.disabledSurface, borderColor: vision.palette.outline, borderWidth: 1, borderStyle: "dashed" as const }
+                      : { opacity: 0.4 }),
                   ]}
                   disabled={!!value}
                   onPress={() => void handleVoiceSearch()}
@@ -833,11 +839,13 @@ export default React.memo(function BuildingPicker({
                   }}
                   accessibilityRole="button"
                   accessibilityLabel="Voice Search"
+                  accessibilityState={vision.monochrome ? { disabled: !!value } : undefined}
+                  accessibilityHint={vision.monochrome && value ? "Unavailable while a destination is selected. Clear the destination to use voice search." : undefined}
                 >
                   <Ionicons
                     name="mic-outline"
                     size={20}
-                    color="#666"
+                    color={vision.color("#666", "iconColor")}
                   />
                 </TouchableOpacity>
 
@@ -881,7 +889,7 @@ export default React.memo(function BuildingPicker({
 
       {isInputFocused && !value && (
         <TouchableOpacity
-          style={[styles.buildingSelectorButton, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}
+          style={[styles.buildingSelectorButton, increasedContrast && { borderColor: vision.color("#444", "borderColor"), borderWidth: 2 }]}
           onPress={() => {
             Keyboard.dismiss();
             setIsOpen(false);
@@ -893,7 +901,7 @@ export default React.memo(function BuildingPicker({
           <Ionicons
             name="list-outline"
             size={18}
-            color="#1d5962"
+            color={vision.color("#1d5962", "iconColor")}
           />
 
           <Text key={`picker-text-7-${fontSize}-${systemFontScale}`}
@@ -1063,7 +1071,7 @@ export default React.memo(function BuildingPicker({
               style={[
                 styles.modalTab,
                 !showSavedOnly && styles.modalTabActive,
-                increasedContrast && !showSavedOnly && { borderBottomWidth: 4, borderBottomColor: "#10434b" },
+                increasedContrast && !showSavedOnly && { borderBottomWidth: 4, borderBottomColor: vision.color("#10434b", "borderBottomColor") },
               ]}
               onPress={() => setShowSavedOnly(false)}
             >
@@ -1085,16 +1093,14 @@ export default React.memo(function BuildingPicker({
               style={[
                 styles.modalTab,
                 showSavedOnly && styles.modalTabActive,
-                increasedContrast && showSavedOnly && { borderBottomWidth: 4, borderBottomColor: "#10434b" },
+                increasedContrast && showSavedOnly && { borderBottomWidth: 4, borderBottomColor: vision.color("#10434b", "borderBottomColor") },
               ]}
               onPress={() => setShowSavedOnly(true)}
             >
               <Ionicons
                 name="star"
                 size={16}
-                color={
-                  showSavedOnly ? "#1d5962" : "#666"
-                }
+                color={vision.color(showSavedOnly ? "#1d5962" : "#666", "iconColor")}
                 style={{ marginRight: 6 }}
               />
 
@@ -1149,7 +1155,7 @@ export default React.memo(function BuildingPicker({
   );
 });
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     zIndex: 10,
     position: "relative",
@@ -1386,7 +1392,7 @@ const styles = StyleSheet.create({
   emptyStateText: {
     maxWidth: "100%",
     textAlign: "center",
-    color: "#777",
+    color: "#595959",
     fontStyle: "italic",
   },
   selectorModal: {

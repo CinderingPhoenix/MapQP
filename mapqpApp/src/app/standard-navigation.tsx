@@ -1,3 +1,4 @@
+import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
 import NavigationAnnouncements from "../components/navigation-announcements";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,6 +45,8 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
+  const vision = useColorVisionPalette();
+  const styles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
@@ -194,8 +197,8 @@ export default function Home() {
           <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
         ) : (
           <>
-            <ActivityIndicator size="large" color="#1d5962" />
-            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: "#555" }}>Loading campus data...</Text>
+            <ActivityIndicator size="large" color={vision.color("#1d5962", "iconColor")} />
+            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: vision.color("#555", "color") }}>Loading campus data...</Text>
           </>
         )}
       </SafeAreaView>
@@ -209,8 +212,8 @@ export default function Home() {
           onLayout={(event) => setSummaryBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
           style={[
             styles.topRouteSummary,
-            increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
-            reduceTransparencyEnabled && { backgroundColor: "#fff" },
+            increasedContrast && { borderColor: vision.color("#1d5962", "borderColor"), borderWidth: 2 },
+            reduceTransparencyEnabled && { backgroundColor: vision.color("#fff", "backgroundColor") },
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
             directionsExpanded && { height: Math.min(viewportHeight * 0.65,
               Math.max(120, viewportHeight - plannerHeight - keyboardHeight - recenterClearance - 248)) },
@@ -255,7 +258,7 @@ export default function Home() {
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.subText,
-                { fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555" },
+                { fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: vision.color(increasedContrast ? "#111" : "#555", "color") },
               ]}
             >
               {formatDistance(route.distance, distanceUnits)} total • {formatDuration(route.duration)}{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
@@ -263,7 +266,7 @@ export default function Home() {
           </CurrentNavigationSummary>
           {directionsExpanded && (
             <View style={styles.expandedContainer}>
-              <Text accessibilityRole="header" maxFontSizeMultiplier={2.5} style={[styles.boldText, { fontSize: 22 * fontSize }]}>
+              <Text accessibilityRole="header" maxFontSizeMultiplier={2.5} style={[styles.boldText, styles.highlightedHeading, { fontSize: 22 * fontSize }]}>
                 Upcoming Directions
               </Text>
               <ScrollView
@@ -285,7 +288,7 @@ export default function Home() {
                   return (
                     <View
                       key={`${step.pointIndex}-${index}`}
-                      style={[styles.directionItem, { borderBottomColor: increasedContrast ? "#aaa" : "#eee" }]}
+                      style={[styles.directionItem, { borderBottomColor: vision.color(increasedContrast ? "#aaa" : "#eee", "borderBottomColor") }]}
                     >
                       <Text
                         key={`nav-text-3-${fontSize}-${fontScale}-${textRefresh}`}
@@ -306,7 +309,7 @@ export default function Home() {
                   );
                 })}
                 {upcomingSteps.length === 0 && (
-                  <View style={[styles.directionItem, { borderBottomColor: increasedContrast ? "#aaa" : "#eee" }]}>
+                  <View style={[styles.directionItem, { borderBottomColor: vision.color(increasedContrast ? "#aaa" : "#eee", "borderBottomColor") }]}>
                     <Text
                       key={`nav-text-4-${fontSize}-${fontScale}-${textRefresh}`}
                       maxFontSizeMultiplier={2.5}
@@ -330,7 +333,7 @@ export default function Home() {
                   maxFontSizeMultiplier={2.5}
                   style={[
                     styles.subText,
-                    { marginTop: 10, fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: increasedContrast ? "#111" : "#555" },
+                    { marginTop: 10, fontSize: 16 * fontSize, fontWeight: emphasizedText ? "bold" : "normal", color: vision.color(increasedContrast ? "#111" : "#555", "color") },
                   ]}
                 >
                   {formatDistance(route.distance, distanceUnits)} • {formatDuration(route.duration)} left{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
@@ -345,7 +348,7 @@ export default function Home() {
                 maxFontSizeMultiplier={2.5}
                 style={[
                   styles.subText,
-                  { fontSize: 14 * fontSize, color: increasedContrast ? "#111" : "#555", fontWeight: emphasizedText ? "bold" : "normal" },
+                  { fontSize: 14 * fontSize, color: vision.color(increasedContrast ? "#111" : "#555", "color"), fontWeight: emphasizedText ? "bold" : "normal" },
                 ]}
               >
                 Route preview
@@ -371,7 +374,7 @@ export default function Home() {
             <Text
               key={`nav-text-8-${fontSize}-${fontScale}-${textRefresh}`}
               maxFontSizeMultiplier={2.5}
-              style={{ fontSize: 16 * fontSize, color: increasedContrast ? "#111" : "#333", fontWeight: emphasizedText ? "bold" : "normal" }}
+              style={{ fontSize: 16 * fontSize, color: vision.color(increasedContrast ? "#111" : "#333", "color"), fontWeight: emphasizedText ? "bold" : "normal" }}
             >
               {error}
             </Text>
@@ -440,7 +443,7 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   mapCanvas: { ...StyleSheet.absoluteFill, backgroundColor: "#e0e0e0" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -508,6 +511,7 @@ const styles = StyleSheet.create({
   },
   recenterText: { fontWeight: "bold", color: "#333" },
   subText: { fontSize: 16, color: "#555", marginTop: 4 },
+  highlightedHeading: { color: "#1d5962" },
   boldText: { fontSize: 22, fontWeight: "bold", color: "#1d5962" },
   errorText: { color: "red", marginTop: 8 },
 });

@@ -1,3 +1,5 @@
+import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "./color-vision-setting";
+import { useColorVisionPalette, useColorVisionColors, useColorVisionStyles } from "../../hooks/use-color-vision-palette";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Slider from "@react-native-community/slider";
 import { router, useFocusEffect } from "expo-router";
@@ -27,7 +29,7 @@ type Props = {
   accessibilityControls: readonly Preference[];
 };
 
-const COLORS = {
+const BASE_COLORS = {
   background: "#FAF8F4", panel: "#FFFFFF", ink: "#211E1C", secondary: "#3D3733",
   accent: "#741B2B", divider: "#BCB8B4", importantDivider: "#81756E", outline: "#70655F",
   contrastInk: "#000000", contrastOutline: "#272423", off: "#514B48", danger: "#8A211C",
@@ -69,6 +71,9 @@ function focusControl(target: ComponentRef<typeof TouchableOpacity> | ComponentR
 
 // Each disclosure owns only its open state. Preferences remain in SettingsProvider.
 function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon; children: ReactNode }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const vision = useColorVisionPalette();
   const [expanded, setExpanded] = useState(false);
   const { screenReaderEnabled } = useAccessibilityPreferences();
   const increasedContrast = useIncreasedContrast();
@@ -128,13 +133,13 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
       activeOpacity={1} style={[s.accordionHeader, expanded && s.expandedHeader, stackHeading && s.stackedRow]}>
       <View style={[s.accordionHeading, stackHeading && s.wrappedIconLabel]}>
         <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-          pointerEvents="none" style={[s.headerIcon, { backgroundColor: icon.background }]}>
-          <MaterialCommunityIcons name={icon.name} size={24} color={icon.color} accessible={false} allowFontScaling={false} />
+          pointerEvents="none" style={[s.headerIcon, { backgroundColor: vision.color(icon.background, "backgroundColor") }]}>
+          <MaterialCommunityIcons name={icon.name} size={24} color={vision.color(icon.color, "iconColor")} accessible={false} allowFontScaling={false} />
         </View>
         <BoldText size={22} accessible={false} style={stackHeading ? s.fullWidth : s.flex}>{title}</BoldText>
       </View>
       <MaterialCommunityIcons name={expanded ? "chevron-up" : "chevron-down"} size={28}
-        color={increasedContrast ? COLORS.contrastInk : COLORS.ink} accessible={false} allowFontScaling={false} style={stackHeading ? s.chevronEnd : undefined} />
+        color={vision.color(increasedContrast ? COLORS.contrastInk : COLORS.ink, "iconColor")} accessible={false} allowFontScaling={false} style={stackHeading ? s.chevronEnd : undefined} />
     </TouchableOpacity>
     {expanded && <View>
       {children}
@@ -144,19 +149,22 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
           style={[s.collapseButton, increasedContrast && s.strongBoundary]}>
           <BoldText accessible={false} style={s.flex}>Collapse Section</BoldText>
           <MaterialCommunityIcons name="chevron-up" size={24}
-            color={increasedContrast ? COLORS.contrastInk : COLORS.ink} accessible={false} allowFontScaling={false} />
+            color={vision.color(increasedContrast ? COLORS.contrastInk : COLORS.ink, "iconColor")} accessible={false} allowFontScaling={false} />
         </TouchableOpacity>
       </View>
     </View>}
   </View>;
 }
 
-function BoldText({ size = 20, weight = "700", color = COLORS.ink, style, textRef, ...props }:
+function BoldText({ size = 20, weight = "700", color = BASE_COLORS.ink, style, textRef, ...props }:
   TextProps & { size?: number; weight?: TextStyle["fontWeight"]; color?: string;
     textRef?: React.Ref<ComponentRef<typeof Text>> }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const { fontSize } = useSettings();
   const { boldTextEnabled, darkerSystemColorsEnabled, highTextContrastEnabled } = useAccessibilityPreferences();
   const highContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
+  color = useColorVisionPalette().color(color);
   return <Text ref={textRef} allowFontScaling {...props} style={[
     { fontSize: size * fontSize, lineHeight: Math.ceil(size * fontSize * 1.45),
       fontWeight: weight, color: highContrast && (color === COLORS.secondary || color === COLORS.ink) ? COLORS.contrastInk : color,
@@ -165,6 +173,8 @@ function BoldText({ size = 20, weight = "700", color = COLORS.ink, style, textRe
 }
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   return <View style={s.section}>
     <BoldText size={22} accessibilityRole="header">{title}</BoldText>
     {description && <BoldText size={17} weight="600" color={COLORS.secondary}>{description}</BoldText>}
@@ -173,22 +183,29 @@ function Section({ title, description, children }: { title: string; description?
 }
 function Panel({ children }: { children: ReactNode }) { return <View>{children}</View>; }
 function Divider({ important = false }: { important?: boolean }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const increasedContrast = useIncreasedContrast();
   return <View accessible={false} style={[s.divider, important && s.importantDivider,
     increasedContrast && s.strongDivider]} />;
 }
 function Choice({ label, selected, disabled = false, onPress, accessibilityLabel = label, mode = false }:
   { label: string; selected: boolean; disabled?: boolean; onPress?: () => void; accessibilityLabel?: string; mode?: boolean }) {
+  const vision = useColorVisionPalette();
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const increasedContrast = useIncreasedContrast();
   return <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}
     accessibilityState={{ selected, disabled }} disabled={disabled} activeOpacity={0.85} onPress={onPress}
-    style={[s.choice, increasedContrast && s.strongBoundary, mode && s.modeChoice, selected && s.selected, disabled && s.unavailable]}>
-    <MaterialCommunityIcons name="check" size={24} color={selected ? COLORS.panel : COLORS.ink}
+    style={[s.choice, increasedContrast && s.strongBoundary, mode && s.modeChoice, selected && s.selected, disabled && s.unavailable, disabled && !selected && vision.monochrome && { backgroundColor: vision.palette.disabledSurface }]}>
+    <MaterialCommunityIcons name="check" size={24} color={vision.color(selected ? COLORS.panel : COLORS.ink, "iconColor")}
       allowFontScaling={false} accessible={false} style={{ opacity: selected ? 1 : 0, flexShrink: 0 }} />
     <BoldText accessible={false} color={selected ? COLORS.panel : COLORS.ink}>{label}</BoldText>
   </TouchableOpacity>;
 }
 function Choices({ children }: { children: ReactNode }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const { stacked } = useLayout();
   return <View style={[s.choices, stacked && s.stacked]}>
     {Children.map(children, (child) => <View style={stacked ? s.choiceColumn : s.choiceCell}>{child}</View>)}
@@ -197,6 +214,9 @@ function Choices({ children }: { children: ReactNode }) {
 function Action({ label, description, onPress, danger = false, back = false, targetRef, onLayout }:
   { label: string; description?: string; onPress: () => void; danger?: boolean; back?: boolean;
     targetRef?: React.Ref<ComponentRef<typeof TouchableOpacity>>; onLayout?: () => void }) {
+  const vision = useColorVisionPalette();
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const increasedContrast = useIncreasedContrast();
   const [pressed, setPressed] = useState(false);
   return <TouchableOpacity ref={targetRef} onLayout={onLayout} accessible accessibilityRole="button"
@@ -205,20 +225,22 @@ function Action({ label, description, onPress, danger = false, back = false, tar
     onPressIn={danger ? () => setPressed(true) : undefined}
     onPressOut={danger ? () => setPressed(false) : undefined}
     style={[s.action, back && s.back, back && increasedContrast && s.strongBoundary,
-      danger && { minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, flexWrap: "wrap", borderRadius: 12, borderWidth: 2, borderColor: increasedContrast ? COLORS.contrastOutline : (pressed ? "#8F1C28" : "#B42332"),
-        backgroundColor: pressed ? "#8F1C28" : "#B42332" }]}>
-    {danger && <MaterialCommunityIcons name="trash-can-outline" size={24} color="#FFFFFF" accessible={false}
+      danger && { minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, flexWrap: "wrap", borderRadius: 12, borderWidth: 2, borderColor: vision.color(increasedContrast ? COLORS.contrastOutline : (pressed ? "#8F1C28" : "#B42332"), "borderColor"),
+        backgroundColor: vision.color(pressed ? "#8F1C28" : "#B42332", "backgroundColor") }]}>
+    {danger && <MaterialCommunityIcons name="trash-can-outline" size={24} color={vision.color("#FFFFFF", "iconColor")} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <View style={s.actionCopy} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <BoldText color={danger ? "#FFFFFF" : COLORS.ink}>{label}</BoldText>
       {description && !danger && <BoldText size={17} weight="600" color={COLORS.secondary}>{description}</BoldText>}
     </View>
-    {!danger && !back && <MaterialCommunityIcons name="chevron-right" size={28} color={COLORS.ink}
+    {!danger && !back && <MaterialCommunityIcons name="chevron-right" size={28} color={vision.color(COLORS.ink, "iconColor")}
       accessible={false} allowFontScaling={false} />}
   </TouchableOpacity>;
 }
 
 function PreferenceLabel({ label, icon, stacked = false }: { label: string; icon?: IconName; stacked?: boolean }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const { width, scale, gutter } = useLayout();
   const words = label.split(/\s+/);
   const wrapWithIcon = stacked && icon && Math.max(...words.map((word) => word.length)) * 20 * scale * 0.62
@@ -235,6 +257,8 @@ function PreferenceLabel({ label, icon, stacked = false }: { label: string; icon
 
 function ToggleRow({ label, value, onChange, disabled, description, icon }:
   { label: string; value: boolean; onChange: (value: boolean) => void; disabled: boolean; description?: string; icon?: IconName }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const { stackRow } = useLayout();
   // Give the new routing labels a little measurement slack for bold native
   // glyphs, so long words use the full row before their switch moves below.
@@ -254,6 +278,8 @@ function ToggleRow({ label, value, onChange, disabled, description, icon }:
 }
 
 function AccessibilityPanel({ controls }: { controls: readonly Preference[] }) {
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
   const { deviceAccessibility: device, customAccessibilityPreferences: saved, settingsLoaded, settingsReadSucceeded,
     setAccessibilityPreference } = useSettings();
   const { stackRow, scale } = useLayout();
@@ -307,6 +333,10 @@ function AccessibilityPanel({ controls }: { controls: readonly Preference[] }) {
 
 export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNavigationModeChange,
   onFontSizeAccessibilityAction, accessibilityControls }: Props) {
+  const vision = useColorVisionPalette();
+  const s = useColorVisionStyles(baseStyles);
+  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const colorVision = useColorVisionDialog();
   const settings = useSettings();
   const preferences = useAccessibilityPreferences();
   const increasedContrast = useIncreasedContrast();
@@ -346,7 +376,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
     void save.catch(() => Alert.alert("Could not save preference", "Please try changing the switch again."));
   };
   return <SafeAreaView style={s.container}>
-    <ScrollView contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
+    <ScrollView accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"} contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
       <View style={s.header}>
         <Action label="‹ Back To Map" back onPress={onBack} />
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
@@ -367,6 +397,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             <Choice label="Accessible" accessibilityLabel="Accessible Settings appearance" selected disabled={disabled}
               onPress={() => settings.setSettingsAppearance("accessible")} />
           </Choices></View>
+          <ColorVisionSetting accessibleAppearance onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
           <Divider important /><BoldText style={s.label}>Color theme</BoldText>
           <View style={s.choiceInset}><Choices>
             <Choice label="Light" accessibilityLabel="Light Settings color theme" selected />
@@ -407,13 +438,13 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           <View style={s.choiceInset}>
             <Choices>
               <Choice
-                label="Feet / Miles"
+                label="Feet / miles"
                 selected={settings.distanceUnits === "imperial"}
                 disabled={disabled}
                 onPress={() => settings.setDistanceUnits("imperial")}
               />
               <Choice
-                label="Meters / Kilometers"
+                label="Meters / km"
                 selected={settings.distanceUnits === "metric"}
                 disabled={disabled}
                 onPress={() => settings.setDistanceUnits("metric")}
@@ -462,73 +493,74 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
       <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
         accessibilityHint="Returns to the MapQP landing page." onPress={onHome}
         style={[s.homeAction, increasedContrast && s.homeActionContrast]}>
-        <MaterialCommunityIcons name="home-outline" size={28} color={COLORS.accent} accessible={false}
+        <MaterialCommunityIcons name="home-outline" size={28} color={vision.color(COLORS.accent, "iconColor")} accessible={false}
           accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
         <View style={s.flex} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <BoldText size={22} weight="600">Return to Home</BoldText>
         </View>
-        <MaterialCommunityIcons name="chevron-right" size={28} color={COLORS.accent} accessible={false}
+        <MaterialCommunityIcons name="chevron-right" size={28} color={vision.color(COLORS.accent, "iconColor")} accessible={false}
           accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
       </TouchableOpacity>
     </ScrollView>
+    <ColorVisionDialog accessibleAppearance visible={colorVision.visible} onClose={colorVision.close} triggerRef={colorVision.triggerRef} />
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const baseStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BASE_COLORS.background },
   content: { paddingTop: 12, paddingBottom: 28, gap: 16 },
   header: { gap: 12 }, section: { gap: 12 }, accordions: { gap: 12 },
   homeAction: { width: "100%", minHeight: 72, padding: 16, flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: "#94877F", borderRadius: 12 },
-  homeActionContrast: { borderWidth: 2, borderColor: COLORS.contrastOutline },
+    backgroundColor: BASE_COLORS.panel, borderWidth: 1, borderColor: "#94877F", borderRadius: 12 },
+  homeActionContrast: { borderWidth: 2, borderColor: BASE_COLORS.contrastOutline },
   accordionHeader: { minHeight: 72, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12,
     borderBottomWidth: 2, borderBottomColor: "transparent" },
-  expandedHeader: { backgroundColor: "#F5ECEE", borderBottomColor: COLORS.accent, borderBottomWidth: 3 },
+  expandedHeader: { backgroundColor: "#F5ECEE", borderBottomColor: BASE_COLORS.accent, borderBottomWidth: 3 },
   accordionHeading: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12 },
   collapseFooter: { padding: 12 },
   collapseButton: { minWidth: 44, minHeight: 56, paddingHorizontal: 16, paddingVertical: 12,
-    flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: COLORS.outline,
-    borderRadius: 12, backgroundColor: COLORS.panel },
+    flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: BASE_COLORS.outline,
+    borderRadius: 12, backgroundColor: BASE_COLORS.panel },
   headerIcon: { width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  panel: { backgroundColor: COLORS.panel, borderRadius: 18, borderWidth: 1, borderColor: COLORS.outline, overflow: "hidden" },
-  strongPanel: { borderWidth: 2, borderColor: COLORS.contrastOutline },
-  strongBoundary: { borderColor: COLORS.contrastOutline },
-  divider: { height: 1, backgroundColor: COLORS.divider }, importantDivider: { backgroundColor: COLORS.importantDivider },
-  strongDivider: { height: 2, backgroundColor: COLORS.contrastOutline },
+  panel: { backgroundColor: BASE_COLORS.panel, borderRadius: 18, borderWidth: 1, borderColor: BASE_COLORS.outline, overflow: "hidden" },
+  strongPanel: { borderWidth: 2, borderColor: BASE_COLORS.contrastOutline },
+  strongBoundary: { borderColor: BASE_COLORS.contrastOutline },
+  divider: { height: 1, backgroundColor: BASE_COLORS.divider }, importantDivider: { backgroundColor: BASE_COLORS.importantDivider },
+  strongDivider: { height: 2, backgroundColor: BASE_COLORS.contrastOutline },
   flex: { flex: 1, minWidth: 0 }, stacked: { flexDirection: "column" },
   fullWidth: { width: "100%", flexGrow: 0, flexShrink: 1, flexBasis: "auto" }, chevronEnd: { alignSelf: "flex-end" },
   wrappedIconLabel: { flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 0 }, word: { maxWidth: "100%", flexShrink: 0 },
   stackedRow: { flexDirection: "column", alignItems: "stretch", gap: 8 },
   choices: { flexDirection: "row", gap: 12, alignItems: "stretch" },
   choiceCell: { flex: 1, minWidth: 0 }, choiceColumn: { width: "100%" },
-  choice: { width: "100%", flexGrow: 1, flexShrink: 0, minWidth: 0, minHeight: 64, borderWidth: 2, borderColor: COLORS.outline, borderRadius: 12,
-    backgroundColor: COLORS.panel, paddingHorizontal: 8, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 4 },
+  choice: { width: "100%", flexGrow: 1, flexShrink: 0, minWidth: 0, minHeight: 64, borderWidth: 2, borderColor: BASE_COLORS.outline, borderRadius: 12,
+    backgroundColor: BASE_COLORS.panel, paddingHorizontal: 8, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 4 },
   modeChoice: { minHeight: 112, flexDirection: "column", alignItems: "flex-start", justifyContent: "center" },
-  selected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent }, unavailable: { borderStyle: "dashed" },
+  selected: { backgroundColor: BASE_COLORS.accent, borderColor: BASE_COLORS.accent }, unavailable: { borderStyle: "dashed" },
   action: { minHeight: 64, paddingHorizontal: 16, paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 12 },
   actionCopy: { flex: 1, minWidth: 0, gap: 8 }, back: { minHeight: 56, borderRadius: 12, borderWidth: 1,
-    borderColor: COLORS.outline, backgroundColor: COLORS.panel },
+    borderColor: BASE_COLORS.outline, backgroundColor: BASE_COLORS.panel },
   rowLabel: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, minWidth: 0 },
   toggleRow: { minHeight: 96, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
   switchGroup: { alignItems: "center", gap: 4, flexShrink: 0, alignSelf: "center" },
   stackedSwitchGroup: { flexDirection: "row", alignSelf: "flex-start", minHeight: 56, gap: 16 },
-  track: { width: 80, height: 48, borderRadius: 24, borderWidth: 2, padding: 4, justifyContent: "center", borderColor: COLORS.ink },
-  trackOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent, alignItems: "flex-end" },
-  trackOff: { backgroundColor: COLORS.off, alignItems: "flex-start" }, trackDisabled: { borderStyle: "dashed" },
-  thumb: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.panel },
+  track: { width: 80, height: 48, borderRadius: 24, borderWidth: 2, padding: 4, justifyContent: "center", borderColor: BASE_COLORS.ink },
+  trackOn: { backgroundColor: BASE_COLORS.accent, borderColor: BASE_COLORS.accent, alignItems: "flex-end" },
+  trackOff: { backgroundColor: BASE_COLORS.off, alignItems: "flex-start" }, trackDisabled: { borderStyle: "dashed" },
+  thumb: { width: 36, height: 36, borderRadius: 18, backgroundColor: BASE_COLORS.panel },
   status: { minWidth: 96, alignItems: "center", gap: 4, flexShrink: 0 },
   readOnly: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, minHeight: 96 }, readOnlyHeading: { flexDirection: "row", alignItems: "center", gap: 12 },
   statusNote: { paddingHorizontal: 16, paddingBottom: 16 },
   label: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   note: { paddingHorizontal: 16, paddingBottom: 8 }, choiceInset: { paddingHorizontal: 12, paddingVertical: 8 },
   sizeActions: { paddingHorizontal: 12, paddingVertical: 8 },
-  sizeButton: { minHeight: 64, padding: 8, borderWidth: 2, borderColor: COLORS.outline, borderRadius: 12,
+  sizeButton: { minHeight: 64, padding: 8, borderWidth: 2, borderColor: BASE_COLORS.outline, borderRadius: 12,
     justifyContent: "center", flexGrow: 1 },
   sliderGroup: { padding: 16, gap: 8 }, slider: { minHeight: 64, justifyContent: "center" }, sliderInput: { width: "100%", height: 64 },
   sliderRail: { position: "absolute", left: 22, right: 22, height: 12, borderRadius: 6, backgroundColor: "#85858F" },
-  strongRail: { backgroundColor: COLORS.contrastOutline },
+  strongRail: { backgroundColor: BASE_COLORS.contrastOutline },
   sliderThumb: { position: "absolute", width: 44, height: 44, borderRadius: 22, borderWidth: 3,
-    borderColor: COLORS.ink, backgroundColor: COLORS.panel },
+    borderColor: BASE_COLORS.ink, backgroundColor: BASE_COLORS.panel },
   intervalGrid: { padding: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   infoRow: { minHeight: 64, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
 });

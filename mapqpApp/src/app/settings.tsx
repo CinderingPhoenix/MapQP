@@ -1,3 +1,5 @@
+import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "../components/settings/color-vision-setting";
+import { useColorVisionPalette, useColorVisionColors, useColorVisionStyles } from "../hooks/use-color-vision-palette";
 import { PreferenceIcon } from "../components/settings/preference-icon";
 import { AccessibleSettings } from "../components/settings/accessible-settings";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -202,12 +204,13 @@ function SettingDescription({ children }: { children: string }) {
 }
 
 function SelectionIndicator({ selected }: { selected: boolean }) {
+  const vision = useColorVisionPalette();
   const { settingsAppearance } = useSettings();
   if (settingsAppearance !== "accessible") return null;
   // Reserve the same space on both options to avoid shifts when selection changes.
   return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
     style={accessibleStyles.selectionIndicator}>
-    <MaterialCommunityIcons name="check" size={24} color="#FFFFFF" allowFontScaling={false}
+    <MaterialCommunityIcons name="check" size={24} color={vision.color("#FFFFFF", "iconColor")} allowFontScaling={false}
       accessible={false} style={{ opacity: selected ? 1 : 0 }} />
   </View>;
 }
@@ -216,6 +219,7 @@ function SelectionIndicator({ selected }: { selected: boolean }) {
 function SettingIcon({ name }: {
   name: SettingsIconName; highContrast: boolean;
 }) {
+  const vision = useColorVisionPalette();
   const { fontSize: textSizeMultiplier } = useSettings();
   const iconSize = Math.max(20, Math.min(30, Math.round(22 * textSizeMultiplier)));
   const stroke = iconSize * 0.055;
@@ -248,7 +252,7 @@ function SettingIcon({ name }: {
         backgroundColor: name === "stairs" ? "#C45100" : name === "compass" ? "#B32635" : name === "navigation" ? "#7950B2"
           : name === "contrast-circle" || name === "layers-outline" ? "#636366" : "#007AFF",
       }]}>
-        <MaterialCommunityIcons name={name} size={Math.round(iconSize * 0.78)} color="#FFFFFF"
+        <MaterialCommunityIcons name={name} size={Math.round(iconSize * 0.78)} color={vision.color("#FFFFFF", "iconColor")}
           accessible={false} allowFontScaling={false} />
       </View>
     )}
@@ -268,7 +272,7 @@ export default function SettingsPage() {
 
   const {
     settingsAppearance,
-    setSettingsAppearance,
+    setSettingsAppearance, setColorVisionPreset,
     navigationMode,
     setNavigationMode,
     setHasSelectedMode,
@@ -429,6 +433,7 @@ export default function SettingsPage() {
                 resetAvoidStairsPreference();
                 setFontSize(1);
                 setSettingsAppearance("standard");
+                setColorVisionPreset("default");
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -472,7 +477,7 @@ export default function SettingsPage() {
 
 // Signal is intentionally separate from standardStyles: Accessible appearance
 // inherits those legacy styles, so changing them would also change Accessible.
-const SIGNAL = {
+const BASE_SIGNAL = {
   background: "#F7F6F2", heading: "#000000", ink: "#000000", muted: "#000000", status: "#000000",
   divider: "#D0CDC9", accent: "#741B2B", off: "#686868", outline: "#686868",
   disabled: "#E0DDD7",
@@ -486,11 +491,14 @@ function useSignalContrast() {
 }
 
 function useSignalStyles() {
+  const signalStyles = useColorVisionStyles(baseSignalStyles);
+  const vision = useColorVisionPalette();
   const increased = useSignalContrast();
-  if (!increased) return signalStyles;
-  return {
+  const neutralBadge = { ...signalStyles.deviceBadge, backgroundColor: vision.readOnlyStatus.surface };
+  if (!increased) return vision.monochrome ? signalStyles : { ...signalStyles, deviceBadge: neutralBadge };
+  const contrasted = {
     ...signalStyles,
-    container: { ...signalStyles.container, backgroundColor: "#FFFFFF" },
+    container: { ...signalStyles.container, backgroundColor: vision.settingsBackground(BASE_SIGNAL.background) },
     modeGroup: { ...signalStyles.modeGroup, backgroundColor: "#FFFFFF" },
     choice: { ...signalStyles.choice, backgroundColor: "#FFFFFF", borderColor: "#272423", borderWidth: 2 },
     choiceSelected: { ...signalStyles.choiceSelected, borderColor: "#272423" },
@@ -507,16 +515,19 @@ function useSignalStyles() {
     switchOff: { ...signalStyles.switchOff, backgroundColor: "#454545" },
     switchReadOnly: { ...signalStyles.switchReadOnly, borderWidth: 2, padding: 2 },
     disabled: { ...signalStyles.disabled, backgroundColor: "#DAD6D0" },
-    modalPanel: { ...signalStyles.modalPanel, backgroundColor: "#FFFFFF", borderColor: "#272423", borderWidth: 2 },
-    opaqueOverlay: { ...signalStyles.opaqueOverlay, backgroundColor: "#FFFFFF" },
+    modalPanel: { ...signalStyles.modalPanel, backgroundColor: vision.settingsBackground(BASE_SIGNAL.background), borderColor: "#272423", borderWidth: 2 },
+    opaqueOverlay: { ...signalStyles.opaqueOverlay, backgroundColor: vision.settingsBackground(BASE_SIGNAL.background) },
   };
+  return vision.monochrome ? vision.styles(contrasted) : { ...contrasted, deviceBadge: { ...contrasted.deviceBadge, backgroundColor: vision.readOnlyStatus.surface } };
 }
 
-function SignalText({ size = 17, weight = "400", color = SIGNAL.ink, style, textRef, ...props }:
+function SignalText({ size = 17, weight = "400", color = BASE_SIGNAL.ink, style, textRef, ...props }:
   TextProps & { size?: number; weight?: TextStyle["fontWeight"]; color?: string; textRef?: React.Ref<React.ElementRef<typeof Text>> }) {
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const { fontSize } = useSettings();
   const preferences = useAccessibilityPreferences();
   const highContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+  color = useColorVisionPalette().color(color);
   return <Text ref={textRef} allowFontScaling maxFontSizeMultiplier={2.5} {...props}
     style={[{ fontSize: size * fontSize, lineHeight: Math.ceil(size * fontSize * 1.4),
       fontWeight: weight, color: highContrast && (color === SIGNAL.muted || color === SIGNAL.status || color === SIGNAL.outline) ? SIGNAL.ink : color,
@@ -526,6 +537,7 @@ function SignalText({ size = 17, weight = "400", color = SIGNAL.ink, style, text
 function SignalSection({ title, description, children, titleRef }: {
   title: string; description?: string; children: ReactNode; titleRef?: React.Ref<React.ElementRef<typeof Text>>;
 }) {
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   return <View style={signalStyles.section}>
     <SignalText textRef={titleRef} size={24} weight="800" color={SIGNAL.heading} accessibilityRole="header">{title}</SignalText>
@@ -547,6 +559,8 @@ type SignalOption = {
 function SignalChoice({ label, accessibilityLabel, hint, selected, onPress, disabled = false, vertical = false }: SignalOption & {
   disabled?: boolean; vertical?: boolean;
 }) {
+  const vision = useColorVisionPalette();
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const stacked = useSignalStacked();
   const increased = useSignalContrast();
@@ -554,9 +568,9 @@ function SignalChoice({ label, accessibilityLabel, hint, selected, onPress, disa
     accessibilityHint={hint} accessibilityState={{ selected, disabled }} disabled={disabled}
     onPress={onPress} style={[signalStyles.choice, (vertical || stacked) && signalStyles.stackedChoice, selected && signalStyles.choiceSelected,
       disabled && !selected && signalStyles.disabled, disabled && signalStyles.disabledChoice]}>
-    {selected && <MaterialCommunityIcons name={disabled ? "lock-check-outline" : "check"} size={16} color="#FFFFFF" accessible={false}
+    {selected && <MaterialCommunityIcons name={disabled ? "lock-check-outline" : "check"} size={16} color={vision.color("#FFFFFF", "iconColor")} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
-    {disabled && !selected && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={SIGNAL.ink}
+    {disabled && !selected && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={vision.color(SIGNAL.ink, "iconColor")}
       accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <SignalText accessible={false} size={16} weight="600" color={selected ? "#FFFFFF" : SIGNAL.ink}
       style={signalStyles.choiceLabel}>{label}</SignalText>
@@ -568,6 +582,8 @@ function SignalChoice({ label, accessibilityLabel, hint, selected, onPress, disa
 function SignalPreferenceRow({ label, value, description, options, disabled = false }: {
   label: string; value: string; description?: string; options: SignalOption[]; disabled?: boolean;
 }) {
+  const vision = useColorVisionPalette();
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const [open, setOpen] = useState(false);
   const [presented, setPresented] = useState(false);
@@ -622,9 +638,9 @@ function SignalPreferenceRow({ label, value, description, options, disabled = fa
         </View>
         <View style={[signalStyles.valueWithChevron, stacked && signalStyles.stackedValue]} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <SignalText size={15} weight="600" color={disabled ? SIGNAL.status : SIGNAL.accent}>{value}</SignalText>
-          {disabled && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={SIGNAL.ink}
+          {disabled && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={vision.color(SIGNAL.ink, "iconColor")}
             accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
-          <MaterialCommunityIcons name="chevron-right" size={20} color={disabled ? SIGNAL.status : SIGNAL.accent} accessible={false} allowFontScaling={false} />
+          <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(disabled ? SIGNAL.status : SIGNAL.accent, "iconColor")} accessible={false} allowFontScaling={false} />
         </View>
       </View>
       {description && <SignalText size={14} color={SIGNAL.muted} accessible={false}
@@ -653,6 +669,7 @@ function SignalPreferenceRow({ label, value, description, options, disabled = fa
 }
 
 function SignalSwitch(props: SwitchProps) {
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const stacked = useSignalStacked();
   const { value, disabled, onValueChange, ...accessibilityProps } = props;
@@ -673,6 +690,7 @@ function SignalSwitch(props: SwitchProps) {
 function SignalSwitchRow({ label, description, status, icon, children }: {
   label: string; description?: string; status?: string; icon?: SettingsIconName; children: ReactNode;
 }) {
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const stacked = useSignalStacked();
   return <View style={signalStyles.switchRow}>
@@ -690,6 +708,7 @@ function SignalSwitchRow({ label, description, status, icon, children }: {
 }
 
 function SignalGuidanceSettings({ titleRef }: { titleRef?: React.Ref<React.ElementRef<typeof Text>> }) {
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const { repeatGuidanceEnabled, repeatGuidanceSeconds, setRepeatGuidanceEnabled, setRepeatGuidanceSeconds,
     settingsLoaded, settingsReadSucceeded } = useSettings();
@@ -726,6 +745,8 @@ function SignalActionRow({ label, description, onPress, accessibilityLabel = lab
   label: string; description?: string; onPress: () => void; accessibilityLabel?: string;
   accessibilityHint: string; chevron?: boolean;
 }) {
+  const vision = useColorVisionPalette();
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const [pressed, setPressed] = useState(false);
   const preferences = useAccessibilityPreferences();
@@ -736,16 +757,16 @@ function SignalActionRow({ label, description, onPress, accessibilityLabel = lab
     onPressIn={!chevron ? () => setPressed(true) : undefined}
     onPressOut={!chevron ? () => setPressed(false) : undefined}
     style={[signalStyles.preferenceRow, !chevron && signalStyles.deleteAction,
-      !chevron && { backgroundColor: pressed ? "#8F1C28" : "#B42332",
-        borderColor: increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332"),
-        borderBottomColor: increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332") }]}>
-    {!chevron && <MaterialCommunityIcons name="trash-can-outline" size={24} color="#FFFFFF" accessible={false}
+      !chevron && { backgroundColor: vision.color(pressed ? "#8F1C28" : "#B42332", "backgroundColor"),
+        borderColor: vision.monochrome ? vision.palette.outline : increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332"),
+        borderBottomColor: vision.monochrome ? vision.palette.outline : increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332") }]}>
+    {!chevron && <MaterialCommunityIcons name="trash-can-outline" size={24} color={vision.color("#FFFFFF", "iconColor")} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <SignalText weight={chevron ? "500" : "700"} color={chevron ? SIGNAL.ink : "#FFFFFF"}>{label}</SignalText>
       {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
     </View>
-    {chevron && <MaterialCommunityIcons name="chevron-right" size={20} color={SIGNAL.accent} accessible={false}
+    {chevron && <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
   </TouchableOpacity>;
 }
@@ -759,6 +780,8 @@ type SignalSettingsProps = {
 
 function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHome, onDelete,
   onNavigationModeChange, onFontSizeAccessibilityAction }: SignalSettingsProps) {
+  const vision = useColorVisionPalette();
+  const SIGNAL = useColorVisionColors(BASE_SIGNAL, { accent: "accentText" });
   const signalStyles = useSignalStyles();
   const { settingsAppearance, setSettingsAppearance, navigationMode, distanceUnits, setDistanceUnits,
     directionStyle, setDirectionStyle, fontSize, setFontSize, deviceAccessibility,
@@ -768,6 +791,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
   const stacked = useSignalStacked();
   const { screenReaderEnabled, reduceMotionEnabled } = useAccessibilityPreferences();
   const increased = useSignalContrast();
+  const colorVision = useColorVisionDialog();
   const scroll = useRef<React.ElementRef<typeof ScrollView>>(null);
   const guidanceHeading = useRef<React.ElementRef<typeof Text>>(null);
   const pendingGuidance = useRef(false);
@@ -807,14 +831,14 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
   };
 
   return <SafeAreaView style={signalStyles.container}>
-    <ScrollView ref={scroll} key={activeTab} showsVerticalScrollIndicator={false}
+    <ScrollView accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"} ref={scroll} key={activeTab} showsVerticalScrollIndicator={false}
       onContentSizeChange={() => { guidanceLayout.current.content = true; locateGuidance(); }} contentContainerStyle={signalStyles.content}>
       <View style={signalStyles.header}>
         <View style={signalStyles.topRow}>
           <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={from ? "Back to navigation" : "Back"}
             accessibilityHint={from ? "Returns to navigation and applies the selected navigation mode" : "Returns to the previous screen"}
             style={signalStyles.backButton}>
-            <MaterialCommunityIcons name="chevron-left" size={20} color={SIGNAL.accent} accessible={false} allowFontScaling={false} />
+            <MaterialCommunityIcons name="chevron-left" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false} allowFontScaling={false} />
             <SignalText accessible={false} size={16} weight="500" color={SIGNAL.accent}>{from ? "Back to map" : "Back"}</SignalText>
           </TouchableOpacity>
           <SignalText size={16} weight="700">MapQP</SignalText>
@@ -862,6 +886,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                 hint: `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`,
                 selected: settingsAppearance === appearance, onPress: () => setSettingsAppearance(appearance),
               }))} />
+            <ColorVisionSetting onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
             <View style={signalStyles.sliderGroup}>
               <View style={[signalStyles.textSizeHeading, stacked && signalStyles.stackedRow]}>
                 <SignalText weight="500">Text size</SignalText>
@@ -877,8 +902,8 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
                   onAccessibilityAction={onFontSizeAccessibilityAction}>
                   <Slider style={signalStyles.sliderInput} minimumValue={0.8} maximumValue={1.8} step={0.1}
-                    value={fontSize} onValueChange={setFontSize} minimumTrackTintColor={SIGNAL.accent}
-                    maximumTrackTintColor={increased ? "#272423" : SIGNAL.outline} thumbTintColor={SIGNAL.accent} accessible={false}
+                    value={fontSize} onValueChange={setFontSize} minimumTrackTintColor={vision.color(SIGNAL.accent, "backgroundColor")}
+                    maximumTrackTintColor={vision.monochrome ? vision.palette.outline : increased ? "#272423" : SIGNAL.outline} thumbTintColor={vision.color(SIGNAL.accent, "backgroundColor")} accessible={false}
                     accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                 </View>
                 <SignalText size={25} weight="600" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
@@ -886,9 +911,9 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
             </View>
             <SignalPreferenceRow label="Distance units" value={distanceUnits === "imperial" ? "Feet / miles" : "Meters / km"}
               options={[
-                { label: "ft / mi", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
+                { label: "Feet / miles", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
                   selected: distanceUnits === "imperial", onPress: () => setDistanceUnits("imperial") },
-                { label: "m / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
+                { label: "Meters / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
                   selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
               ]} />
             <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
@@ -911,6 +936,10 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   <SignalText weight="500">Screen reader</SignalText>
                 </View>
                 <View style={signalStyles.deviceBadge}>
+                  {!vision.monochrome && !increased && <View pointerEvents="none" accessible={false}
+                    accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+                    style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0,
+                      borderRadius: 6, borderWidth: 1, borderColor: vision.readOnlyStatus.outline }} /> }
                   <SignalText size={14} weight="600" color={SIGNAL.status}>{deviceValue("screenReaderEnabled")}</SignalText>
                 </View>
               </View>
@@ -953,12 +982,12 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
             <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
               accessibilityHint="Return to the MapQP home screen" onPress={onHome}
               style={[signalStyles.homeAction, increased && signalStyles.homeActionContrast]}>
-              <MaterialCommunityIcons name="home-outline" size={24} color={SIGNAL.accent} accessible={false}
+              <MaterialCommunityIcons name="home-outline" size={24} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
                 accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
               <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                 <SignalText weight="600">Return to Home</SignalText>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={20} color={SIGNAL.accent} accessible={false}
+              <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
                 accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
             </TouchableOpacity>
           </SignalSection>
@@ -1001,20 +1030,21 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
         <SignalText size={13} color={SIGNAL.status} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
       </View>
     </ScrollView>
+    <ColorVisionDialog visible={colorVision.visible} onClose={colorVision.close} triggerRef={colorVision.triggerRef} />
   </SafeAreaView>;
 }
 
-const signalStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: SIGNAL.background },
+const baseSignalStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BASE_SIGNAL.background },
   content: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 20, paddingBottom: 16 },
   header: { gap: 8, paddingTop: 4 },
   topRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   backButton: { minHeight: 44, flexDirection: "row", alignItems: "center", flexShrink: 1 },
   titleGroup: { paddingVertical: 4 },
-  tabs: { flexDirection: "row", gap: 8, borderBottomWidth: 1, borderBottomColor: SIGNAL.divider },
+  tabs: { flexDirection: "row", gap: 8, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
   tab: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 10, paddingHorizontal: 4,
     alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
-  tabSelected: { borderBottomColor: SIGNAL.accent },
+  tabSelected: { borderBottomColor: BASE_SIGNAL.accent },
   centered: { textAlign: "center" },
   sections: { gap: 24, paddingTop: 20, paddingBottom: 12 },
   section: { gap: 4 },
@@ -1023,13 +1053,13 @@ const signalStyles = StyleSheet.create({
   stackedChoices: { flexDirection: "column", alignItems: "stretch" },
   choice: { flexGrow: 1, flexBasis: 0, minWidth: 0, minHeight: 48, flexDirection: "row", alignItems: "center",
     justifyContent: "center", gap: 8, paddingHorizontal: 8, paddingVertical: 12, borderRadius: 8,
-    borderWidth: 1, borderColor: SIGNAL.outline, backgroundColor: "#F0EEEA" },
-  choiceSelected: { backgroundColor: SIGNAL.accent, borderColor: SIGNAL.accent },
+    borderWidth: 1, borderColor: BASE_SIGNAL.outline, backgroundColor: "#F0EEEA" },
+  choiceSelected: { backgroundColor: BASE_SIGNAL.accent, borderColor: BASE_SIGNAL.accent },
   stackedChoice: { flexBasis: "auto", flexGrow: 0, flexShrink: 0, width: "100%" },
   choiceLabel: { textAlign: "center" },
   preferenceRow: { minHeight: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: SIGNAL.divider },
-  preferenceBlock: { gap: 4, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: SIGNAL.divider },
+    gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
+  preferenceBlock: { gap: 4, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
   preferenceHeading: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   rowLabel: { flex: 1, minWidth: 0, gap: 4 },
   iconLabel: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -1037,14 +1067,14 @@ const signalStyles = StyleSheet.create({
   stackedRow: { flexDirection: "column", alignItems: "stretch" },
   stackedLabel: { flex: 0, flexBasis: "auto", width: "100%" },
   stackedValue: { maxWidth: "100%", alignSelf: "flex-start" },
-  switchRow: { gap: 6, paddingTop: 8, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: SIGNAL.divider },
+  switchRow: { gap: 6, paddingTop: 8, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
   deviceBadge: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: "#E9E7DF" },
   switchControl: { minHeight: 48, maxWidth: "100%", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8, flexShrink: 0 },
   switchControlLarge: { alignSelf: "flex-start", flexShrink: 1, flexWrap: "wrap" },
   switchTrack: { width: 52, height: 32, borderRadius: 16, padding: 4, justifyContent: "center", flexShrink: 0 },
-  switchOn: { backgroundColor: SIGNAL.accent, alignItems: "flex-end" },
-  switchOff: { backgroundColor: SIGNAL.off, alignItems: "flex-start" },
-  switchReadOnly: { borderWidth: 1, borderStyle: "dashed", borderColor: SIGNAL.ink, padding: 3 },
+  switchOn: { backgroundColor: BASE_SIGNAL.accent, alignItems: "flex-end" },
+  switchOff: { backgroundColor: BASE_SIGNAL.off, alignItems: "flex-start" },
+  switchReadOnly: { borderWidth: 1, borderStyle: "dashed", borderColor: BASE_SIGNAL.ink, padding: 3 },
   switchThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#FFFFFF" },
   sliderGroup: { gap: 4, paddingTop: 12, paddingBottom: 4 },
   textSizeHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
@@ -1058,18 +1088,18 @@ const signalStyles = StyleSheet.create({
   homeActionContrast: { borderWidth: 2, borderColor: "#272423" },
   deleteSection: { gap: 4 },
   deleteAction: { minHeight: 48, borderWidth: 2, borderBottomWidth: 2, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
-  routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: SIGNAL.divider, paddingLeft: 16, paddingVertical: 8 },
+  routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: BASE_SIGNAL.divider, paddingLeft: 16, paddingVertical: 8 },
   footer: { alignItems: "center", paddingTop: 20, paddingBottom: 12 },
   // Disabled choices/rows keep full text contrast; the fill, neutral value and
   // locked selected indicator distinguish them without changing their geometry.
-  disabled: { backgroundColor: SIGNAL.disabled },
+  disabled: { backgroundColor: BASE_SIGNAL.disabled },
   disabledChoice: { borderStyle: "dashed" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(37,39,32,0.35)", justifyContent: "center", padding: 24 },
-  opaqueOverlay: { backgroundColor: SIGNAL.background },
-  modalPanel: { maxHeight: "90%", maxWidth: 480, width: "100%", alignSelf: "center", backgroundColor: SIGNAL.background,
-    borderWidth: 1, borderColor: SIGNAL.outline, borderRadius: 16, overflow: "hidden" },
+  opaqueOverlay: { backgroundColor: BASE_SIGNAL.background },
+  modalPanel: { maxHeight: "90%", maxWidth: 480, width: "100%", alignSelf: "center", backgroundColor: BASE_SIGNAL.background,
+    borderWidth: 1, borderColor: BASE_SIGNAL.outline, borderRadius: 16, overflow: "hidden" },
   modalContent: { padding: 24, gap: 16 },
-  modalHeading: { color: SIGNAL.heading, fontSize: 23, lineHeight: 32, fontWeight: "600" },
+  modalHeading: { color: BASE_SIGNAL.heading, fontSize: 23, lineHeight: 32, fontWeight: "600" },
   cancelButton: { minHeight: 48, alignItems: "center", justifyContent: "center" },
 });
 
