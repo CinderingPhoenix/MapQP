@@ -5,7 +5,6 @@ import { router } from "expo-router";
 import { NavigationKeepAwake } from "../components/navigation-keep-awake";
 import {
   Animated,
-  Dimensions,
   Keyboard,
   Platform,
   ScrollView,
@@ -15,7 +14,6 @@ import {
   View,
   ActivityIndicator,
   useWindowDimensions,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";

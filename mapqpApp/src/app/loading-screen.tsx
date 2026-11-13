@@ -35,7 +35,7 @@ import { useKeyLockout } from '../hooks/use-key-lockout';
 import { useAccessibilityPreferences } from '../hooks/use-accessibility-preferences';
 import { isServerOnline, setServerOnline } from '../utils/server-status';
 import { ensureBackendSession } from '../utils/backend-session';
-import { initRoutingGraph, validateMapData } from '../utils/routing';
+import { initRoutingGraph } from '../utils/routing';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
