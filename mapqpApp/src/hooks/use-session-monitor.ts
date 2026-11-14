@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { router, usePathname } from 'expo-router';
+import { isReviewSession } from '../utils/review-access';
 
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
 const TEMP_CODE_EXPIRES_AT_KEY = 'mapqp_temp_code_expires_at';
@@ -17,7 +18,7 @@ export function useSessionMonitor() {
         SecureStore.getItemAsync(TEMP_CODE_STORAGE_KEY),
         SecureStore.getItemAsync(TEMP_CODE_EXPIRES_AT_KEY),
       ]);
-      if (!code) return;
+      if (!code || isReviewSession(code)) return;
       const expiresAt = Number(expiry);
       if (!expiry || !Number.isFinite(expiresAt)) { await handleSessionExpired(); return; }
 

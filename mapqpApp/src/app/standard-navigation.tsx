@@ -3,7 +3,7 @@ import NavigationAnnouncements from "../components/navigation-announcements";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
-import { useKeepAwake } from "expo-keep-awake";
+import { NavigationKeepAwake } from "../components/navigation-keep-awake";
 import {
   Animated,
   Keyboard,
@@ -47,7 +47,6 @@ import defaultBuildings from "../data/wpi-buildings.json";
 export default function Home() {
   const vision = useColorVisionPalette();
   const styles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
-  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(windowHeight);
@@ -386,6 +385,9 @@ export default function Home() {
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            speed={coordinates?.speed}
+            positionHeading={coordinates?.heading}
+            positionTimestamp={coordinates?.timestamp}
             heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
@@ -437,6 +439,7 @@ export default function Home() {
         />
         {routeError !== "" && <Text style={[styles.errorText, { fontSize: 14 * fontSize }]}>{routeError}</Text>}
       </Animated.View>
+      <NavigationKeepAwake />
       <NavigationAnnouncements message={politeAnnouncement} />
       {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
@@ -500,16 +503,19 @@ const baseStyles = StyleSheet.create({
     minWidth: 48,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "white",
+    backgroundColor: "#173B56",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
     padding: 12,
     borderRadius: 8,
     elevation: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     zIndex: 20,
   },
-  recenterText: { fontWeight: "bold", color: "#333" },
+  recenterText: { fontWeight: "bold", color: "#FFFFFF" },
   subText: { fontSize: 16, color: "#555", marginTop: 4 },
   highlightedHeading: { color: "#1d5962" },
   boldText: { fontSize: 22, fontWeight: "bold", color: "#1d5962" },

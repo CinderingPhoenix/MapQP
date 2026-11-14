@@ -1,4 +1,3 @@
-
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -68,10 +67,13 @@
       animation: none !important;
     }
 
-    .compass-control.accessibility-compass-control {
-      width: 72px !important;
-      height: 72px !important;
-      line-height: 72px !important;
+    .compass-control.accessibility-compass-control,
+    .mute-control.accessibility-mute-control {
+      box-sizing: border-box;
+      padding: 0;
+      width: 80px !important;
+      height: 80px !important;
+      line-height: 80px !important;
     }
 
     .accessibility-compass-control .compass-icon {
@@ -93,6 +95,8 @@
       justify-content: center;
       margin-top: 12px !important;
     }
+
+    .accessibility-mute-control svg { width: 40px; height: 40px; }
 
     /* Destination uses a square shape, not color alone. */
     .destination-marker-shape {
@@ -627,7 +631,9 @@
         onAdd: function(map) {
           var container = L.DomUtil.create(
             'button',
-            'leaflet-bar leaflet-control mute-control'
+            accessibilityMode
+              ? 'leaflet-bar leaflet-control mute-control accessibility-mute-control'
+              : 'leaflet-bar leaflet-control mute-control'
           );
 
           container.type = 'button';
@@ -860,6 +866,62 @@
     /**
      * Updates user position and route geometry.
      */
+    // Display-only estimates: never sent to the native routing/speech hook.
+    var motionTimer = null;
+    var motionEnabled = false;
+    var motionTimestamp = null;
+    var motionDeadline = 0;
+    var motionRouteKey = null;
+    function drawMotionPosition(point) {
+      if (!map || !marker || !circle || !point) return;
+      marker.setLatLng(point);
+      circle.setLatLng(point);
+      if (isHeadingFocused && !window.manualCameraExploration) {
+        map.panTo(point, { animate: false });
+      }
+    }
+    function stopMotion() {
+      if (motionTimer !== null) clearInterval(motionTimer);
+      motionTimer = null;
+      motionEnabled = false;
+      motionTimestamp = null;
+      if (window.positionInterpolator) window.positionInterpolator.reset();
+    }
+    window.updateMotionSample = function(fix, geometry, enabled) {
+      if (!window.positionInterpolator) return;
+      if (!enabled || document.hidden) {
+        stopMotion();
+        drawMotionPosition([fix.latitude, fix.longitude]);
+        return;
+      }
+      if (fix.timestamp !== motionTimestamp) {
+        motionTimestamp = fix.timestamp;
+        motionDeadline = Date.now() + 3600;
+      }
+      var routeKey = JSON.stringify(geometry);
+      if (routeKey !== motionRouteKey) {
+        window.positionInterpolator.reset();
+        motionRouteKey = routeKey;
+      }
+      motionEnabled = true;
+      window.positionInterpolator.update(fix, geometry, Date.now());
+      if (motionTimer === null && Date.now() < motionDeadline) {
+        // Ten frames/sec gives continuous walking motion without a 60fps loop
+        // or repeated React/WebView bridge traffic.
+        motionTimer = setInterval(function() {
+          if (document.hidden) { stopMotion(); return; }
+          drawMotionPosition(window.positionInterpolator.sample(Date.now()));
+          if (Date.now() >= motionDeadline) {
+            clearInterval(motionTimer); motionTimer = null;
+          }
+        }, 100);
+      }
+    };
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) stopMotion();
+    });
+    window.addEventListener('pagehide', stopMotion);
+
     window.updateMap = function(
       userLat,
       userLng,
@@ -870,11 +932,13 @@
 
       var userLatLng = [userLat, userLng];
 
-      marker.setLatLng(userLatLng);
-      circle.setLatLng(userLatLng);
+      if (!motionEnabled) {
+        marker.setLatLng(userLatLng);
+        circle.setLatLng(userLatLng);
+      }
       circle.setRadius(acc);
 
-      if (isHeadingFocused) {
+      if (isHeadingFocused && !motionEnabled) {
         map.setView(
           userLatLng,
           Math.max(map.getZoom(), 32),

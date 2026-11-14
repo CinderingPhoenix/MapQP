@@ -1,5 +1,4 @@
 import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
-
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { NavigationSpeech } from "../utils/navigation-speech";
 import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
@@ -1236,17 +1235,6 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "#fff",
     fontSize: 16,
-  },
-  inputPadded: {
-    paddingRight: 132,
-  },
-  inputRightActions: {
-    position: "absolute",
-    right: 8,
-    top: 0,
-    bottom: 0,
-    flexDirection: "row",
-    alignItems: "center",
   },
   actionIconButton: {
     minWidth: 44,

@@ -1,14 +1,11 @@
 import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
 import NavigationAnnouncements from "../components/navigation-announcements";
-// accessibility-navigation.tsx
-
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
-import { useKeepAwake } from "expo-keep-awake";
+import { NavigationKeepAwake } from "../components/navigation-keep-awake";
 import {
   Animated,
-  Dimensions,
   Keyboard,
   Platform,
   ScrollView,
@@ -18,7 +15,6 @@ import {
   View,
   ActivityIndicator,
   useWindowDimensions,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";
@@ -52,7 +48,6 @@ export default function Home() {
   const vision = useColorVisionPalette();
   const styles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
   const voiceMapRef = useRef<LocationMapHandle>(null);
-  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(windowHeight);
@@ -408,6 +403,9 @@ export default function Home() {
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            speed={coordinates?.speed}
+            positionHeading={coordinates?.heading}
+            positionTimestamp={coordinates?.timestamp}
             heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
@@ -457,7 +455,7 @@ export default function Home() {
               key={`nav-text-9-${fontSize}-${fontScale}-${textRefresh}`}
               accessible={false}
               maxFontSizeMultiplier={2.5}
-              style={[styles.recenterText, { fontSize: 14 * fontSize }]}
+              style={[styles.recenterText, { fontSize: 18 * fontSize }]}
             >
               Recenter
             </Text>
@@ -493,6 +491,7 @@ export default function Home() {
           </Text>
         )}
       </Animated.View>
+      <NavigationKeepAwake />
       <NavigationAnnouncements message={politeAnnouncement} />
       {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
@@ -617,22 +616,27 @@ const baseStyles = StyleSheet.create({
     borderColor: "#e0e0e0",
   },
   recenterButton: {
-    minHeight: 48,
-    minWidth: 48,
+    minHeight: 64,
+    minWidth: 144,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "white",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#173B56",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
     elevation: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     zIndex: 20,
   },
   recenterText: {
+    textAlign: "center",
     fontWeight: "bold",
-    color: "#333",
+    color: "#FFFFFF",
   },
   subText: {
     fontSize: 16,
