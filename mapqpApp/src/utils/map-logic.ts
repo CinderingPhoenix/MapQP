@@ -10,6 +10,8 @@ import { getRelaxedRoutingPreferences, getRoutingPreferences, NavigationPoint, r
 import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
+import { syncBackgroundNavigation, stopBackgroundNavigation } from "./background-navigation";
+import { addNavigationExitListener, consumeNavigationExit } from "../../modules/navigation-notification";
 
 export type Point = {
   latitude: number;
@@ -454,6 +456,7 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => { routeGeometryRef.current = route?.geometry ?? null; }, [route]);
 
   const handleCancelRoute = useCallback(() => {
+    void stopBackgroundNavigation().catch(error => console.warn("Unable to stop background navigation", error));
     answerRouteAlternative(false);
     isRouteCancelledRef.current = true;
     routeRequestIdRef.current += 1;
@@ -480,6 +483,14 @@ export function useMapNavigation(buildings: Building[]) {
     setRouteSteps([]);
     setCurrentRouteIndex(0);
   }, [navigationSpeech, answerRouteAlternative]);
+
+  useEffect(() => {
+    const checkExit = () => { void consumeNavigationExit().then(exited => { if (exited) handleCancelRoute(); }); };
+    const exitListener = addNavigationExitListener(checkExit);
+    const stateListener = AppState.addEventListener("change", state => { if (state === "active") checkExit(); });
+    checkExit();
+    return () => { exitListener?.remove(); stateListener.remove(); };
+  }, [handleCancelRoute]);
 
   const prevNavigationModeRef = useRef(navigationMode);
   
@@ -763,6 +774,20 @@ export function useMapNavigation(buildings: Building[]) {
   const nextStepInstruction = nextStep
     ? formatDirectionInstruction(nextStep, directionStyle)
     : null;
+  useEffect(() => {
+    if (!route || !routeSteps.length || !isFocused) return;
+    void syncBackgroundNavigation({
+      geometry: route.geometry,
+      steps: routeSteps.map(step => ({ ...step, instruction: formatDirectionInstruction(step, directionStyle) })),
+      destination: route.destination.label,
+      units: distanceUnits,
+      duration: route.duration,
+      expiresAt: Date.now() + Math.max(route.duration * 3000, 2 * 60 * 60 * 1000),
+    }).catch(error => {
+      console.warn("Background navigation unavailable", error);
+      Alert.alert("Background directions unavailable", "Navigation will continue while the app is open. Background guidance could not be started on this device.");
+    });
+  }, [route, routeSteps, distanceUnits, directionStyle, isFocused]);
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   const currentGuidanceRef = useRef({ route, nextStep });

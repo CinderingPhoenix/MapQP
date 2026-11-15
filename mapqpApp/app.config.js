@@ -9,6 +9,7 @@ module.exports = () => ({
       PORT: process.env.PORT || appJson.expo.extra.PORT,
     },
     "ios": {
+      ...appJson.expo.ios,
       "bundleIdentifier": "com.anonymous.mapQP"
     }
 });
