@@ -1,5 +1,6 @@
 import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "./color-vision-setting";
-import { useColorVisionPalette, useColorVisionColors, useColorVisionStyles } from "../../hooks/use-color-vision-palette";
+import { useSettingsPalette, useSettingsColors, useSettingsStyles } from "../../hooks/use-settings-theme";
+import { ThemeChoices, SettingsStatusBar } from "./theme-setting";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Slider from "@react-native-community/slider";
 import { router, useFocusEffect } from "expo-router";
@@ -37,6 +38,7 @@ const BASE_COLORS = {
 type HeaderIcon = { name: keyof typeof MaterialCommunityIcons.glyphMap; color: string; background: string };
 const HEADER_ICONS = {
   display: { name: "tune-variant", color: "#245B8F", background: "#EAF1F8" },
+  text: { name: "format-size", color: "#245B8F", background: "#EAF1F8" },
   accessibility: { name: "human", color: "#65418C", background: "#F1EBF7" },
   routing: { name: "routes", color: "#286341", background: "#EAF3ED" },
   support: { name: "cog-outline", color: "#741B2B", background: "#F5ECEE" },
@@ -71,9 +73,9 @@ function focusControl(target: ComponentRef<typeof TouchableOpacity> | ComponentR
 
 // Each disclosure owns only its open state. Preferences remain in SettingsProvider.
 function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon; children: ReactNode }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
-  const vision = useColorVisionPalette();
+  const s = useSettingsStyles(baseStyles);
+  const COLORS = useSettingsColors(BASE_COLORS);
+  const vision = useSettingsPalette();
   const [expanded, setExpanded] = useState(false);
   const { screenReaderEnabled } = useAccessibilityPreferences();
   const increasedContrast = useIncreasedContrast();
@@ -133,8 +135,8 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
       activeOpacity={1} style={[s.accordionHeader, expanded && s.expandedHeader, stackHeading && s.stackedRow]}>
       <View style={[s.accordionHeading, stackHeading && s.wrappedIconLabel]}>
         <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-          pointerEvents="none" style={[s.headerIcon, { backgroundColor: vision.color(icon.background, "backgroundColor") }]}>
-          <MaterialCommunityIcons name={icon.name} size={24} color={vision.color(icon.color, "iconColor")} accessible={false} allowFontScaling={false} />
+          pointerEvents="none" style={[s.headerIcon, { backgroundColor: vision.iconColors(icon.background, icon.color).background }]}>
+          <MaterialCommunityIcons name={icon.name} size={24} color={vision.iconColors(icon.background, icon.color).foreground} accessible={false} allowFontScaling={false} />
         </View>
         <BoldText size={22} accessible={false} style={stackHeading ? s.fullWidth : s.flex}>{title}</BoldText>
       </View>
@@ -159,12 +161,12 @@ function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon;
 function BoldText({ size = 20, weight = "700", color = BASE_COLORS.ink, style, textRef, ...props }:
   TextProps & { size?: number; weight?: TextStyle["fontWeight"]; color?: string;
     textRef?: React.Ref<ComponentRef<typeof Text>> }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const COLORS = useSettingsColors(BASE_COLORS);
   const { fontSize } = useSettings();
   const { boldTextEnabled, darkerSystemColorsEnabled, highTextContrastEnabled } = useAccessibilityPreferences();
   const highContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
-  color = useColorVisionPalette().color(color);
+  const vision = useSettingsPalette();
+  color = vision.dark && color === BASE_COLORS.ink ? vision.tokens.text : vision.color(color);
   return <Text ref={textRef} allowFontScaling {...props} style={[
     { fontSize: size * fontSize, lineHeight: Math.ceil(size * fontSize * 1.45),
       fontWeight: weight, color: highContrast && (color === COLORS.secondary || color === COLORS.ink) ? COLORS.contrastInk : color,
@@ -173,8 +175,8 @@ function BoldText({ size = 20, weight = "700", color = BASE_COLORS.ink, style, t
 }
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const s = useSettingsStyles(baseStyles);
+  const COLORS = useSettingsColors(BASE_COLORS);
   return <View style={s.section}>
     <BoldText size={22} accessibilityRole="header">{title}</BoldText>
     {description && <BoldText size={17} weight="600" color={COLORS.secondary}>{description}</BoldText>}
@@ -183,29 +185,27 @@ function Section({ title, description, children }: { title: string; description?
 }
 function Panel({ children }: { children: ReactNode }) { return <View>{children}</View>; }
 function Divider({ important = false }: { important?: boolean }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const s = useSettingsStyles(baseStyles);
   const increasedContrast = useIncreasedContrast();
   return <View accessible={false} style={[s.divider, important && s.importantDivider,
     increasedContrast && s.strongDivider]} />;
 }
 function Choice({ label, selected, disabled = false, onPress, accessibilityLabel = label, mode = false }:
   { label: string; selected: boolean; disabled?: boolean; onPress?: () => void; accessibilityLabel?: string; mode?: boolean }) {
-  const vision = useColorVisionPalette();
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const vision = useSettingsPalette();
+  const s = useSettingsStyles(baseStyles);
+  const COLORS = useSettingsColors(BASE_COLORS);
   const increasedContrast = useIncreasedContrast();
   return <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}
     accessibilityState={{ selected, disabled }} disabled={disabled} activeOpacity={0.85} onPress={onPress}
     style={[s.choice, increasedContrast && s.strongBoundary, mode && s.modeChoice, selected && s.selected, disabled && s.unavailable, disabled && !selected && vision.monochrome && { backgroundColor: vision.palette.disabledSurface }]}>
-    <MaterialCommunityIcons name="check" size={24} color={vision.color(selected ? COLORS.panel : COLORS.ink, "iconColor")}
+    <MaterialCommunityIcons name="check" size={24} color={vision.color(selected ? (vision.dark ? vision.tokens.onSelected : COLORS.panel) : COLORS.ink, "iconColor")}
       allowFontScaling={false} accessible={false} style={{ opacity: selected ? 1 : 0, flexShrink: 0 }} />
-    <BoldText accessible={false} color={selected ? COLORS.panel : COLORS.ink}>{label}</BoldText>
+    <BoldText accessible={false} color={selected ? (vision.dark ? vision.tokens.onSelected : COLORS.panel) : COLORS.ink}>{label}</BoldText>
   </TouchableOpacity>;
 }
 function Choices({ children }: { children: ReactNode }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const s = useSettingsStyles(baseStyles);
   const { stacked } = useLayout();
   return <View style={[s.choices, stacked && s.stacked]}>
     {Children.map(children, (child) => <View style={stacked ? s.choiceColumn : s.choiceCell}>{child}</View>)}
@@ -214,9 +214,9 @@ function Choices({ children }: { children: ReactNode }) {
 function Action({ label, description, onPress, danger = false, back = false, targetRef, onLayout }:
   { label: string; description?: string; onPress: () => void; danger?: boolean; back?: boolean;
     targetRef?: React.Ref<ComponentRef<typeof TouchableOpacity>>; onLayout?: () => void }) {
-  const vision = useColorVisionPalette();
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const vision = useSettingsPalette();
+  const s = useSettingsStyles(baseStyles);
+  const COLORS = useSettingsColors(BASE_COLORS);
   const increasedContrast = useIncreasedContrast();
   const [pressed, setPressed] = useState(false);
   return <TouchableOpacity ref={targetRef} onLayout={onLayout} accessible accessibilityRole="button"
@@ -226,11 +226,11 @@ function Action({ label, description, onPress, danger = false, back = false, tar
     onPressOut={danger ? () => setPressed(false) : undefined}
     style={[s.action, back && s.back, back && increasedContrast && s.strongBoundary,
       danger && { minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, flexWrap: "wrap", borderRadius: 12, borderWidth: 2, borderColor: vision.color(increasedContrast ? COLORS.contrastOutline : (pressed ? "#8F1C28" : "#B42332"), "borderColor"),
-        backgroundColor: vision.color(pressed ? "#8F1C28" : "#B42332", "backgroundColor") }]}>
-    {danger && <MaterialCommunityIcons name="trash-can-outline" size={24} color={vision.color("#FFFFFF", "iconColor")} accessible={false}
+        backgroundColor: vision.dark ? (pressed ? vision.tokens.dangerPressed : vision.tokens.dangerSurface) : vision.color(pressed ? "#8F1C28" : "#B42332", "backgroundColor") }]}>
+    {danger && <MaterialCommunityIcons name="trash-can-outline" size={24} color={vision.dark ? vision.tokens.dangerText : vision.color("#FFFFFF", "iconColor")} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <View style={s.actionCopy} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <BoldText color={danger ? "#FFFFFF" : COLORS.ink}>{label}</BoldText>
+      <BoldText color={danger ? (vision.dark ? vision.tokens.dangerText : "#FFFFFF") : COLORS.ink}>{label}</BoldText>
       {description && !danger && <BoldText size={17} weight="600" color={COLORS.secondary}>{description}</BoldText>}
     </View>
     {!danger && !back && <MaterialCommunityIcons name="chevron-right" size={28} color={vision.color(COLORS.ink, "iconColor")}
@@ -239,8 +239,7 @@ function Action({ label, description, onPress, danger = false, back = false, tar
 }
 
 function PreferenceLabel({ label, icon, stacked = false }: { label: string; icon?: IconName; stacked?: boolean }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const s = useSettingsStyles(baseStyles);
   const { width, scale, gutter } = useLayout();
   const words = label.split(/\s+/);
   const wrapWithIcon = stacked && icon && Math.max(...words.map((word) => word.length)) * 20 * scale * 0.62
@@ -255,31 +254,34 @@ function PreferenceLabel({ label, icon, stacked = false }: { label: string; icon
   </View>;
 }
 
-function ToggleRow({ label, value, onChange, disabled, description, icon }:
-  { label: string; value: boolean; onChange: (value: boolean) => void; disabled: boolean; description?: string; icon?: IconName }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+function ToggleRow({ label, value, onChange, disabled, description, icon, compact = false }:
+  { label: string; value: boolean; onChange: (value: boolean) => void; disabled: boolean; description?: string; icon?: IconName; compact?: boolean }) {
+  const s = useSettingsStyles(baseStyles);
   const { stackRow } = useLayout();
   // Give the new routing labels a little measurement slack for bold native
   // glyphs, so long words use the full row before their switch moves below.
   const routingIcon = icon === "stairs" || icon === "office-building" || icon === "walk";
-  const stacked = stackRow(label, !!icon, routingIcon ? 96 : 80);
-  return <TouchableOpacity accessible accessibilityRole="switch" accessibilityLabel={description ? `${label}. ${description}` : label}
+  const stacked = !compact && stackRow(label, !!icon, routingIcon ? 96 : 80);
+  return <TouchableOpacity accessible accessibilityRole="switch" accessibilityLabel={compact ? label : description ? `${label}. ${description}` : label}
+    accessibilityHint={compact ? description : undefined}
     accessibilityState={{ checked: value, disabled }} disabled={disabled}
-    onPress={() => { if (!disabled) onChange(!value); }} activeOpacity={1} style={[s.toggleRow, stacked && s.stackedRow]}>
-    <PreferenceLabel label={label} icon={icon} stacked={stacked} />
+    onPress={() => { if (!disabled) onChange(!value); }} activeOpacity={1} style={[s.toggleRow, compact && s.compactBatteryRow, stacked && s.stackedRow]}>
+    {compact ? <View style={s.flex} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <BoldText>{label}</BoldText>
+      <BoldText size={18}>{value ? "On" : "Off"}</BoldText>
+    </View> : <PreferenceLabel label={label} icon={icon} stacked={stacked} />}
     <View style={[s.switchGroup, stacked && s.stackedSwitchGroup]} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <View style={[s.track, value ? s.trackOn : s.trackOff, disabled && s.trackDisabled]}>
         <View style={s.thumb} />
       </View>
-      <BoldText size={18}>{value ? "On" : "Off"}</BoldText>
+      {!compact && <BoldText size={18}>{value ? "On" : "Off"}</BoldText>}
     </View>
   </TouchableOpacity>;
 }
 
 function AccessibilityPanel({ controls }: { controls: readonly Preference[] }) {
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const s = useSettingsStyles(baseStyles);
+  const COLORS = useSettingsColors(BASE_COLORS);
   const { deviceAccessibility: device, customAccessibilityPreferences: saved, settingsLoaded, settingsReadSucceeded,
     setAccessibilityPreference } = useSettings();
   const { stackRow, scale } = useLayout();
@@ -333,9 +335,9 @@ function AccessibilityPanel({ controls }: { controls: readonly Preference[] }) {
 
 export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNavigationModeChange,
   onFontSizeAccessibilityAction, accessibilityControls }: Props) {
-  const vision = useColorVisionPalette();
-  const s = useColorVisionStyles(baseStyles);
-  const COLORS = useColorVisionColors(BASE_COLORS, { accent: "accentText" });
+  const vision = useSettingsPalette();
+  const s = useSettingsStyles(baseStyles);
+  const COLORS = useSettingsColors(BASE_COLORS);
   const colorVision = useColorVisionDialog();
   const settings = useSettings();
   const preferences = useAccessibilityPreferences();
@@ -376,6 +378,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
     void save.catch(() => Alert.alert("Could not save preference", "Please try changing the switch again."));
   };
   return <SafeAreaView style={s.container}>
+    <SettingsStatusBar />
     <ScrollView accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"} contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
       <View style={s.header}>
         <Action label="‹ Back To Map" back onPress={onBack} />
@@ -383,7 +386,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
         <Section title="Battery">
-          <ToggleRow label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
+          <ToggleRow compact label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
             onChange={settings.setBatterySaverEnabled}
             description="Uses fewer location updates, less compass activity, and fewer animations. Your screen can sleep; navigation may pause while locked or in the background. Turn guidance stays on." />
         </Section>
@@ -394,22 +397,23 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             disabled={disabled} onPress={() => onNavigationModeChange("accessibility")} />
         </Choices></Section>
       <View style={s.accordions}>
-      <Accordion title="Display & Text" icon={HEADER_ICONS.display}>
-          <BoldText style={s.label}>Settings appearance</BoldText>
+      <Accordion title="Appearance" icon={HEADER_ICONS.display}>
+          <BoldText style={s.label}>Settings layout</BoldText>
           <View style={s.choiceInset}><Choices>
-            <Choice label="Standard" accessibilityLabel="Standard Settings appearance" selected={false} disabled={disabled}
+            <Choice label="Standard" accessibilityLabel="Standard Settings layout" selected={false} disabled={disabled}
               onPress={() => settings.setSettingsAppearance("standard")} />
-            <Choice label="Accessible" accessibilityLabel="Accessible Settings appearance" selected disabled={disabled}
+            <Choice label="Accessible" accessibilityLabel="Accessible Settings layout" selected disabled={disabled}
               onPress={() => settings.setSettingsAppearance("accessible")} />
           </Choices></View>
+          <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Settings layout doesn’t change Navigation mode.</BoldText>
+          <Divider important />
+          <BoldText style={s.label}>App appearance</BoldText>
+          <View style={s.choiceInset}><ThemeChoices /></View>
+          <Divider important />
           <ColorVisionSetting accessibleAppearance onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
-          <Divider important /><BoldText style={s.label}>Color theme</BoldText>
-          <View style={s.choiceInset}><Choices>
-            <Choice label="Light" accessibilityLabel="Light Settings color theme" selected />
-            <Choice label="Dark" accessibilityLabel="Dark Settings color theme. Not yet available" selected={false} disabled />
-          </Choices></View>
-          <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Settings appearance doesn’t change Navigation mode.</BoldText>
-          <Divider important /><BoldText style={s.label}>Text size</BoldText>
+      </Accordion>
+      <Accordion title="Text & Navigation Preferences" icon={HEADER_ICONS.text}>
+          <BoldText style={s.label}>Text size</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>80%–180%</BoldText>
           <View style={s.sliderGroup}>
             <BoldText size={18} color={COLORS.accent}>Current size: {Math.round(settings.fontSize * 100)}%</BoldText>
@@ -547,6 +551,7 @@ const baseStyles = StyleSheet.create({
     borderColor: BASE_COLORS.outline, backgroundColor: BASE_COLORS.panel },
   rowLabel: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, minWidth: 0 },
   toggleRow: { minHeight: 96, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  compactBatteryRow: { minHeight: 64, paddingVertical: 4 },
   switchGroup: { alignItems: "center", gap: 4, flexShrink: 0, alignSelf: "center" },
   stackedSwitchGroup: { flexDirection: "row", alignSelf: "flex-start", minHeight: 56, gap: 16 },
   track: { width: 80, height: 48, borderRadius: 24, borderWidth: 2, padding: 4, justifyContent: "center", borderColor: BASE_COLORS.ink },

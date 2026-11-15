@@ -5,7 +5,8 @@ import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "../../context/settings-context";
 import { useAccessibilityPreferences } from "../../hooks/use-accessibility-preferences";
-import { useColorVisionPalette } from "../../hooks/use-color-vision-palette";
+import { useSettingsPalette } from "../../hooks/use-settings-theme";
+import { THEME_OPTIONS } from "../../theme/settings-theme";
 import { COLOR_VISION_OPTIONS, colorVisionDialogSize } from "../../theme/color-vision-palettes";
 
 type Trigger = ComponentRef<typeof TouchableOpacity>;
@@ -25,10 +26,10 @@ export function ColorVisionSetting({ accessibleAppearance = false, onPress, trig
 }) {
   const { colorVisionPreset, fontSize, settingsLoaded, settingsReadSucceeded } = useSettings();
   const { boldTextEnabled } = useAccessibilityPreferences();
-  const vision = useColorVisionPalette();
+  const vision = useSettingsPalette();
   const label = COLOR_VISION_OPTIONS.find(option => option.value === colorVisionPreset)?.label ?? "Default";
   const disabled = !settingsLoaded || !settingsReadSucceeded;
-  const ink = vision.color(accessibleAppearance ? "#211E1C" : "#000000");
+  const ink = vision.dark ? vision.tokens.text : vision.color(accessibleAppearance ? "#211E1C" : "#000000");
   const accent = vision.textColor("#741B2B", "accentText");
   const size = accessibleAppearance ? 20 : 17;
   const scale = (n: number) => ({ fontSize: n * fontSize, lineHeight: Math.ceil(n * fontSize * 1.4) });
@@ -37,7 +38,7 @@ export function ColorVisionSetting({ accessibleAppearance = false, onPress, trig
     accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={[s.trigger, accessibleAppearance ? s.accessibleTrigger : s.standardTrigger,
       { borderColor: vision.color(accessibleAppearance ? "#81756E" : "#D0CDC9", "borderColor") },
-      disabled && vision.monochrome && { borderStyle: "dashed", backgroundColor: vision.palette.disabledSurface }]}>
+      disabled && (vision.monochrome || vision.dark) && { borderStyle: "dashed", backgroundColor: vision.dark ? vision.tokens.raised : vision.palette.disabledSurface }]}>
     <View style={[s.triggerHeading, accessibleAppearance && s.accessibleHeading]} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <View style={s.copy}>
@@ -46,21 +47,28 @@ export function ColorVisionSetting({ accessibleAppearance = false, onPress, trig
         </View>
         {accessibleAppearance && <Text allowFontScaling style={[scale(20), { color: accent, fontWeight: boldTextEnabled ? "900" : "600" }]}>{label}</Text>}
       </View>
-      {!accessibleAppearance && <Text allowFontScaling style={[scale(15), s.value, { color: accent, fontWeight: boldTextEnabled ? "900" : "600" }]}>{label}</Text>}
+      {!accessibleAppearance && <Text allowFontScaling style={[scale(vision.dark ? 17 : 15), s.value, { color: accent, fontWeight: boldTextEnabled ? "900" : "600" }]}>{label}</Text>}
       {!accessibleAppearance && <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(accent, "iconColor")}
         accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     </View>
     <Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling
-      style={[scale(accessibleAppearance ? 17 : 14), { color: ink, fontWeight: boldTextEnabled ? "900" : accessibleAppearance ? "600" : "400" }]}>{SCOPE}</Text>
+      style={[scale(accessibleAppearance ? 17 : vision.dark ? 16 : 14), { color: ink, fontWeight: boldTextEnabled ? "900" : accessibleAppearance ? "600" : "400" }]}>{SCOPE}</Text>
   </TouchableOpacity>;
 }
 
-export function ColorVisionDialog({ visible, onClose, triggerRef, accessibleAppearance = false }: {
-  visible: boolean; onClose: () => void; triggerRef: RefObject<Trigger | null>; accessibleAppearance?: boolean;
+export function ColorVisionDialog({ visible, onClose, triggerRef, accessibleAppearance = false, selection = "colorVision" }: {
+  visible: boolean; onClose: () => void; triggerRef: RefObject<Trigger | null>; accessibleAppearance?: boolean; selection?: "colorVision" | "theme";
 }) {
-  const { colorVisionPreset, setColorVisionPreset, fontSize } = useSettings();
+  const { colorVisionPreset, setColorVisionPreset, themePreference, setThemePreference, fontSize,
+    settingsLoaded, settingsReadSucceeded } = useSettings();
+  const isTheme = selection === "theme";
+  const title = isTheme ? "App appearance" : "Color vision";
+  const options = isTheme ? THEME_OPTIONS : COLOR_VISION_OPTIONS;
+  const current = isTheme ? themePreference : colorVisionPreset;
+  const disabled = !settingsLoaded || !settingsReadSucceeded;
+  const [focusedOption, setFocusedOption] = useState<string | null>(null);
   const preferences = useAccessibilityPreferences();
-  const vision = useColorVisionPalette();
+  const vision = useSettingsPalette();
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const size = colorVisionDialogSize(width, height, insets);
@@ -109,37 +117,45 @@ export function ColorVisionDialog({ visible, onClose, triggerRef, accessibleAppe
   const dismiss = () => { cancelFrames(); restorePending.current = true; onClose(); };
   const font = (n: number, selected = false) => ({ fontSize: n * fontSize,
     lineHeight: Math.ceil(n * fontSize * 1.45), fontWeight: preferences.boldTextEnabled ? "900" as const : "600" as const,
-    color: selected ? "#FFFFFF" : vision.color(accessibleAppearance ? "#211E1C" : "#000000"), flexShrink: 1 });
-  const outline = vision.increased ? vision.color("#272423", "borderColor") : vision.color("#70655F", "borderColor");
-  const primary = vision.color("#741B2B", "backgroundColor");
+    color: selected ? "#FFFFFF" : vision.dark ? vision.tokens.text : vision.color(accessibleAppearance ? "#211E1C" : "#000000"), flexShrink: 1 });
+  const outline = vision.dark ? vision.tokens.outline : vision.increased ? vision.color("#272423", "borderColor") : vision.color("#70655F", "borderColor");
+  const primary = vision.dark ? vision.tokens.primary : vision.color("#741B2B", "backgroundColor");
   const description = <Text allowFontScaling style={font(accessibleAppearance ? 17 : 14)}>{SCOPE}</Text>;
 
   return <Modal transparent visible={visible} animationType="none" onRequestClose={dismiss}
     onShow={() => { shown.current = true; focusTitle(); }} onDismiss={restore}>
     <View style={[s.overlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16,
       paddingLeft: insets.left, paddingRight: insets.right,
-      backgroundColor: preferences.reduceTransparencyEnabled ? (accessibleAppearance ? vision.color("#F7F6F2", "backgroundColor") : vision.settingsBackground("#F7F6F2")) : vision.color("rgba(39,36,35,0.4)", "backgroundColor") }]}>
-      <View testID="color-vision-dialog" accessibilityViewIsModal importantForAccessibility="yes" onAccessibilityEscape={dismiss}
+      backgroundColor: vision.dark ? (preferences.reduceTransparencyEnabled ? vision.tokens.backdrop : vision.tokens.scrim) : preferences.reduceTransparencyEnabled ? (accessibleAppearance ? vision.color("#F7F6F2", "backgroundColor") : vision.settingsBackground("#F7F6F2")) : vision.color("rgba(39,36,35,0.4)", "backgroundColor") }]}>
+      <View testID={isTheme ? "theme-selection-dialog" : "color-vision-dialog"} accessibilityViewIsModal importantForAccessibility="yes" onAccessibilityEscape={dismiss}
         style={[s.panel, { width: size.width, maxHeight: size.maxHeight, borderColor: outline,
-          backgroundColor: accessibleAppearance ? "#FFFFFF" : vision.settingsBackground("#F7F6F2") }]}>
+          backgroundColor: vision.dark ? vision.tokens.surface : accessibleAppearance ? "#FFFFFF" : vision.settingsBackground("#F7F6F2") }]}>
         <View style={[s.header, accessibleAppearance && s.accessibleHeader]}>
-          <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel="Color vision" focusable
+          <View ref={titleRef} accessible accessibilityRole="header" accessibilityLabel={title} focusable
             onLayout={event => { const { width: w, height: h } = event.nativeEvent.layout; laidOut.current = w > 0 && h > 0; focusTitle(); }}>
-            <Text accessible={false} allowFontScaling style={[font(accessibleAppearance ? 28 : 23), { fontWeight: preferences.boldTextEnabled ? "900" : accessibleAppearance ? "800" : "600" }]}>Color vision</Text>
+            <Text accessible={false} allowFontScaling style={[font(accessibleAppearance ? 28 : 23), { fontWeight: preferences.boldTextEnabled ? "900" : accessibleAppearance ? "800" : "600" }]}>{title}</Text>
           </View>
-          {!enlarged && description}
+          {!isTheme && !enlarged && description}
         </View>
         <ScrollView style={s.scroll} contentContainerStyle={[s.options, { paddingHorizontal: accessibleAppearance ? 8 : 20 }]}
           keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
           <View accessibilityRole="radiogroup" style={[s.optionsGroup, accessibleAppearance && s.accessibleOptionsGroup]}>
-            {COLOR_VISION_OPTIONS.map(option => {
-              const selected = option.value === colorVisionPreset;
+            {options.map(option => {
+              const selected = option.value === current;
               return <TouchableOpacity activeOpacity={1} key={option.value} accessible accessibilityRole="radio"
-                accessibilityLabel={`${option.label}. ${option.description}`} accessibilityState={{ checked: selected }}
-                onPress={() => { setColorVisionPreset(option.value); dismiss(); }}
+                accessibilityLabel={`${option.label}. ${option.description}`} accessibilityState={{ checked: selected, disabled }}
+                disabled={disabled} onFocus={() => setFocusedOption(option.value)} onBlur={() => setFocusedOption(null)}
+                onPress={() => {
+                  if (disabled) return;
+                  if (option.value === "light" || option.value === "dark" || option.value === "system") setThemePreference(option.value);
+                  else setColorVisionPreset(option.value);
+                  dismiss();
+                }}
                 style={[s.option, accessibleAppearance && s.accessibleOption, enlarged && s.enlargedOption,
-                  { borderColor: selected && !vision.increased ? primary : outline,
-                    borderWidth: vision.increased ? 2 : 1, backgroundColor: selected ? primary : "#FFFFFF" }]}>
+                  { borderColor: vision.dark && focusedOption === option.value ? vision.tokens.focus : vision.dark && selected ? vision.tokens.accent : selected && !vision.increased ? primary : outline,
+                    borderStyle: disabled ? "dashed" : "solid",
+                    borderWidth: vision.dark && focusedOption === option.value ? 3 : vision.dark || vision.increased ? 2 : 1,
+                    backgroundColor: selected ? primary : vision.dark ? vision.tokens.raised : "#FFFFFF" }]}>
                 {!accessibleAppearance && (selected ? <MaterialCommunityIcons name="check" size={20} color="#FFFFFF"
                   accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
                   : <View style={{ width: 20 }} />)}
@@ -150,17 +166,17 @@ export function ColorVisionDialog({ visible, onClose, triggerRef, accessibleAppe
                       accessibleAppearance && { lineHeight: Math.ceil(20 * fontSize * 1.4) }, enlarged && s.enlargedName]}>{option.label}</Text>
                     {accessibleAppearance && !enlarged && selected && <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
                   </View>
-                  <Text accessible={false} allowFontScaling style={[font(accessibleAppearance ? 16 : 14, selected),
-                    { lineHeight: Math.ceil((accessibleAppearance ? 22 : 20) * fontSize),
+                  <Text accessible={false} allowFontScaling style={[font(accessibleAppearance || vision.dark || isTheme ? 16 : 14, selected),
+                    { lineHeight: Math.ceil((accessibleAppearance ? (vision.dark ? 24 : 22) : vision.dark || isTheme ? 24 : 20) * fontSize),
                       fontWeight: preferences.boldTextEnabled ? "900" : "400",
-                      color: selected ? "#FFFFFF" : accessibleAppearance ? "#3D3733" : "#000000" }]}>{option.description}</Text>
+                      color: selected ? "#FFFFFF" : vision.dark ? vision.tokens.secondary : accessibleAppearance ? "#3D3733" : "#000000" }]}>{option.description}</Text>
                 </View>
               </TouchableOpacity>;
             })}
           </View>
-          {enlarged && <View style={s.largeScope}>{description}</View>}
+          {!isTheme && enlarged && <View style={s.largeScope}>{description}</View>}
         </ScrollView>
-        <View style={s.footer}>
+        <View style={[s.footer, vision.dark && { borderTopWidth: 1, borderTopColor: outline }]}>
           <TouchableOpacity activeOpacity={1} accessible accessibilityRole="button" accessibilityLabel="Cancel" onPress={dismiss}
             style={[s.cancel, { borderColor: outline, borderWidth: accessibleAppearance || vision.increased ? 2 : 0 }]}>
             <Text accessible={false} allowFontScaling style={[font(accessibleAppearance ? 20 : 17), { color: vision.textColor("#741B2B", "accentText"), textAlign: "center" }]}>Cancel</Text>
