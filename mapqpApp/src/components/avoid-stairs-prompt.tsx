@@ -1,4 +1,5 @@
-import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { landingPresentation } from "../theme/landing-theme";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,8 +37,9 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss, defaultAvoid
   onAnswered: () => void;
   onDismiss: () => void;
 }) {
-  const vision = useColorVisionPalette();
-  const styles = useColorVisionStyles(baseStyles, { title: "highlightedHeading" });
+  const theme = useAppTheme();
+  const presentation = landingPresentation(theme.preset, theme.increased, theme.resolvedTheme, theme.opaque);
+  const styles = presentation.promptStyles(baseStyles);
   const { fontSize, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks, configureRoutingPreferences } = useSettings();
   const [selectedAvoidStairs, setSelectedAvoidStairs] = useState(avoidStairs);
   const [selectedIndoor, setSelectedIndoor] = useState(avoidIndoorRoutes);
@@ -128,7 +130,7 @@ export function AvoidStairsPrompt({ visible, onAnswered, onDismiss, defaultAvoid
                   accessibilityRole="switch" accessibilityLabel={label}
                   accessibilityHint={`${hint} Saved when you press Continue.`}
                   accessibilityState={{ checked: value, disabled }}
-                  trackColor={{ false: vision.color("#636366", "backgroundColor"), true: vision.color("#761723", "backgroundColor") }} thumbColor={vision.color("#FFFFFF", "thumbColor")} ios_backgroundColor={vision.color("#636366", "ios_backgroundColor")} />
+                  trackColor={{ false: presentation.controlOff, true: presentation.original ? "#761723" : presentation.primary }} thumbColor="#FFFFFF" ios_backgroundColor={presentation.controlIosOff} />
               </View>
             </View>;
           })}
