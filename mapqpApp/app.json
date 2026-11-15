@@ -72,9 +72,13 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your precise location for campus routing."
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to give directions while your screen is locked or the app is in the background.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
+      "expo-notifications",
       "./plugins/with-short-cmake-paths",
       "./plugins/with-upload-signing",
       "./plugins/with-android-application-id"

@@ -182,6 +182,14 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert, 
       return plan;
     } },
     './navigation-speech': speechModule,
+    './background-navigation': {
+      syncBackgroundNavigation: async () => {},
+      stopBackgroundNavigation: async () => {},
+    },
+    '../../modules/navigation-notification': {
+      addNavigationExitListener: () => ({ remove() {} }),
+      consumeNavigationExit: async () => false,
+    },
   }, {
     setInterval(callback, ms) { const id = nextTimer++; intervals.set(id, { callback, ms }); return id; },
     clearInterval(id) { intervals.delete(id); },
