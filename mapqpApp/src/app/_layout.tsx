@@ -1,3 +1,4 @@
+import "../utils/background-navigation";
 import { Stack } from "expo-router";
 import { SettingsProvider, useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";

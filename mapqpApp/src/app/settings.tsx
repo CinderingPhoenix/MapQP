@@ -626,13 +626,6 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
       }}
         style={signalStyles.sections}>
         {activeTab === "general" ? <>
-          <SignalSection title="Battery">
-            <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline"
-              description="Reduces location updates, compass activity, and animations to save battery.">
-              <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
-                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Your screen can sleep; navigation may pause while the device is locked or the app is in the background. Turn guidance stays on." />
-            </SignalSwitchRow>
-          </SignalSection>
           <SignalSection title="Navigation">
             <View style={signalStyles.modeGroup}>
               <SignalText weight="600">Navigation mode</SignalText>
@@ -741,6 +734,10 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   onValueChange={(enabled) => { if (!control.disabled) setAccessibilityPreference(preference, enabled); }} />
               </SignalSwitchRow>;
             })}
+            <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline">
+              <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
+                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Turn guidance stays on." />
+            </SignalSwitchRow>
           </SignalSection>
           <SignalSection title="App & support">
             <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
