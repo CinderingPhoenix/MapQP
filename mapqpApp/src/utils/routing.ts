@@ -116,6 +116,9 @@ let campusNodesById = new Map<string, GraphNode>();
 let graphEdges = new Map<string, GraphEdge[]>();
 type WalkwaySegment = { from: GraphNode; to: GraphNode; edge: GraphEdge };
 let routingSegments: WalkwaySegment[] | null = null;
+let routingSnapshot: { points: Parameters<typeof initRoutingGraph>[0]; buildings: BuildingInput[] } | null = null;
+
+export function getRoutingGraphSnapshot() { return routingSnapshot; }
 
 // Downloaded nodes may use named fields; bundled and legacy maps use tuples.
 function parseWalkwayNode(node: unknown, index: number): GraphNode {
@@ -189,6 +192,7 @@ export function initRoutingGraph(
   // Store normalized nodes as GraphNode objects.
   walkwayNodes = validatedNodes;
   walkwayConnections = routePointsData.connections;
+  routingSnapshot = { points: routePointsData, buildings: buildingData };
 
   // Map building entrances supporting both object and tuple formats
   campusNodes = [

@@ -17,14 +17,16 @@ function compile(file, dependencies) {
 }
 
 function harness({ platform = 'android', foreground = false, nativeAvailable = true,
-  running = true, notificationsGranted = true, locationGranted = true, decline = false, storage = new Map() } = {}) {
+  running = true, notificationsGranted = true, locationGranted = true, decline = false, storage = new Map(),
+  updateRoute = async route => route } = {}) {
   let task;
   let stateListener;
   let exitListener;
   let exited = false;
   const prompts = [];
   const routeKey = 'mapqp-background-route-v1';
-  const updates = [], notifications = [], stopped = [], dismissed = [], started = [];
+  const updates = [], notifications = [], stopped = [], dismissed = [], started = [], channels = [];
+  let notificationHandler;
   const native = { Platform: { OS: platform }, AppState: { currentState: foreground ? 'active' : 'background',
     addEventListener: (_event, listener) => { stateListener = listener; } },
     Alert: { alert: (_title, _body, buttons) => { prompts.push('explanation'); buttons[decline ? 0 : 1].onPress(); } } };
@@ -40,8 +42,9 @@ function harness({ platform = 'android', foreground = false, nativeAvailable = t
       Accuracy: { BestForNavigation: 1 }, ActivityType: { Fitness: 1 },
       stopLocationUpdatesAsync: async name => { stopped.push(name); running = false; } },
     'expo-notifications': {
-      setNotificationHandler() {},
-      AndroidImportance: { HIGH: 4 }, setNotificationChannelAsync: async () => {},
+      setNotificationHandler(value) { notificationHandler = value; },
+      AndroidImportance: { HIGH: 4, LOW: 2 }, AndroidNotificationVisibility: { PUBLIC: 1 },
+      setNotificationChannelAsync: async (...args) => channels.push(args),
       getPermissionsAsync: async () => ({ granted: notificationsGranted, canAskAgain: true }),
       requestPermissionsAsync: async () => { prompts.push('notifications'); return { granted: !decline }; },
       scheduleNotificationAsync: async notice => notifications.push(notice),
@@ -51,6 +54,10 @@ function harness({ platform = 'android', foreground = false, nativeAvailable = t
     'expo-task-manager': { defineTask: (_name, callback) => { task = callback; }, isAvailableAsync: async () => true },
     'react-native': native,
     './background-guidance': compile('src/utils/background-guidance.ts', {}),
+    './background-rerouting': {
+      saveBackgroundRoutingGraph: async () => {},
+      updateBackgroundRoute: updateRoute,
+    },
     '../../modules/navigation-notification': {
       updateNavigationNotification: async (...args) => { updates.push(args); return nativeAvailable; },
       clearNavigationNotification: async () => {},
@@ -61,8 +68,10 @@ function harness({ platform = 'android', foreground = false, nativeAvailable = t
   const route = { geometry: [[42, -71], [42.001, -71], [42.001, -70.999]],
     steps: [{ instruction: 'Turn right', pointIndex: 1 }, { instruction: 'Arrive at destination', pointIndex: 2 }],
     destination: 'Library', units: 'metric', expiresAt: Date.now() + 60000 };
-  return { api, route, updates, notifications, stopped, dismissed, prompts, started,
+  return { api, route, updates, notifications, stopped, dismissed, prompts, started, channels,
+    notificationBehavior: () => notificationHandler.handleNotification(),
     get saved() { return storage.get(routeKey); },
+    requestNativeExit() { exited = true; },
     async exit() {
       exited = true;
       exitListener();
@@ -203,4 +212,57 @@ test('foreground route refreshes a registered task whose service may have been l
   await h.api.syncBackgroundNavigation(h.route);
   assert.deepEqual(h.started, ['mapqp-navigation-location']);
   assert.equal(h.prompts.length, 0);
+});
+
+test('direction updates and arrival notifications are silent', async () => {
+  for (const platform of ['android', 'ios']) {
+    const h = harness({ platform, nativeAvailable: false });
+    await h.api.syncBackgroundNavigation(h.route);
+    await h.fix(42.0002, -71);
+    await h.fix(42.0005, -71);
+    await h.fix(42.001, -70.999);
+    assert.ok(h.notifications.length >= 2);
+    assert.ok(h.notifications.every(n => n.content.sound === false));
+    assert.equal((await h.notificationBehavior()).shouldPlaySound, false);
+  }
+});
+
+test('fallback uses a new silent channel rather than the previously alerting channel', async () => {
+  const h = harness({ running: false });
+  await h.api.syncBackgroundNavigation(h.route);
+  const [id, channel] = h.channels[0];
+  assert.equal(id, 'navigation-directions-silent-v2');
+  assert.equal(channel.sound, null);
+  assert.equal(channel.enableVibrate, false);
+  assert.equal(channel.importance, 2);
+});
+
+test('a background replacement route updates the direction card and persists its revision', async () => {
+  const h = harness({ updateRoute: async route => ({ ...route, revision: 1,
+    geometry: [[42.0005, -70.999], [42.001, -70.999]],
+    steps: [{ instruction: 'Continue straight', pointIndex: 1 }] }) });
+  await h.api.syncBackgroundNavigation(h.route);
+  await h.fix(42.0005, -70.999);
+  assert.match(h.updates.at(-1)[2], /Continue straight/);
+  assert.equal(JSON.parse(h.saved).revision, 1);
+});
+
+test('exiting during recalculation cannot post or save a replacement route', async () => {
+  const h = harness({ updateRoute: async route => { h.requestNativeExit(); return { ...route, revision: 1 }; } });
+  await h.api.syncBackgroundNavigation(h.route);
+  await h.fix(42.0005, -70.999);
+  assert.equal(h.saved, undefined);
+  assert.equal(h.updates.length, 1);
+});
+
+test('foreground focus sync cannot replace a newer background route with the old geometry', async () => {
+  const storage = new Map();
+  const h = harness({ storage });
+  const route = { ...h.route, navigationId: 'session-1', revision: 0 };
+  await h.api.syncBackgroundNavigation(route);
+  const replacement = { ...route, revision: 1, geometry: [[42, -71], [42.001, -70.999]] };
+  storage.set('mapqp-background-route-v1', JSON.stringify(replacement));
+  await h.api.syncBackgroundNavigation(route);
+  assert.equal(JSON.parse(h.saved).revision, 1);
+  assert.deepEqual(JSON.parse(h.saved).geometry, replacement.geometry);
 });
