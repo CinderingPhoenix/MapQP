@@ -517,12 +517,12 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
 
           {selectedTopic === null ? (
             <ScrollView key={`topics-${mode}`} style={styles.scrollArea} contentContainerStyle={styles.topicContent} showsVerticalScrollIndicator>
-              <Text style={styles.title} accessibilityRole="header">What would you like to learn?</Text>
+              <Text style={[styles.title, textStyle(styles.title)]} accessibilityRole="header">What would you like to learn?</Text>
               <View style={styles.topicGrid}>
               {tutorialTopics.map((topic) => (
                 <TouchableOpacity
                   key={topic.value}
-                  style={[styles.topicButton, largeTutorialText && { flexBasis: "100%" }]}
+                  style={[styles.topicButton, fontSize * fontScale > 1 && { flexBasis: "100%" }]}
                   onPress={() => { setCurrentPage(0); setSelectedTopic(topic.value); }}
                   accessibilityRole="button"
                   accessibilityLabel={topic.label}
@@ -531,7 +531,7 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
                   <View style={styles.topicIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <MaterialCommunityIcons name={topic.icon} size={36} color={presentation.topicIcon} />
                   </View>
-                  <Text style={styles.topicTitle}>{topic.label}</Text>
+                  <Text style={[styles.topicTitle, textStyle(styles.topicTitle), fontSize * fontScale > 1 && { alignSelf: "stretch" }]}>{topic.label}</Text>
                 </TouchableOpacity>
               ))}
               </View>

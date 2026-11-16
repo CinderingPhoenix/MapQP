@@ -2,7 +2,9 @@ import { createPositionInterpolator } from "../utils/position-interpolation";
 import { useSettings } from "../context/settings-context";
 import { useFocusEffect } from "expo-router";
 import { Asset } from "expo-asset";
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { navigationPresentation } from "../theme/navigation-theme";
 import type { VoiceMapCommand } from "../utils/voice-map-command";
 import { AppState, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -137,6 +139,11 @@ export default function LocationMap({
     webViewRef.current?.injectJavaScript(`window.cameraCommand && window.cameraCommand(${JSON.stringify(action)}); true;`);
   };
   const [mapUri, setMapUri] = useState<string>("");
+  // Appearance changes must never change the WebView source or its identity.
+  const mapSource = useMemo(() => ({ uri: mapUri }), [mapUri]);
+  const theme = useAppTheme();
+  const presentation = navigationPresentation(theme.preset, theme.increased, theme.resolvedTheme);
+  const mapBackground = theme.dark ? { backgroundColor: presentation.tokens.background } : undefined;
 
   const {
     reduceMotionEnabled,
@@ -148,6 +155,9 @@ export default function LocationMap({
   } = useAccessibilityPreferences();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const visualPreferencesScript = `
+    if (window.setMapUIPresentation) {
+      window.setMapUIPresentation(${JSON.stringify(presentation.mapUI)});
+    }
     if (window.setVisualAccessibility) {
       window.setVisualAccessibility(${boldTextEnabled}, ${increasedContrast}, ${reduceTransparencyEnabled});
     }
@@ -375,15 +385,15 @@ export default function LocationMap({
   }, [currentMarkerLat, currentMarkerLng, accuracy, route]);
 
   if (!mapUri) {
-    return <View style={styles.container} />;
+    return <View style={[styles.container, mapBackground]} />;
   }
 
   return (
-    <View style={styles.container} onLayout={(event) => setMapHeight(event.nativeEvent.layout.height)}>
+    <View style={[styles.container, mapBackground]} onLayout={(event) => setMapHeight(event.nativeEvent.layout.height)}>
       <WebView<{}>
         ref={webViewRef}
         originWhitelist={["*"]}
-        source={{ uri: mapUri }}
+        source={mapSource}
         style={styles.map}
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}

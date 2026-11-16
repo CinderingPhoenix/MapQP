@@ -5,9 +5,13 @@ import * as SecureStore from "expo-secure-store";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { isReviewSession } from "../utils/review-access";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { navigationPresentation } from "../theme/navigation-theme";
 
 // Display only: never writes or renews the session deadline.
 export function TemporarySessionNotice() {
+  const theme = useAppTheme();
+  const presentation = navigationPresentation(theme.preset, theme.increased, theme.resolvedTheme);
   const [deadline, setDeadline] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const { fontSize } = useSettings();
@@ -43,7 +47,7 @@ export function TemporarySessionNotice() {
     ? `${hours}h`
     : `${minutes}m ${seconds % 60}s`;
   return (
-    <Text style={[styles.notice, { fontSize: 14 * fontSize, fontWeight: emphasizedTextEnabled ? "bold" : "500" }]}>
+    <Text style={[styles.notice, presentation.noticeStyle, { fontSize: 14 * fontSize, fontWeight: emphasizedTextEnabled ? "bold" : "500" }]}>
       {seconds > 0 ? `Temporary access: signs out in ${remaining}` : "Temporary access expired. Signing out?"}
     </Text>
   );

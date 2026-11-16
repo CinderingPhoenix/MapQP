@@ -1,4 +1,6 @@
-import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import { useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { routeAlternativePresentation } from "../theme/route-alternative-theme";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,8 +19,9 @@ export function RouteAlternativePrompt({ relaxed, onAnswer }: {
   relaxed: (keyof RoutingPreferences)[];
   onAnswer: (accepted: boolean) => void;
 }) {
-  const vision = useColorVisionPalette();
-  const styles = useColorVisionStyles(baseStyles, { heading: "highlightedHeading", cancelText: "accentText" });
+  const legacyStyles = useColorVisionStyles(baseStyles, { heading: "highlightedHeading", cancelText: "accentText" });
+  const theme = useAppTheme();
+  const styles = routeAlternativePresentation(theme.preset, theme.increased, theme.resolvedTheme, theme.opaque).styles(legacyStyles);
   const { fontSize } = useSettings();
   const { screenReaderEnabled, boldTextEnabled } = useAccessibilityPreferences();
   const heading = useRef<React.ElementRef<typeof Text>>(null);
@@ -65,11 +68,11 @@ export function RouteAlternativePrompt({ relaxed, onAnswer }: {
             </View>)}
           </View>
           <Text style={[styles.text, body]}>Your saved settings will stay the same. Choose whether this route works for you.</Text>
-          <TouchableOpacity accessibilityRole="button" accessibilityHint="Closes this prompt without starting the alternative route."
+          <TouchableOpacity activeOpacity={theme.dark ? 0.9 : undefined} accessibilityRole="button" accessibilityHint="Closes this prompt without starting the alternative route."
             onPress={() => answer(false)} style={[styles.button, styles.cancel]}>
             <Text style={[styles.cancelText, { fontSize: 19 * fontSize }]}>Cancel route</Text>
           </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" accessibilityHint="Starts the route with the barriers listed above."
+          <TouchableOpacity activeOpacity={theme.dark ? 0.9 : undefined} accessibilityRole="button" accessibilityHint="Starts the route with the barriers listed above."
             onPress={() => answer(true)} style={[styles.button, styles.accept]}>
             <Text style={[styles.acceptText, { fontSize: 19 * fontSize }]}>Use this route</Text>
           </TouchableOpacity>

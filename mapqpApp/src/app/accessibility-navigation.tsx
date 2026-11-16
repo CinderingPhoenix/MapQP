@@ -1,6 +1,9 @@
 import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { navigationScreenPresentation } from "../theme/navigation-theme";
 import NavigationAnnouncements from "../components/navigation-announcements";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useIsFocused } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import { NavigationKeepAwake } from "../components/navigation-keep-awake";
@@ -46,7 +49,11 @@ import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
   const vision = useColorVisionPalette();
-  const styles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
+  const legacyStyles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
+  const theme = useAppTheme();
+  const focused = useIsFocused();
+  const presentation = navigationScreenPresentation(theme.preset, theme.increased, theme.resolvedTheme);
+  const styles = presentation.styles(legacyStyles);
   const voiceMapRef = useRef<LocationMapHandle>(null);
   useAuthGuard();
   const { fontScale, height: windowHeight } = useWindowDimensions();
@@ -193,12 +200,13 @@ export default function Home() {
   if (!isMapDataLoaded || !accessibilityLoaded) {
     return (
       <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
         {dataError ? (
           <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
         ) : (
           <>
-            <ActivityIndicator size="large" color={vision.color("#1d5962", "iconColor")} />
-            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: vision.color("#555", "color") }}>Loading accessibility options...</Text>
+            <ActivityIndicator size="large" color={presentation.color(vision.color("#1d5962", "iconColor"), "navigationAccent")} />
+            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: presentation.color(vision.color("#555", "color"), "secondary") }}>Loading accessibility options...</Text>
           </>
         )}
       </SafeAreaView>
@@ -210,13 +218,14 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
+      {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
       {route && (
         <View
           onLayout={(event) => setSummaryBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
           style={[
             styles.topRouteSummary,
-            increasedContrast && { borderColor: vision.color("#1d5962", "borderColor"), borderWidth: 2 },
-            reduceTransparencyEnabled && { backgroundColor: vision.color("#fff", "backgroundColor") },
+            increasedContrast && { borderColor: presentation.color(vision.color("#1d5962", "borderColor"), "outline"), borderWidth: 2 },
+            reduceTransparencyEnabled && { backgroundColor: presentation.color(vision.color("#fff", "backgroundColor"), "surface") },
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
             directionsExpanded && { height: Math.min(viewportHeight * 0.65,
               Math.max(120, viewportHeight - plannerHeight - keyboardHeight - recenterClearance - 248)) },
@@ -259,7 +268,7 @@ export default function Home() {
                     {
                       fontSize: 16 * fontSize,
                       fontWeight: boldTextEnabled ? "600" : "normal",
-                      color: vision.color(darkerSystemColorsEnabled ? "#222" : "#555", "color"),
+                      color: presentation.color(vision.color(darkerSystemColorsEnabled ? "#222" : "#555", "color"), "secondary"),
                     },
                   ]}
                 >
@@ -272,7 +281,8 @@ export default function Home() {
 
             {/* Dedicated Cancel Route Button */}
             <TouchableOpacity
-              style={[styles.cancelRouteButton, increasedContrast && { borderColor: vision.color("#B42332", "borderColor"), borderWidth: 2 }]}
+              activeOpacity={theme.dark ? 0.9 : undefined}
+              style={[styles.cancelRouteButton, increasedContrast && { borderColor: presentation.color(vision.color("#B42332", "borderColor"), "outline"), borderWidth: 2 }]}
               onPress={handleCancelRoute}
               accessible
               accessibilityRole="button"
@@ -307,7 +317,7 @@ export default function Home() {
                   return (
                     <View
                       key={`${step.pointIndex}-${index}`}
-                      style={[styles.directionItem, { borderBottomColor: vision.color(darkerSystemColorsEnabled ? "#aaa" : "#eee", "borderBottomColor") }]}
+                      style={[styles.directionItem, { borderBottomColor: presentation.color(vision.color(darkerSystemColorsEnabled ? "#aaa" : "#eee", "borderBottomColor"), "divider") }]}
                     >
                       <Text
                         key={`nav-text-3-${fontSize}-${fontScale}-${textRefresh}`}
@@ -321,7 +331,7 @@ export default function Home() {
                 })}
 
                 {upcomingSteps.length === 0 && (
-                  <View style={[styles.directionItem, { borderBottomColor: vision.color(darkerSystemColorsEnabled ? "#aaa" : "#eee", "borderBottomColor") }]}>
+                  <View style={[styles.directionItem, { borderBottomColor: presentation.color(vision.color(darkerSystemColorsEnabled ? "#aaa" : "#eee", "borderBottomColor"), "divider") }]}>
                     <Text
                       key={`nav-text-4-${fontSize}-${fontScale}-${textRefresh}`}
                       maxFontSizeMultiplier={2.5}
@@ -343,7 +353,7 @@ export default function Home() {
                       marginTop: 10,
                       fontSize: 16 * fontSize,
                       fontWeight: boldTextEnabled ? "600" : "normal",
-                      color: vision.color(darkerSystemColorsEnabled ? "#222" : "#555", "color"),
+                      color: presentation.color(vision.color(darkerSystemColorsEnabled ? "#222" : "#555", "color"), "secondary"),
                     },
                   ]}
                 >
@@ -361,7 +371,7 @@ export default function Home() {
                 maxFontSizeMultiplier={2.5}
                 style={[
                   styles.subText,
-                  { fontSize: 14 * fontSize, color: vision.color(increasedContrast ? "#111" : "#555", "color"), fontWeight: emphasizedText ? "bold" : "normal" },
+                  { fontSize: 14 * fontSize, color: presentation.color(vision.color(increasedContrast ? "#111" : "#555", "color"), "secondary"), fontWeight: emphasizedText ? "bold" : "normal" },
                 ]}
               >
                 Route preview
@@ -390,7 +400,7 @@ export default function Home() {
             <Text
               key={`nav-text-8-${fontSize}-${fontScale}-${textRefresh}`}
               maxFontSizeMultiplier={2.5}
-              style={{ fontSize: 16 * fontSize, color: vision.color(increasedContrast ? "#111" : "#333", "color"), fontWeight: emphasizedText ? "bold" : "normal" }}
+              style={{ fontSize: 16 * fontSize, color: presentation.color(vision.color(increasedContrast ? "#111" : "#333", "color"), "text"), fontWeight: emphasizedText ? "bold" : "normal" }}
             >
               {error}
             </Text>
@@ -432,8 +442,8 @@ export default function Home() {
         onLayout={(event) => setPlannerHeight(event.nativeEvent.layout.height)}
         style={[
           styles.plannerPanel,
-          increasedContrast && { borderColor: vision.color("#1d5962", "borderColor"), borderWidth: 2 },
-          reduceTransparencyEnabled && { backgroundColor: vision.color("#fff", "backgroundColor") },
+          increasedContrast && { borderColor: presentation.color(vision.color("#1d5962", "borderColor"), "outline"), borderWidth: 2 },
+          reduceTransparencyEnabled && { backgroundColor: presentation.color(vision.color("#fff", "backgroundColor"), "surface") },
           {
             paddingBottom: keyboardHeight > 0 ? 48 : 40,
             transform: [{ translateY: keyboardTranslateY }],
@@ -444,7 +454,8 @@ export default function Home() {
         <RecenterOverlay visible={showRecenter} measuredHeight={recenterHeight}
           plannerBorderWidth={increasedContrast ? 2 : styles.plannerPanel.borderWidth} onHeightChange={setRecenterHeight}>
           <TouchableOpacity
-            style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: vision.color("#1d5962", "borderColor") }]}
+            activeOpacity={theme.dark ? 0.9 : undefined}
+            style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: presentation.color(vision.color("#1d5962", "borderColor"), "outline") }]}
             onPress={() => { if (showRecenter) handleRecenter(); }}
             disabled={!showRecenter} accessible={showRecenter}
             accessibilityRole="button"

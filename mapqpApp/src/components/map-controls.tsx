@@ -1,4 +1,6 @@
 import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { navigationPresentation } from "../theme/navigation-theme";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
@@ -27,7 +29,10 @@ export default function MapControls({ accessibilityMode = false, camera, onComma
   accessibilityMode?: boolean; camera: CameraState; onCommand: (action: CameraAction) => void;
 }) {
   const vision = useColorVisionPalette();
-  const styles = useColorVisionStyles(baseStyles);
+  const legacyStyles = useColorVisionStyles(baseStyles);
+  const theme = useAppTheme();
+  const presentation = navigationPresentation(theme.preset, theme.increased, theme.resolvedTheme);
+  const styles = presentation.styles(legacyStyles);
   const rows = accessibilityMode ? ROWS : [[ROWS[0][0]], [ROWS[0][2]]];
   return <View style={[styles.panel, !accessibilityMode && styles.standardPanel]}>
     {rows.map((row, index) => <View key={index} style={styles.row}>
@@ -35,14 +40,16 @@ export default function MapControls({ accessibilityMode = false, camera, onComma
         const disabled = !camera.ready ||
           (action === "zoom-in" && camera.zoom >= camera.maxZoom) ||
           (action === "zoom-out" && camera.zoom <= camera.minZoom);
-        return <TouchableOpacity key={action} accessible
-          style={[styles.button, disabled && styles.disabled, disabled && vision.monochrome && { borderStyle: "dashed" }]} disabled={disabled}
+        return <TouchableOpacity key={action} accessible activeOpacity={theme.dark ? 0.9 : undefined}
+          style={[styles.button, disabled && styles.disabled, disabled && (presentation.dark || vision.monochrome) && { borderStyle: "dashed" }]} disabled={disabled}
           accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }}
           accessibilityHint={action.startsWith("pan-")
             ? "Moves the view in this screen direction. Your location continues updating."
             : "Changes map zoom by one level. Your location continues updating."}
           onPress={() => { if (!disabled) onCommand(action); }}>
-          <MaterialCommunityIcons name={icon} size={28} color={vision.color(disabled ? "#595959" : "#761723", "iconColor")}
+          <MaterialCommunityIcons name={icon} size={28} color={presentation.dark
+            ? disabled ? presentation.controls.disabledIcon : presentation.controls.icon
+            : vision.color(disabled ? "#595959" : "#761723", "iconColor")}
             accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
             allowFontScaling={false} />
         </TouchableOpacity>;
