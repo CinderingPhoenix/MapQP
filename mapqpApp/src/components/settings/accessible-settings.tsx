@@ -461,7 +461,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             </Choices>
           </View>
           <Divider important /><BoldText style={s.label}>Direction style</BoldText>
-          <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Natural: left/right. Degrees: turning angles.</BoldText>
+          <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Natural: Turn Left/Right. Degrees: Turn Left/Right 90°.</BoldText>
           <View style={s.choiceInset}><Choices>
             <Choice label="Natural" selected={settings.directionStyle === "natural"} disabled={disabled} onPress={() => settings.setDirectionStyle("natural")} />
             <Choice label="Degrees" selected={settings.directionStyle === "degrees"} disabled={disabled} onPress={() => settings.setDirectionStyle("degrees")} />
@@ -491,7 +491,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
       </Accordion>
       <Accordion title="App & Support" icon={HEADER_ICONS.support}>
           <BoldText style={s.label}>Support</BoldText>
-          <Action label="Report a bug" description="Submission not yet available." onPress={() => router.push("/report-bug")} /><Divider />
+          <Action label="Report a bug" onPress={() => router.push("/report-bug")} /><Divider />
           <View style={[s.infoRow, stacked && s.stackedRow]}><BoldText style={s.flex}>Route data version</BoldText><BoldText size={18} color={COLORS.secondary}>v{mapVersion}</BoldText></View>
           <Divider important /><BoldText style={s.label}>Data management</BoldText>
           <View style={s.collapseFooter}>

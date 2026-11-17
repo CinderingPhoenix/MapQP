@@ -39,10 +39,6 @@ export function useSessionMonitor() {
   }, []);
 
   const handleSessionExpired = async () => {
-    // TEMPORARY DEVELOPMENT LOGIN BYPASS
-    if (__DEV__) {
-      return;
-    }
     await Promise.all([
       SecureStore.deleteItemAsync('mapqp_access_token'),
       SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY),

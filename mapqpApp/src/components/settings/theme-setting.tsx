@@ -75,10 +75,6 @@ export function ThemeChoices() {
         </View>
       </TouchableOpacity>;
     })}
-    <Text allowFontScaling style={{ fontSize: 18 * fontSize, lineHeight: Math.ceil(27 * fontSize),
-      color: secondary, fontWeight: boldTextEnabled ? "900" : "400" }}>
-      Light or Dark stays on. System Default follows your device.
-    </Text>
     {disabled && <Text allowFontScaling style={{ fontSize: 18 * fontSize, lineHeight: Math.ceil(27 * fontSize), color: secondary }}>
       {!settingsLoaded ? "Loading saved preferences. Please wait." : "Saved preferences could not be loaded. Theme editing is unavailable."}
     </Text>}
