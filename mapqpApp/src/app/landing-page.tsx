@@ -1,27 +1,32 @@
-// landing-page.tsx
-
+import { StatusBar } from "expo-status-bar";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { landingPresentation } from "../theme/landing-theme";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect, useNavigation, type NativeStackNavigationProp } from "expo-router";
+import { router, useFocusEffect, useIsFocused, useNavigation, type NativeStackNavigationProp } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState, useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import { useLocationWarmup } from "../hooks/use-location-warmup";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { TutorialModal } from "../components/tutorial-modal";
+import { AvoidStairsPrompt } from "../components/avoid-stairs-prompt";
 
 const TUTORIAL_SHOWN_KEY = "mapqp_tutorial_shown_once";
 
 export default function LandingPage() {
   useLocationWarmup();
-  useAuthGuard();
-  const { setNavigationMode, setHasSelectedMode } = useSettings();
+  const { isChecking: authChecking } = useAuthGuard();
+  const { setNavigationMode, setHasSelectedMode, settingsLoaded } = useSettings();
   const { fontScale, width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
+  const presentation = landingPresentation(theme.preset, theme.increased, theme.resolvedTheme, theme.opaque);
+  const styles = presentation.landingStyles(baseStyles);
   const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
@@ -32,31 +37,52 @@ export default function LandingPage() {
   const initialFocusHandled = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<{ "landing-page": undefined }>>();
 
-  // Tutorial modal state
   const [showTutorial, setShowTutorial] = useState(false);
-
-  // Check if tutorial has been shown before using SecureStore
+  const [tutorialReady, setTutorialReady] = useState(false);
+  const [tutorialDismissed, setTutorialDismissed] = useState(true);
+  const [promptPhase, setPromptPhase] = useState<"idle" | "open" | "closing">("idle");
+  const [pendingMode, setPendingMode] = useState<"standard" | "accessibility" | null>(null);
+  const pendingModeRef = useRef<"standard" | "accessibility" | null>(null);
+  const focused = useIsFocused();
+  const mounted = useRef(true);
+  const tutorialClosing = useRef(false);
+  const reportBugAfterTutorial = useRef(false);
   useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setTutorialReady(false);
+    setPromptPhase("idle");
     async function checkFirstLaunch() {
       try {
         const hasShown = await SecureStore.getItemAsync(TUTORIAL_SHOWN_KEY);
-        if (hasShown !== "true") {
-          setShowTutorial(true);
-        }
+        if (!active) return;
+        setTutorialDismissed(hasShown === "true");
+        setShowTutorial(hasShown !== "true");
       } catch (error) {
+        // Skip new onboarding after an unverified read; keep landing usable.
         console.error("Failed to check tutorial status", error);
+      } finally {
+        if (active) setTutorialReady(true);
       }
     }
-    checkFirstLaunch();
-  }, []);
+    void checkFirstLaunch();
+    return () => { active = false; };
+  }, []));
 
   const handleDismissTutorial = async () => {
+    if (tutorialClosing.current) return;
+    tutorialClosing.current = true;
     try {
       await SecureStore.setItemAsync(TUTORIAL_SHOWN_KEY, "true");
     } catch (error) {
       console.error("Failed to save tutorial status", error);
     }
-    setShowTutorial(false);
+    if (mounted.current) setShowTutorial(false);
+    tutorialClosing.current = false;
   };
 
   // The web stack has no native transition events. On iOS/Android, onAppear
@@ -86,41 +112,69 @@ export default function LandingPage() {
     };
   }, [navigation]);
 
+  useEffect(() => {
+    if (!focused) {
+      setPromptPhase("idle");
+      pendingModeRef.current = null;
+      setPendingMode(null);
+    }
+  }, [focused]);
+
+  const eligibilityReady = settingsLoaded && tutorialReady && accessibilityLoaded && !authChecking;
+  const onboardingBlocksFocus = !eligibilityReady || showTutorial || !tutorialDismissed || promptPhase !== "idle";
+  const onboardingBlocksFocusRef = useRef(onboardingBlocksFocus);
+  onboardingBlocksFocusRef.current = onboardingBlocksFocus;
+  const tutorialVisible = showTutorial && focused && !authChecking && transitionComplete;
+  const promptVisible = promptPhase === "open" && focused && !authChecking && transitionComplete;
+
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS !== "ios" && Platform.OS !== "android") return;
-      if (!accessibilityLoaded || !headingLaidOut || !transitionComplete || initialFocusHandled.current) return;
+      if (onboardingBlocksFocus || !focused || !accessibilityLoaded || !headingLaidOut || !transitionComplete || initialFocusHandled.current) return;
       if (!screenReaderEnabled) {
         initialFocusHandled.current = true;
         return;
       }
 
       const frame = requestAnimationFrame(() => {
-        if (!transitionCompleteRef.current || initialFocusHandled.current || !headingRef.current) return;
+        if (onboardingBlocksFocusRef.current || !navigation.isFocused() || !transitionCompleteRef.current || initialFocusHandled.current || !headingRef.current) return;
         initialFocusHandled.current = true;
         AccessibilityInfo.sendAccessibilityEvent(headingRef.current, "focus");
       });
       return () => cancelAnimationFrame(frame);
-    }, [accessibilityLoaded, headingLaidOut, screenReaderEnabled, transitionComplete])
+    }, [accessibilityLoaded, headingLaidOut, screenReaderEnabled, transitionComplete, onboardingBlocksFocus, focused, navigation])
   );
 
-  const openStandardNavigation = () => {
-    setNavigationMode("standard");
-    setHasSelectedMode(true);
-    router.push("/standard-navigation");
+  const requestNavigation = (mode: "standard" | "accessibility") => {
+    if (onboardingBlocksFocus || pendingModeRef.current) return;
+    pendingModeRef.current = mode;
+    setPendingMode(mode);
+    setPromptPhase("open");
   };
 
-  const openAccessibilityNavigation = () => {
-    setNavigationMode("accessibility");
+  const openStandardNavigation = () => requestNavigation("standard");
+  const openAccessibilityNavigation = () => requestNavigation("accessibility");
+
+  const finishNavigation = () => {
+    const mode = pendingModeRef.current;
+    if (!mounted.current || !navigation.isFocused() || !mode || promptPhase !== "closing") return;
+    pendingModeRef.current = null;
+    setPendingMode(null);
+    setPromptPhase("idle");
+    setNavigationMode(mode);
     setHasSelectedMode(true);
-    router.push("/accessibility-navigation");
+    router.push(mode === "accessibility" ? "/accessibility-navigation" : "/standard-navigation");
   };
 
   return (
-    <View style={styles.container} onTouchStart={() => { initialFocusHandled.current = true; }}>
-      <View style={styles.mapBackground}>
+    <View style={styles.container} onTouchStart={() => { if (!onboardingBlocksFocus) initialFocusHandled.current = true; }}>
+      {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
+      <View style={styles.mapBackground} pointerEvents={onboardingBlocksFocus ? "none" : "auto"}
+        aria-hidden={onboardingBlocksFocus}
+        accessibilityElementsHidden={onboardingBlocksFocus}
+        importantForAccessibility={onboardingBlocksFocus ? "no-hide-descendants" : "auto"}>
         <ExpoImage
-          source={require("../../assets/images/campus-map.png")}
+          source={require("../../assets/images/campus-map.webp")}
           style={[StyleSheet.absoluteFill, styles.mapImage]}
           contentFit="cover"
           cachePolicy="memory-disk"
@@ -128,10 +182,12 @@ export default function LandingPage() {
           transition={0}
           accessible={false}
         />
+        {theme.dark && <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+          style={[StyleSheet.absoluteFill, { backgroundColor: presentation.scrim }]} />}
         <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.header, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 3, borderBottomColor: "#761723" }]}>
+          <View style={[styles.header, opaqueSurfaces && !theme.dark && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 3, borderBottomColor: presentation.original ? "#761723" : presentation.accent }]}>
             <ExpoImage
-              source={require("../../assets/images/mapqp-logo.png")}
+              source={theme.dark ? require("../../assets/images/mapqp-logo-dark.png") : require("../../assets/images/mapqp-logo.png")}
               style={styles.mapqpLogo}
               contentFit="contain"
               cachePolicy="memory-disk"
@@ -141,7 +197,7 @@ export default function LandingPage() {
             />
             <View style={styles.headerRight}>
               <ExpoImage
-                source={require("../../assets/images/wpi-logo.png")}
+                source={theme.dark ? require("../../assets/images/wpi-logo-dark.png") : require("../../assets/images/wpi-logo.png")}
                 style={styles.wpiLogo}
                 contentFit="contain"
                 cachePolicy="memory-disk"
@@ -152,9 +208,11 @@ export default function LandingPage() {
             </View>
           </View>
 
+          <View style={styles.quickActionsContainer}>
+          <View style={[styles.quickActions, increasedContrast && styles.quickActionsHighContrast]}>
           {/* Settings Button */}
           <TouchableOpacity
-            style={[styles.settingsButton, { top: insets.top + 130, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            style={[styles.quickActionButton, increasedContrast && { borderWidth: 2, borderColor: presentation.original ? "#172033" : presentation.outline }]}
             onPress={() => router.push("/settings")}
             activeOpacity={0.7}
             accessible
@@ -162,21 +220,33 @@ export default function LandingPage() {
             accessibilityLabel="Settings"
             accessibilityHint="Opens the application settings"
           >
-            <Ionicons name="settings-outline" size={28} color="#172033" />
+            <Ionicons name="settings-outline" size={24} color={presentation.utilityIcon} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            <Text style={[styles.quickActionText, boldTextEnabled && { fontWeight: "900" },
+              increasedContrast && { color: theme.dark ? theme.tokens.text : "#000" }]}>Settings</Text>
+            <Ionicons name="chevron-forward" size={20} color={presentation.utilityIcon} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
 
+          <View style={[styles.quickActionDivider, increasedContrast && { backgroundColor: presentation.original ? "#172033" : presentation.outline }]} />
           {/* Reopen Tutorial Button */}
           <TouchableOpacity
-            style={[styles.tutorialButton, { top: insets.top + 195, left: insets.left + 28 }, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
-            onPress={() => setShowTutorial(true)}
+            style={[styles.quickActionButton,
+              increasedContrast && { borderWidth: 2, borderColor: presentation.original ? "#172033" : presentation.outline }]}
+            onPress={() => { initialFocusHandled.current = false; setTutorialDismissed(false); setShowTutorial(true); }}
             activeOpacity={0.7}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Tutorial"
-            accessibilityHint="Reopens the app tutorial"
+            accessible accessibilityRole="button" accessibilityLabel="Tutorial & Bug Reports"
+            accessibilityHint="Opens tutorials and the option to report a bug."
           >
-            <Ionicons name="help-circle-outline" size={28} color="#172033" />
+            <Ionicons name="book-outline" size={24} color={presentation.utilityIcon} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            <Text style={[styles.quickActionText, boldTextEnabled && { fontWeight: "900" },
+              increasedContrast && { color: theme.dark ? theme.tokens.text : "#000" }]}>Tutorial &amp; Bug Reports</Text>
+            <Ionicons name="chevron-forward" size={20} color={presentation.utilityIcon} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
+          </View>
+          </View>
 
           <ScrollView
             key={`landing-scroll-${stackButtons ? "stacked" : "row"}-${fontScale.toFixed(2)}`}
@@ -209,12 +279,10 @@ export default function LandingPage() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Standard mode"
-                  accessibilityHint="Opens standard campus navigation"
+                  accessibilityHint="Choose routing preferences, then open standard campus navigation"
                 >
                   <LinearGradient
-                    colors={opaqueSurfaces
-                      ? ["#FFF5F5", "#F9E5E7"]
-                      : ["rgba(255,245,245,0.96)", "rgba(249,229,231,0.96)"]}
+                    colors={presentation.gradient("standard", opaqueSurfaces)}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={[styles.modeButton, styles.standardModeButton, largeText && styles.modeButtonLargeText, increasedContrast && styles.modeButtonHighContrast]}
@@ -247,18 +315,18 @@ export default function LandingPage() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel="Accessibility mode"
-                  accessibilityHint="Opens accessible campus navigation"
+                  accessibilityHint="Choose routing preferences, then open accessible campus navigation. Avoid stairs is selected by default."
                 >
                   <LinearGradient
-                    colors={opaqueSurfaces
-                      ? ["#F1FAF9", "#DDF2F0"]
-                      : ["rgba(241,250,249,0.96)", "rgba(221,242,240,0.96)"]}
+                    colors={presentation.gradient("accessibility", opaqueSurfaces)}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={[styles.modeButton, styles.accessibilityModeButton, largeText && styles.modeButtonLargeText, increasedContrast && styles.modeButtonHighContrast]}
                   >
                     <View style={[styles.modeIcon, styles.accessibilityIcon]}>
-                      <Text style={styles.accessibilityIconText} allowFontScaling={false}>♿</Text>
+                      {theme.preset === "default" ? <Text style={styles.accessibilityIconText} allowFontScaling={false}>♿</Text>
+                        : <MaterialCommunityIcons name="wheelchair-accessibility" size={29} color="#FFFFFF" allowFontScaling={false}
+                            accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />}
                     </View>
                     <Text
                       key={`accessibility-title-${fontScale}`}
@@ -278,18 +346,39 @@ export default function LandingPage() {
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
+
             </View>
           </ScrollView>
         </SafeAreaView>
       </View>
 
       {/* First-time Tutorial Modal Component */}
-      <TutorialModal visible={showTutorial} onClose={handleDismissTutorial} />
+      <TutorialModal visible={tutorialVisible} onClose={handleDismissTutorial}
+        onReportBug={() => {
+          reportBugAfterTutorial.current = true;
+          void handleDismissTutorial();
+        }} onDismiss={() => {
+        if (!showTutorial && mounted.current) {
+          initialFocusHandled.current = false;
+          setTutorialDismissed(true);
+          if (reportBugAfterTutorial.current) {
+            reportBugAfterTutorial.current = false;
+            if (navigation.isFocused()) router.push("/report-bug");
+          }
+        }
+      }} />
+      <AvoidStairsPrompt visible={promptVisible}
+        defaultAvoidStairs={pendingMode === "accessibility" ? true : undefined}
+        onAnswered={() => {
+          if (mounted.current) setPromptPhase("closing");
+        }}
+        onDismiss={finishNavigation}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   safeArea: { flex: 1, backgroundColor: "transparent" },
   header: {
@@ -309,7 +398,7 @@ const styles = StyleSheet.create({
   mapImage: { transform: [{ scale: 1 }] },
   contentScroll: { flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: "flex-end" },
-  presetArea: { paddingHorizontal: 18, paddingBottom: 26, paddingTop: 30 },
+  presetArea: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 18, paddingBottom: 26, paddingTop: 30 },
   presetLabel: {
     transform: [{ translateY: 10 }],
     alignSelf: "stretch",
@@ -415,20 +504,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 5, borderTopRightRadius: 5,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
-  settingsButton: {
-    position: "absolute",
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
-    justifyContent: "center", alignItems: "center", zIndex: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2, shadowRadius: 5, elevation: 5,
+  quickActionsContainer: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 18, paddingTop: 16 },
+  quickActions: { borderRadius: 20, backgroundColor: "#F8FAFC",
+    borderWidth: 1, borderColor: "#CBD5E1", overflow: "hidden",
   },
-  tutorialButton: {
-    position: "absolute",
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
-    justifyContent: "center", alignItems: "center", zIndex: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2, shadowRadius: 5, elevation: 5,
+  quickActionsHighContrast: { borderWidth: 2, borderColor: "#172033", backgroundColor: "#FFFFFF" },
+  quickActionDivider: { height: 1, backgroundColor: "#CBD5E1", marginHorizontal: 18 },
+  quickActionText: {
+    flex: 1, color: "#172033", fontSize: 15, fontWeight: "600",
+  },
+  quickActionButton: {
+    minHeight: 56, paddingHorizontal: 18, paddingVertical: 14, gap: 12,
+    flexDirection: "row", alignItems: "center",
   },
 });

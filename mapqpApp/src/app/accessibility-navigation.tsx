@@ -1,12 +1,14 @@
-// accessibility-navigation.tsx
-
-import { useFocusEffect } from "expo-router";
+import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { navigationScreenPresentation } from "../theme/navigation-theme";
+import NavigationAnnouncements from "../components/navigation-announcements";
+import { useFocusEffect, useIsFocused } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
-import { useKeepAwake } from "expo-keep-awake";
+import { NavigationKeepAwake } from "../components/navigation-keep-awake";
 import {
   Animated,
-  Dimensions,
   Keyboard,
   Platform,
   ScrollView,
@@ -16,13 +18,15 @@ import {
   View,
   ActivityIndicator,
   useWindowDimensions,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { File, Paths } from "expo-file-system";
 
+import { TemporarySessionNotice } from "../components/temporary-session-notice";
 import BuildingPicker from "../components/building-picker";
-import LocationMap from "../components/location-map";
+import { RouteAlternativePrompt } from "../components/route-alternative-prompt";
+import LocationMap, { type LocationMapHandle } from "../components/location-map";
+import RecenterOverlay from "../components/recenter-overlay";
 import CurrentNavigationSummary from "../components/current-navigation-summary";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
@@ -33,9 +37,9 @@ import {
   formatDirectionInstruction,
   formatDistance,
   formatDuration,
+  formatArrivalTime,
   formatInstructionWithDistance,
   getDistanceToStepPoint,
-  getSegmentDistance,
   useMapNavigation,
 } from "../utils/map-logic";
 import { initRoutingGraph } from "../utils/routing";
@@ -44,10 +48,22 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
-  useKeepAwake();
+  const vision = useColorVisionPalette();
+  const legacyStyles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
+  const theme = useAppTheme();
+  const focused = useIsFocused();
+  const presentation = navigationScreenPresentation(theme.preset, theme.increased, theme.resolvedTheme);
+  const styles = presentation.styles(legacyStyles);
+  const voiceMapRef = useRef<LocationMapHandle>(null);
   useAuthGuard();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, height: windowHeight } = useWindowDimensions();
+  const [viewportHeight, setViewportHeight] = useState(windowHeight);
   const [textRefresh, setTextRefresh] = useState(0);
+  const [summaryBottom, setSummaryBottom] = useState(0);
+  const [plannerHeight, setPlannerHeight] = useState(160);
+  const [recenterHeight, setRecenterHeight] = useState(0);
+  // Reserve the measured button plus the same gap even while it is hidden.
+  const recenterClearance = recenterHeight + 16;
 
   // --- Dynamic Map Data State & Hooks (Must be called unconditionally) ---
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -77,6 +93,8 @@ export default function Home() {
     route,
     routeDestinationBuilding,
     routeError,
+    routeAlternative,
+    answerRouteAlternative,
     currentRouteIndex,
     showRecenter,
     recenterSignal,
@@ -88,6 +106,8 @@ export default function Home() {
     toggleMute,
     handleDestinationChange,
     handleCancelRoute,
+    navigationSpeech, onVoiceListeningChange, politeAnnouncement,
+    startupSession, startupReady, onStartupHandoff, onPickerTransition,
     handleRecenter,
     setShowRecenter,
   } = useMapNavigation(buildings);
@@ -104,21 +124,28 @@ export default function Home() {
       try {
         let routeData = defaultRoutePoints;
         let buildingData = defaultBuildings;
+        try {
 
-        const routeFile = new File(Paths.document, "route-points.json");
-        const buildingsFile = new File(Paths.document, "wpi-buildings.json");
+          const routeFile = new File(Paths.document, "route-points.json");
+          const buildingsFile = new File(Paths.document, "wpi-buildings.json");
 
-        if (routeFile.exists) {
-          const routeContent = await routeFile.text();
-          routeData = JSON.parse(routeContent);
+          if (routeFile.exists) {
+            const routeContent = await routeFile.text();
+            routeData = JSON.parse(routeContent);
+          }
+
+          if (buildingsFile.exists) {
+            const buildingContent = await buildingsFile.text();
+            buildingData = JSON.parse(buildingContent);
+          }
+
+          initRoutingGraph(routeData, buildingData);
+        } catch (cacheError) {
+          console.warn("Cached map data is unusable; using bundled map data.", cacheError);
+          routeData = defaultRoutePoints;
+          buildingData = defaultBuildings;
+          initRoutingGraph(routeData, buildingData);
         }
-
-        if (buildingsFile.exists) {
-          const buildingContent = await buildingsFile.text();
-          buildingData = JSON.parse(buildingContent);
-        }
-
-        initRoutingGraph(routeData, buildingData);
         setBuildings(parseBuildingData(buildingData));
         setIsMapDataLoaded(true);
       } catch (err) {
@@ -126,7 +153,7 @@ export default function Home() {
         console.error("Map Data Load Error:", err);
       }
     }
-    
+
     loadLocalMapData();
   }, []);
 
@@ -173,12 +200,13 @@ export default function Home() {
   if (!isMapDataLoaded || !accessibilityLoaded) {
     return (
       <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
         {dataError ? (
           <Text style={[styles.errorText, { fontSize: 16 * fontSize }]}>{dataError}</Text>
         ) : (
           <>
-            <ActivityIndicator size="large" color="#1d5962" />
-            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: "#555" }}>Loading accessibility options...</Text>
+            <ActivityIndicator size="large" color={presentation.color(vision.color("#1d5962", "iconColor"), "navigationAccent")} />
+            <Text style={{ marginTop: 16, fontSize: 16 * fontSize, color: presentation.color(vision.color("#555", "color"), "secondary") }}>Loading accessibility options...</Text>
           </>
         )}
       </SafeAreaView>
@@ -189,21 +217,28 @@ export default function Home() {
   const emphasizedText = accessibilityPreferences.emphasizedTextEnabled;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
+      {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
       {route && (
         <View
+          onLayout={(event) => setSummaryBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
           style={[
             styles.topRouteSummary,
-            increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
-            reduceTransparencyEnabled && { backgroundColor: "#fff" },
+            increasedContrast && { borderColor: presentation.color(vision.color("#1d5962", "borderColor"), "outline"), borderWidth: 2 },
+            reduceTransparencyEnabled && { backgroundColor: presentation.color(vision.color("#fff", "backgroundColor"), "surface") },
             directionsExpanded ? styles.topRouteSummaryExpanded : styles.topRouteSummaryCollapsed,
+            directionsExpanded && { height: Math.min(viewportHeight * 0.65,
+              Math.max(120, viewportHeight - plannerHeight - keyboardHeight - recenterClearance - 248)) },
           ]}
         >
           {/* Header Row containing Route Info and a dedicated Cancel Button */}
           <View style={styles.routeHeaderRow}>
             <View style={{ flex: 1 }}>
               <CurrentNavigationSummary
-                destinationKey={routeDestinationBuilding}
+                startupAnnouncement
+                startupSession={startupSession}
+                startupReady={startupReady}
+                onStartupHandoff={onStartupHandoff}
                 destinationName={buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination"}
                 screenReaderEnabled={screenReaderEnabled}
                 expanded={directionsExpanded}
@@ -233,20 +268,21 @@ export default function Home() {
                     {
                       fontSize: 16 * fontSize,
                       fontWeight: boldTextEnabled ? "600" : "normal",
-                      color: darkerSystemColorsEnabled ? "#222" : "#555",
+                      color: presentation.color(vision.color(darkerSystemColorsEnabled ? "#222" : "#555", "color"), "secondary"),
                     },
                   ]}
                 >
                   {formatDistance(route.distance, distanceUnits)}
                   {" total • "}
-                  {formatDuration(route.duration)}
+                  {formatDuration(route.duration)}{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
                 </Text>
               </CurrentNavigationSummary>
             </View>
 
             {/* Dedicated Cancel Route Button */}
             <TouchableOpacity
-              style={[styles.cancelRouteButton, increasedContrast && { borderColor: "#d9534f", borderWidth: 2 }]}
+              activeOpacity={theme.dark ? 0.9 : undefined}
+              style={[styles.cancelRouteButton, increasedContrast && { borderColor: presentation.color(vision.color("#B42332", "borderColor"), "outline"), borderWidth: 2 }]}
               onPress={handleCancelRoute}
               accessible
               accessibilityRole="button"
@@ -259,7 +295,7 @@ export default function Home() {
 
           {directionsExpanded && (
             <View style={styles.expandedContainer}>
-              <Text accessibilityRole="header" maxFontSizeMultiplier={2.5} style={[styles.boldText, { fontSize: 22 * fontSize }]}>
+              <Text accessibilityRole="header" maxFontSizeMultiplier={2.5} style={[styles.boldText, styles.highlightedHeading, { fontSize: 22 * fontSize }]}>
                 Upcoming Directions
               </Text>
               <ScrollView
@@ -270,35 +306,32 @@ export default function Home() {
                 showsVerticalScrollIndicator
               >
                 {upcomingSteps.map((step, index) => {
-                  const distance =
-                    index === 0
-                      ? getDistanceToStepPoint(
-                          route.geometry,
-                          currentRouteIndex,
-                          step.pointIndex,
-                          coordinates?.latitude,
-                          coordinates?.longitude
-                        )
-                      : getSegmentDistance(route.geometry, upcomingSteps[index - 1].pointIndex, step.pointIndex);
+                  const distance = getDistanceToStepPoint(
+                    route.geometry,
+                    currentRouteIndex,
+                    step.pointIndex,
+                    coordinates?.latitude,
+                    coordinates?.longitude
+                  );
 
                   return (
                     <View
                       key={`${step.pointIndex}-${index}`}
-                      style={[styles.directionItem, { borderBottomColor: darkerSystemColorsEnabled ? "#aaa" : "#eee" }]}
+                      style={[styles.directionItem, { borderBottomColor: presentation.color(vision.color(darkerSystemColorsEnabled ? "#aaa" : "#eee", "borderBottomColor"), "divider") }]}
                     >
                       <Text
                         key={`nav-text-3-${fontSize}-${fontScale}-${textRefresh}`}
                         maxFontSizeMultiplier={2.5}
                         style={[styles.directionInstruction, { fontSize: 19 * fontSize, fontWeight: boldTextEnabled ? "600" : "500" }]}
                       >
-                        {formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits)}
+                        {formatInstructionWithDistance(formatDirectionInstruction(step, directionStyle), distance, distanceUnits, index === 0)}
                       </Text>
                     </View>
                   );
                 })}
 
                 {upcomingSteps.length === 0 && (
-                  <View style={[styles.directionItem, { borderBottomColor: darkerSystemColorsEnabled ? "#aaa" : "#eee" }]}>
+                  <View style={[styles.directionItem, { borderBottomColor: presentation.color(vision.color(darkerSystemColorsEnabled ? "#aaa" : "#eee", "borderBottomColor"), "divider") }]}>
                     <Text
                       key={`nav-text-4-${fontSize}-${fontScale}-${textRefresh}`}
                       maxFontSizeMultiplier={2.5}
@@ -320,13 +353,13 @@ export default function Home() {
                       marginTop: 10,
                       fontSize: 16 * fontSize,
                       fontWeight: boldTextEnabled ? "600" : "normal",
-                      color: darkerSystemColorsEnabled ? "#222" : "#555",
+                      color: presentation.color(vision.color(darkerSystemColorsEnabled ? "#222" : "#555", "color"), "secondary"),
                     },
                   ]}
                 >
                   {formatDistance(route.distance, distanceUnits)}
                   {" • "}
-                  {formatDuration(route.duration)} left
+                  {formatDuration(route.duration)} left{" \u00b7 Arrive "}{formatArrivalTime(route.arrivalTime)}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -338,7 +371,7 @@ export default function Home() {
                 maxFontSizeMultiplier={2.5}
                 style={[
                   styles.subText,
-                  { fontSize: 14 * fontSize, color: increasedContrast ? "#111" : "#555", fontWeight: emphasizedText ? "bold" : "normal" },
+                  { fontSize: 14 * fontSize, color: presentation.color(vision.color(increasedContrast ? "#111" : "#555", "color"), "secondary"), fontWeight: emphasizedText ? "bold" : "normal" },
                 ]}
               >
                 Route preview
@@ -367,21 +400,27 @@ export default function Home() {
             <Text
               key={`nav-text-8-${fontSize}-${fontScale}-${textRefresh}`}
               maxFontSizeMultiplier={2.5}
-              style={{ fontSize: 16 * fontSize, color: increasedContrast ? "#111" : "#333", fontWeight: emphasizedText ? "bold" : "normal" }}
+              style={{ fontSize: 16 * fontSize, color: presentation.color(vision.color(increasedContrast ? "#111" : "#333", "color"), "text"), fontWeight: emphasizedText ? "bold" : "normal" }}
             >
               {error}
             </Text>
           </View>
         ) : (
           <LocationMap
+            ref={voiceMapRef}
             latitude={showRecenter ? mapCenter.latitude : coordinates?.latitude ?? mapCenter.latitude}
             longitude={showRecenter ? mapCenter.longitude : coordinates?.longitude ?? mapCenter.longitude}
             userLatitude={coordinates?.latitude}
             userLongitude={coordinates?.longitude}
             accuracy={coordinates?.accuracy ?? 0}
+            speed={coordinates?.speed}
+            positionHeading={coordinates?.heading}
+            positionTimestamp={coordinates?.timestamp}
             heading={currentHeading}
             route={route}
             directionsExpanded={directionsExpanded}
+            controlsTop={route ? summaryBottom + 12 : 132}
+            controlsBottom={plannerHeight + keyboardHeight + recenterClearance}
             accessibilityMode
             recenterSignal={recenterSignal}
             onUserDragged={() => setShowRecenter(true)}
@@ -400,21 +439,25 @@ export default function Home() {
 
       {/* Destination picker */}
       <Animated.View
+        onLayout={(event) => setPlannerHeight(event.nativeEvent.layout.height)}
         style={[
           styles.plannerPanel,
-          increasedContrast && { borderColor: "#1d5962", borderWidth: 2 },
-          reduceTransparencyEnabled && { backgroundColor: "#fff" },
+          increasedContrast && { borderColor: presentation.color(vision.color("#1d5962", "borderColor"), "outline"), borderWidth: 2 },
+          reduceTransparencyEnabled && { backgroundColor: presentation.color(vision.color("#fff", "backgroundColor"), "surface") },
           {
             paddingBottom: keyboardHeight > 0 ? 48 : 40,
             transform: [{ translateY: keyboardTranslateY }],
           },
         ]}
       >
-        {showRecenter && (
+        <TemporarySessionNotice />
+        <RecenterOverlay visible={showRecenter} measuredHeight={recenterHeight}
+          plannerBorderWidth={increasedContrast ? 2 : styles.plannerPanel.borderWidth} onHeightChange={setRecenterHeight}>
           <TouchableOpacity
-            style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: "#1d5962" }]}
-            onPress={handleRecenter}
-            accessible
+            activeOpacity={theme.dark ? 0.9 : undefined}
+            style={[styles.recenterButton, increasedContrast && { borderWidth: 2, borderColor: presentation.color(vision.color("#1d5962", "borderColor"), "outline") }]}
+            onPress={() => { if (showRecenter) handleRecenter(); }}
+            disabled={!showRecenter} accessible={showRecenter}
             accessibilityRole="button"
             accessibilityLabel="Recenter map"
             accessibilityHint="Moves the map back to your current location"
@@ -423,14 +466,18 @@ export default function Home() {
               key={`nav-text-9-${fontSize}-${fontScale}-${textRefresh}`}
               accessible={false}
               maxFontSizeMultiplier={2.5}
-              style={[styles.recenterText, { fontSize: 14 * fontSize }]}
+              style={[styles.recenterText, { fontSize: 18 * fontSize }]}
             >
               Recenter
             </Text>
           </TouchableOpacity>
-        )}
+        </RecenterOverlay>
 
         <BuildingPicker
+          onPickerTransition={onPickerTransition}
+          navigationSpeech={navigationSpeech} onVoiceListeningChange={onVoiceListeningChange}
+          onVoiceMapCommand={(command) => voiceMapRef.current?.voiceCommand(command, handleRecenter)
+            ?? Promise.resolve("Map is still loading.")}
           buildings={buildings}
           value={destinationBuilding}
           onChange={handleDestinationChange}
@@ -455,11 +502,14 @@ export default function Home() {
           </Text>
         )}
       </Animated.View>
+      <NavigationKeepAwake />
+      <NavigationAnnouncements message={politeAnnouncement} />
+      {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
@@ -504,7 +554,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cancelRouteButton: {
-    backgroundColor: "#d9534f",
+    backgroundColor: "#B42332",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -577,31 +627,34 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
   },
   recenterButton: {
-    minHeight: 48,
-    minWidth: 48,
+    minHeight: 64,
+    minWidth: 144,
     alignItems: "center",
     justifyContent: "center",
-    position: "absolute",
-    top: -56,
-    right: 0,
-    backgroundColor: "white",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#173B56",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
     elevation: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     zIndex: 20,
   },
   recenterText: {
+    textAlign: "center",
     fontWeight: "bold",
-    color: "#333",
+    color: "#FFFFFF",
   },
   subText: {
     fontSize: 16,
     color: "#555",
     marginTop: 4,
   },
+  highlightedHeading: { color: "#1d5962" },
   boldText: {
     fontSize: 22,
     fontWeight: "bold",

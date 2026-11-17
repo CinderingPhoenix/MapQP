@@ -1,0 +1,31 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.navigationnotification'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.navigationnotification"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  if (findProject(':expo-task-manager') != null) {
+    implementation project(':expo-task-manager')
+  } else {
+    def taskPackage = new groovy.json.JsonSlurper().parse(new File(rootDir, '../node_modules/expo-task-manager/package.json'))
+    compileOnly("host.exp.exponent:expo.modules.taskmanager:${taskPackage.version}") { transitive = false }
+  }
+  if (findProject(':expo-location') != null) {
+    implementation project(':expo-location')
+  } else {
+    def locationPackage = new groovy.json.JsonSlurper().parse(new File(rootDir, '../node_modules/expo-location/package.json'))
+    // Expo links the runtime AAR into the app; only its service types are needed here.
+    compileOnly("host.exp.exponent:expo.modules.location:${locationPackage.version}") { transitive = false }
+  }
+}

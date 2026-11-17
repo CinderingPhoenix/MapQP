@@ -1,9 +1,16 @@
-
-import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { buildingPickerPresentation } from "../theme/building-picker-theme";
+import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-vision-palette";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import type { NavigationSpeech } from "../utils/navigation-speech";
+import { parseVoiceRoutingCommand } from "../utils/voice-routing-command";
+import { parseVoiceMapCommand, type VoiceMapCommand } from "../utils/voice-map-command";
+import { useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   Keyboard,
   Modal,
   Platform,
@@ -47,6 +54,11 @@ type BuildingPickerProps = {
   placeholder: string;
   accessibilityControls?: boolean;
   onOpenSettings?: () => void;
+  onPickerTransition?: (dismissed: boolean) => void;
+  dismissSignal?: number;
+  onVoiceMapCommand?: (command: VoiceMapCommand) => Promise<string>;
+  navigationSpeech: NavigationSpeech;
+  onVoiceListeningChange: (listening: boolean) => Promise<void>;
 };
 
 export default React.memo(function BuildingPicker({
@@ -57,8 +69,18 @@ export default React.memo(function BuildingPicker({
   placeholder,
   accessibilityControls = false,
   onOpenSettings,
+  onPickerTransition,
+  dismissSignal = 0,
+  onVoiceMapCommand,
+  navigationSpeech,
+  onVoiceListeningChange,
 }: BuildingPickerProps) {
-  const { fontSize, deviceAccessibility } = useSettings();
+  const vision = useColorVisionPalette();
+  const legacyStyles = useColorVisionStyles(baseStyles, { listeningActiveText: "accentText", buildingSelectorText: "accentText", buildingRowTextSelected: "accentText", selectorTitle: "highlightedHeading", modalTabTextActive: "accentText" });
+  const theme = useAppTheme();
+  const presentation = buildingPickerPresentation(theme.preset, theme.increased, theme.resolvedTheme);
+  const styles = presentation.styles(legacyStyles);
+  const { fontSize, deviceAccessibility, configureRoutingPreferences } = useSettings();
   const {
     reduceMotionEnabled,
     boldTextEnabled,
@@ -71,23 +93,25 @@ export default React.memo(function BuildingPicker({
   const deviceBoldTextEnabled = deviceAccessibility.boldTextEnabled;
   const accessibleText = {
     fontWeight: boldTextEnabled ? ("700" as const) : undefined,
-    color: increasedContrast ? "#111" : undefined,
+    color: presentation.color(vision.color(increasedContrast ? "#111" : undefined, "color"), "text"),
   };
   const accessibleAccentText = {
     fontWeight: boldTextEnabled ? ("700" as const) : undefined,
-    color: increasedContrast ? "#10434b" : undefined,
+    color: presentation.color(vision.textColor(increasedContrast ? "#10434b" : undefined, "accentText"), "accent"),
   };
   const accessibleLightText = {
     fontWeight: boldTextEnabled ? ("800" as const) : undefined,
   };
   const accessibleBorder = {
-    borderColor: increasedContrast ? "#444" : undefined,
+    borderColor: presentation.color(vision.color(increasedContrast ? "#444" : undefined, "borderColor"), "outline"),
   };
 
   const { fontScale: systemFontScale } = useWindowDimensions();
   // A single-line destination field stays aligned with its action icons.
   // Use a responsive height, but never allow the selected name to wrap under the border.
-  const textBoxHeight = Math.max(48, 20 * fontSize * Math.min(systemFontScale, 2.5) + 24);
+  const searchTextScale = fontSize * Math.min(systemFontScale, 2.5);
+  const stackedSearchActions = searchTextScale >= 1.3;
+  const textBoxHeight = Math.max(48, Math.ceil(26 * searchTextScale) + 24);
   const selectedBuilding = buildings.find(
     (building) => building.id === value
   );
@@ -105,6 +129,18 @@ export default React.memo(function BuildingPicker({
   const blurTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingModalSelection = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dismissSignal) return;
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    setIsOpen(false);
+    setIsInputFocused(false);
+    setShowSavedOnly(false);
+  }, [dismissSignal]);
+  useEffect(() => {
+    // Android does not deliver Modal.onDismiss.
+    if (Platform.OS !== "ios" && !isBuildingSelectorOpen) onPickerTransition?.(true);
+  }, [isBuildingSelectorOpen, onPickerTransition]);
+
 
   const handleSelectorDismiss = useCallback(() => {
     // iOS keeps Modal content mounted during dismissal. Reset only after the
@@ -112,8 +148,9 @@ export default React.memo(function BuildingPicker({
     setShowSavedOnly(false);
     const buildingId = pendingModalSelection.current;
     pendingModalSelection.current = null;
+    onPickerTransition?.(true);
     if (buildingId !== null) onChange(buildingId);
-  }, [onChange]);
+  }, [onChange, onPickerTransition]);
 
   const recentBuildings = recentSearchIds
     .map((id) => buildings.find((building) => building.id === id))
@@ -185,17 +222,108 @@ export default React.memo(function BuildingPicker({
       setQuery(building.name);
       void saveRecentSearch(building.id);
       setIsOpen(false);
-      if (!waitForModalDismissal) setShowSavedOnly(false);
+      if (!waitForModalDismissal) {
+        setShowSavedOnly(false);
+        onPickerTransition?.(true);
+      }
       setIsBuildingSelectorOpen(false);
       setIsInputFocused(false);
     },
-    [onChange, saveRecentSearch, isBuildingSelectorOpen]
+    [onChange, saveRecentSearch, isBuildingSelectorOpen, onPickerTransition]
   );
+
+  const voiceCommandHandled = useRef(false);
+  const voiceSession = useRef({ generation: 0, phase: "idle" as "idle" | "starting" | "listening" | "stopping", focused: false });
+  const [voiceStatus, setVoiceStatus] = useState("");
+  const voiceFeedback = useRef<(message: string) => boolean>(() => false);
+  const reportVoice = (message: string, generation = voiceSession.current.generation) => {
+    if (!voiceSession.current.focused || AppState.currentState !== "active" || generation !== voiceSession.current.generation) return;
+    if (voiceFeedback.current(message)) setVoiceStatus(message);
+  };
+  const invalidateVoice = useCallback(() => {
+    const session = voiceSession.current;
+    session.generation++;
+    voiceCommandHandled.current = true;
+    const wasListening = session.phase === "listening";
+    session.phase = wasListening ? "stopping" : session.phase === "starting" ? "idle" : session.phase;
+    setIsListening(false);
+    if (wasListening) ExpoSpeechRecognitionModule?.abort?.();
+    if (session.phase === "idle") void onVoiceListeningChange(false);
+  }, [onVoiceListeningChange]);
+  useFocusEffect(useCallback(() => {
+    voiceSession.current.focused = true;
+    return () => { pendingModalSelection.current = null; voiceSession.current.focused = false; invalidateVoice(); void onVoiceListeningChange(false); };
+  }, [invalidateVoice, onVoiceListeningChange]));
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") { invalidateVoice(); void onVoiceListeningChange(false); }
+    });
+    return () => subscription.remove();
+  }, [invalidateVoice, onVoiceListeningChange]);
 
   // Speech recognition
   useSpeechRecognitionEvent("result", (event: any) => {
     const spokenText = event.results[0]?.transcript;
-    if (!spokenText) return;
+    if (!spokenText || voiceCommandHandled.current) return;
+    if (voiceSession.current.phase !== "listening" || !voiceSession.current.focused || AppState.currentState !== "active") return;
+    // Wait for the complete phrase so partial commands cannot match a building.
+    if (!event.isFinal) return;
+    voiceCommandHandled.current = true;
+    voiceSession.current.phase = "stopping";
+    ExpoSpeechRecognitionModule?.stop?.();
+    setIsListening(false);
+    const command = spokenText.toLowerCase().replace(/[^a-z\s]/g, "").trim().replace(/\s+/g, " ");
+    if (accessibilityControls && /^(?:please )?(?:cancel|stop|end)(?: (?:the|my|current))? (?:route|navigation)(?: please)?$/.test(command)) {
+      voiceCommandHandled.current = true;
+      pendingModalSelection.current = null;
+      setIsListening(false);
+      setQuery("");
+      setIsOpen(false);
+      setShowSavedOnly(false);
+      setIsBuildingSelectorOpen(false);
+      setIsInputFocused(false);
+      Keyboard.dismiss();
+      onCancel();
+      return;
+    }
+
+    const routingCommand = accessibilityControls ? parseVoiceRoutingCommand(spokenText) : null;
+    if (routingCommand) {
+      voiceCommandHandled.current = true;
+      setIsListening(false);
+      setQuery("");
+      setIsOpen(false);
+      const labels = { avoidStairs: "Avoid stairs", avoidIndoorRoutes: "Avoid indoor routes",
+        avoidInaccessibleCrosswalks: "Avoid inaccessible road crossings" };
+      const generation = voiceSession.current.generation;
+      void configureRoutingPreferences({ [routingCommand.preference]: routingCommand.enabled })
+        .then(() => {
+          reportVoice(`${labels[routingCommand.preference]} turned ${routingCommand.enabled ? "on" : "off"}. Changes apply when you start a new route.`, generation);
+        })
+        .catch(() => {
+          reportVoice("Could not save the routing preference. Please try again.", generation);
+        });
+      return;
+    }
+
+    if (accessibilityControls && onVoiceMapCommand) {
+      const mapCommand = parseVoiceMapCommand(spokenText);
+      if (mapCommand) {
+        const generation = voiceSession.current.generation;
+        void Promise.resolve().then(() => {
+          if (generation !== voiceSession.current.generation || !voiceSession.current.focused || AppState.currentState !== "active") return null;
+          return onVoiceMapCommand(mapCommand);
+        }).then((message) => { if (message) reportVoice(message, generation); })
+          .catch(() => reportVoice("Could not move the map. Try again.", generation));
+        return;
+      }
+      // Reject command-shaped phrases without consuming ordinary destination names.
+      if (/^(?:please )?(?:zoom|move|recenter)\b/.test(command) &&
+          !buildings.some((building) => building.name.toLowerCase().includes(spokenText.toLowerCase().trim()))) {
+        reportVoice("That map command is not supported. Say zoom in, zoom out, move left, right, up, down, or recenter map.");
+        return;
+      }
+    }
 
     setQuery(spokenText);
     setIsOpen(true);
@@ -229,15 +357,27 @@ export default React.memo(function BuildingPicker({
 
     if (matched) {
       selectBuilding(matched);
+    } else if (accessibilityControls) {
+      reportVoice("No matching destination found. Try a building name or a map command.");
     }
   });
 
   useSpeechRecognitionEvent("end", () => {
+    if (accessibilityControls) {
+      if (voiceSession.current.phase === "listening" && !voiceCommandHandled.current) reportVoice("No command heard. Try again.");
+    }
+    voiceSession.current.phase = "idle";
+    void onVoiceListeningChange(false);
     setIsListening(false);
   });
 
   useSpeechRecognitionEvent("error", (event: any) => {
     console.error("Speech recognition error:", event.error);
+    if (accessibilityControls) {
+      if (voiceSession.current.phase === "listening") reportVoice("Could not recognize a command. Try again.");
+    }
+    voiceCommandHandled.current = true;
+    voiceSession.current.phase = "stopping";
     setIsListening(false);
   });
 
@@ -299,8 +439,17 @@ export default React.memo(function BuildingPicker({
 
   const handleVoiceSearch = async () => {
     if (value && !accessibilityControls) return;
+    if (!voiceSession.current.focused || AppState.currentState !== "active") return;
+    if (voiceSession.current.phase !== "idle") { invalidateVoice(); return; }
+    voiceSession.current.phase = "starting";
+    voiceSession.current.generation++;
+    setVoiceStatus("");
+    const generation = voiceSession.current.generation;
+    const canStart = () => generation === voiceSession.current.generation &&
+      voiceSession.current.focused && AppState.currentState === "active" && voiceSession.current.phase === "starting";
 
     if (!ExpoSpeechRecognitionModule?.isRecognitionAvailable) {
+      voiceSession.current.phase = "idle";
       Alert.alert(
         "Expo Go Limitation",
         "Voice search requires a custom development build and is disabled inside Expo Go."
@@ -312,23 +461,29 @@ export default React.memo(function BuildingPicker({
       if (
         !(await ExpoSpeechRecognitionModule.isRecognitionAvailable())
       ) {
+        if (!canStart()) return;
+        voiceSession.current.phase = "idle";
         Alert.alert(
           "Unavailable",
           "Speech recognition is not available or supported on this device."
         );
         return;
       }
+      if (!canStart()) return;
 
       if (
         !(await ExpoSpeechRecognitionModule.requestPermissionsAsync())
           .granted
       ) {
+        if (!canStart()) return;
+        voiceSession.current.phase = "idle";
         Alert.alert(
           "Permission required",
           "Microphone and speech recognition permissions are needed for voice search."
         );
         return;
       }
+      if (!canStart()) return;
 
       if (isListening) {
         ExpoSpeechRecognitionModule.stop();
@@ -336,10 +491,16 @@ export default React.memo(function BuildingPicker({
         return;
       }
 
-      if (value) onCancel();
-
       setQuery("");
       setIsOpen(false);
+      voiceCommandHandled.current = false;
+      // Wait for app TTS to stop before opening the microphone. Do not release
+      // suspension on a final result: the native recognizer must emit end first.
+      await onVoiceListeningChange(true);
+      if (!canStart()) return;
+      voiceFeedback.current = navigationSpeech.feedbackReporter(() =>
+        generation === voiceSession.current.generation && voiceSession.current.focused && AppState.currentState === "active");
+      voiceSession.current.phase = "listening";
       setIsListening(true);
 
       ExpoSpeechRecognitionModule.start({
@@ -352,6 +513,9 @@ export default React.memo(function BuildingPicker({
         "Failed to start speech recognition:",
         voiceError
       );
+      if (generation !== voiceSession.current.generation) return;
+      voiceSession.current.phase = "idle";
+      void onVoiceListeningChange(false);
       setIsListening(false);
       Alert.alert(
         "Error",
@@ -381,12 +545,15 @@ export default React.memo(function BuildingPicker({
         style={[
           styles.buildingRow,
           isSelected && styles.buildingRowSelected,
-          isSelected && increasedContrast && { borderLeftWidth: 4, borderLeftColor: "#10434b" },
-          { borderBottomColor: increasedContrast ? "#666" : undefined },
+          isSelected && vision.monochrome && { backgroundColor: presentation.color(vision.palette.primary, "selected") },
+          isSelected && increasedContrast && { borderLeftWidth: 4, borderLeftColor: presentation.color(vision.color("#10434b", "borderLeftColor"), "outline") },
+          { borderBottomColor: presentation.color(vision.color(increasedContrast ? "#666" : undefined, "borderBottomColor"), "outline") },
         ]}
       >
         <TouchableOpacity
           style={styles.buildingRowMain}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected }}
           onPress={() => selectBuilding(building)}
           activeOpacity={0.7}
         >
@@ -397,6 +564,8 @@ export default React.memo(function BuildingPicker({
               { fontSize: 16 * fontSize },
               isSelected && styles.buildingRowTextSelected,
               accessibleText,
+              isSelected && theme.dark && { color: presentation.colors.onSelected },
+              isSelected && vision.monochrome && { color: "#FFFFFF" },
             ]}
           >
             {building.name}
@@ -406,14 +575,14 @@ export default React.memo(function BuildingPicker({
             <Ionicons
               name="checkmark"
               size={20}
-              color="#1d5962"
+              color={isSelected && vision.monochrome ? "#FFFFFF" : presentation.color(vision.color("#1d5962", "iconColor"), "accent")}
               style={{ marginRight: 6 }}
             />
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.starIconButton, increasedContrast && { borderWidth: 1, borderColor: "#555", borderRadius: 8 }]}
+          style={[styles.starIconButton, increasedContrast && { borderWidth: 1, borderColor: presentation.color(vision.color("#555", "borderColor"), "outline"), borderRadius: 8 }]}
           onPress={() => void toggleSaveBuilding(building.id)}
           hitSlop={{
             top: 10,
@@ -422,6 +591,7 @@ export default React.memo(function BuildingPicker({
             right: 10,
           }}
           accessibilityRole="button"
+          accessibilityState={{ selected: isSaved }}
           accessibilityLabel={
             isSaved
               ? `Remove ${building.name} from saved locations`
@@ -431,7 +601,7 @@ export default React.memo(function BuildingPicker({
           <Ionicons
             name={isSaved ? "star" : "star-outline"}
             size={22}
-            color={increasedContrast ? (isSaved ? "#805500" : "#333") : (isSaved ? "#f1c40f" : "#888")}
+            color={isSelected && vision.monochrome ? "#FFFFFF" : presentation.color(vision.color(increasedContrast ? (isSaved ? "#805500" : "#333") : (isSaved ? "#f1c40f" : "#888"), "iconColor"), isSaved ? "saved" : "icon")}
           />
         </TouchableOpacity>
       </View>
@@ -446,6 +616,11 @@ export default React.memo(function BuildingPicker({
           : styles.container
       }
     >
+      {accessibilityControls && voiceStatus !== "" && (
+        <Text style={[{ fontSize: 14 * fontSize, color: presentation.color(vision.color("#111827", "color"), "text"), padding: 8 }, accessibleText]}>
+          {voiceStatus}
+        </Text>
+      )}
       {accessibilityControls && (
         <View style={styles.accessibilityControls}>
           <TouchableOpacity
@@ -455,11 +630,11 @@ export default React.memo(function BuildingPicker({
             accessibilityLabel="Open settings"
             activeOpacity={0.75}
           >
-            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}>
+            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: presentation.color(vision.color("#444", "borderColor"), "outline"), borderWidth: 2 }]}>
               <Ionicons
                 name="settings-outline"
                 size={27}
-                color="#333"
+                color={presentation.color(vision.color("#333", "iconColor"), "icon")}
               />
             </View>
 
@@ -479,27 +654,29 @@ export default React.memo(function BuildingPicker({
             style={[
               styles.voiceControl,
               isListening && styles.voiceControlListening,
+              { backgroundColor: presentation.color(vision.controlSurface(isListening ? "#801f29" : "#D00000"), isListening ? "listening" : "primary") },
             ]}
             onPress={() => void handleVoiceSearch()}
             accessibilityRole="button"
             accessibilityLabel={
               isListening
-                ? "Stop voice destination search"
-                : "Search destinations by voice"
+                ? "Stop voice command"
+                : "Speak a navigation or map command"
             }
+            accessibilityHint={`Say a building name to navigate, say cancel route to stop navigation, or say avoid stairs, allow indoor routes, or turn on crosswalk avoidance to change routing preferences.${onVoiceMapCommand ? " You can also say zoom in, zoom out, move left, right, up, down, or recenter map." : ""}`}
             activeOpacity={0.8}
           >
             <Ionicons
               name={isListening ? "mic" : "mic-outline"}
               size={36}
-              color="#fff"
+              color={presentation.color(vision.color("#fff", "iconColor"), "onPrimary")}
             />
 
             <Text key={`picker-text-3-${fontSize}-${systemFontScale}`}
               maxFontSizeMultiplier={2.5}
               style={[
                 styles.voiceControlLabel,
-                { fontSize: 14 * fontSize },
+                { fontSize: 14 * fontSize, lineHeight: Math.ceil(21 * fontSize), paddingVertical: 2 },
                 accessibleLightText,
               ]}
             >
@@ -511,14 +688,15 @@ export default React.memo(function BuildingPicker({
             style={styles.secondaryControl}
             onPress={() => {
               setShowSavedOnly(true);
+              onPickerTransition?.(false);
               setIsBuildingSelectorOpen(true);
             }}
             accessibilityRole="button"
             accessibilityLabel="View saved locations"
             activeOpacity={0.75}
           >
-            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}>
-              <Ionicons name="star" size={27} color={increasedContrast ? "#805500" : "#f1c40f"} />
+            <View style={[styles.secondaryControlCircle, increasedContrast && { borderColor: presentation.color(vision.color("#444", "borderColor"), "outline"), borderWidth: 2 }]}>
+              <Ionicons name="star" size={27} color={presentation.color(vision.color(increasedContrast ? "#805500" : "#f1c40f", "iconColor"), "saved")} />
             </View>
 
             <Text key={`picker-text-4-${fontSize}-${systemFontScale}`}
@@ -536,22 +714,27 @@ export default React.memo(function BuildingPicker({
       )}
 
       {!accessibilityControls && (
-        <View style={styles.inputWrapper}>
+        <View style={[styles.inputWrapper, {
+          flexDirection: stackedSearchActions ? "column" : "row",
+          alignItems: stackedSearchActions ? "stretch" : "center",
+        }]}>
           {isListening ? (
             <TouchableOpacity
               style={[
                 styles.listeningActiveContainer,
-                { height: textBoxHeight },
+                { height: textBoxHeight, flex: 1 },
               ]}
               onPress={() => {
                 ExpoSpeechRecognitionModule?.stop?.();
                 setIsListening(false);
               }}
+              accessibilityRole="button"
+              accessibilityHint="Stops voice search."
             >
               <Ionicons
                 name="mic"
                 size={24 * fontSize}
-                color="#1d5962"
+                color={presentation.color(vision.color("#1d5962", "iconColor"), "accent")}
               />
 
               <Text key={`picker-text-5-${fontSize}-${systemFontScale}`}
@@ -580,11 +763,14 @@ export default React.memo(function BuildingPicker({
                   {
                     height: textBoxHeight,
                     fontSize: 16 * fontSize,
+                    lineHeight: Math.ceil(24 * fontSize),
+                    paddingVertical: 12,
+                    textAlignVertical: "center",
                   },
-                  styles.inputPadded,
+                  { flex: stackedSearchActions ? 0 : 1, minWidth: 0 },
                   value !== "" && {
-                    backgroundColor: "#f9f9f9",
-                    color: "#333",
+                    backgroundColor: presentation.color(vision.color("#f9f9f9", "backgroundColor"), "inputSelected"),
+                    color: presentation.color(vision.color("#333", "color"), "text"),
                   },
                   accessibleText,
                   accessibleBorder,
@@ -618,11 +804,15 @@ export default React.memo(function BuildingPicker({
                   }, 150);
                 }}
                 onSubmitEditing={() => setIsOpen(false)}
-                placeholder={placeholder}
+                accessibilityLabel={placeholder}
+                placeholderTextColor={theme.dark ? presentation.colors.secondary : "#4B5563"}
+                selectionColor={theme.dark ? presentation.colors.accent : undefined}
+                keyboardAppearance={theme.dark ? "dark" : undefined}
+                placeholder={stackedSearchActions ? "Search destinations" : placeholder}
               />
 
-              <View style={styles.inputRightActions}>
-                {/* Saved locations */}
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end",
+                flexShrink: 0, marginTop: stackedSearchActions ? 4 : 0 }}>
                 <TouchableOpacity
                   style={styles.actionIconButton}
                   onPress={() => {
@@ -643,15 +833,14 @@ export default React.memo(function BuildingPicker({
                   }}
                   accessibilityRole="button"
                   accessibilityLabel="Saved Locations"
+                  accessibilityState={{ selected: showSavedOnly }}
                 >
                   <Ionicons
                     name={
                       showSavedOnly ? "star" : "star-outline"
                     }
                     size={20}
-                    color={
-                      showSavedOnly ? "#f1c40f" : "#666"
-                    }
+                    color={presentation.color(vision.color(showSavedOnly ? "#f1c40f" : "#666", "iconColor"), showSavedOnly ? "saved" : "icon")}
                   />
                 </TouchableOpacity>
 
@@ -659,7 +848,11 @@ export default React.memo(function BuildingPicker({
                 <TouchableOpacity
                   style={[
                     styles.actionIconButton,
-                    value !== "" && { opacity: 0.4 },
+                    value !== "" && (theme.dark
+                      ? { backgroundColor: presentation.tokens.raised, borderColor: presentation.tokens.outline, borderWidth: 1, borderStyle: "dashed" as const }
+                      : vision.monochrome
+                      ? { backgroundColor: vision.palette.disabledSurface, borderColor: vision.palette.outline, borderWidth: 1, borderStyle: "dashed" as const }
+                      : { opacity: 0.4 }),
                   ]}
                   disabled={!!value}
                   onPress={() => void handleVoiceSearch()}
@@ -671,11 +864,13 @@ export default React.memo(function BuildingPicker({
                   }}
                   accessibilityRole="button"
                   accessibilityLabel="Voice Search"
+                  accessibilityState={{ disabled: !!value }}
+                  accessibilityHint={vision.monochrome && value ? "Unavailable while a destination is selected. Clear the destination to use voice search." : undefined}
                 >
                   <Ionicons
                     name="mic-outline"
                     size={20}
-                    color="#666"
+                    color={presentation.color(vision.color("#666", "iconColor"), "icon")}
                   />
                 </TouchableOpacity>
 
@@ -719,18 +914,20 @@ export default React.memo(function BuildingPicker({
 
       {isInputFocused && !value && (
         <TouchableOpacity
-          style={[styles.buildingSelectorButton, increasedContrast && { borderColor: "#444", borderWidth: 2 }]}
+          style={[styles.buildingSelectorButton, increasedContrast && { borderColor: presentation.color(vision.color("#444", "borderColor"), "outline"), borderWidth: 2 }]}
           onPress={() => {
             Keyboard.dismiss();
             setIsOpen(false);
+            onPickerTransition?.(false);
             setIsBuildingSelectorOpen(true);
           }}
+          accessibilityRole="button"
           activeOpacity={0.75}
         >
           <Ionicons
             name="list-outline"
             size={18}
-            color="#1d5962"
+            color={presentation.color(vision.color("#1d5962", "iconColor"), "accent")}
           />
 
           <Text key={`picker-text-7-${fontSize}-${systemFontScale}`}
@@ -818,6 +1015,7 @@ export default React.memo(function BuildingPicker({
                         styles.clearRecentText,
                         { fontSize: 12 * fontSize },
                         accessibleText,
+                        theme.dark && { color: presentation.colors.danger },
                       ]}
                     >
                       Clear
@@ -895,13 +1093,15 @@ export default React.memo(function BuildingPicker({
           </View>
 
           {/* Modal tabs */}
-          <View style={styles.modalTabs}>
+          <View style={styles.modalTabs} accessibilityRole="tablist">
             <TouchableOpacity
               style={[
                 styles.modalTab,
                 !showSavedOnly && styles.modalTabActive,
-                increasedContrast && !showSavedOnly && { borderBottomWidth: 4, borderBottomColor: "#10434b" },
+                increasedContrast && !showSavedOnly && { borderBottomWidth: 4, borderBottomColor: presentation.color(vision.color("#10434b", "borderBottomColor"), "accent") },
               ]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: !showSavedOnly }}
               onPress={() => setShowSavedOnly(false)}
             >
               <Text key={`picker-text-14-${fontSize}-${systemFontScale}`}
@@ -912,6 +1112,7 @@ export default React.memo(function BuildingPicker({
                     styles.modalTabTextActive,
                   { fontSize: 15 * fontSize },
                   accessibleText,
+                  theme.dark && !showSavedOnly && { color: presentation.colors.accent },
                 ]}
               >
                 {deviceBoldTextEnabled ? "All\nLocations" : "All Locations"}
@@ -922,16 +1123,16 @@ export default React.memo(function BuildingPicker({
               style={[
                 styles.modalTab,
                 showSavedOnly && styles.modalTabActive,
-                increasedContrast && showSavedOnly && { borderBottomWidth: 4, borderBottomColor: "#10434b" },
+                increasedContrast && showSavedOnly && { borderBottomWidth: 4, borderBottomColor: presentation.color(vision.color("#10434b", "borderBottomColor"), "accent") },
               ]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: showSavedOnly }}
               onPress={() => setShowSavedOnly(true)}
             >
               <Ionicons
                 name="star"
                 size={16}
-                color={
-                  showSavedOnly ? "#1d5962" : "#666"
-                }
+                color={presentation.color(vision.color(showSavedOnly ? "#1d5962" : "#666", "iconColor"), showSavedOnly ? "accent" : "icon")}
                 style={{ marginRight: 6 }}
               />
 
@@ -943,6 +1144,7 @@ export default React.memo(function BuildingPicker({
                     styles.modalTabTextActive,
                   { fontSize: 15 * fontSize },
                   accessibleText,
+                  theme.dark && showSavedOnly && { color: presentation.colors.accent },
                 ]}
               >
                 Saved ({savedBuildings.length})
@@ -986,7 +1188,7 @@ export default React.memo(function BuildingPicker({
   );
 });
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     zIndex: 10,
     position: "relative",
@@ -1002,15 +1204,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   secondaryControl: {
-    flex: 1,
+    flex: 1.2,
+    minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 82,
+    minHeight: 96,
+    paddingVertical: 8,
   },
   secondaryControlCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: "#f1f3f4",
     alignItems: "center",
     justifyContent: "center",
@@ -1026,11 +1230,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   voiceControl: {
-    width: 82,
+    flex: 0.85,
+    minWidth: 0,
     minHeight: 82,
+    marginHorizontal: 4,
     paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 41,
+    borderRadius: 16,
     backgroundColor: "#D00000",
     alignItems: "center",
     justifyContent: "center",
@@ -1063,17 +1269,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "#fff",
     fontSize: 16,
-  },
-  inputPadded: {
-    paddingRight: 132,
-  },
-  inputRightActions: {
-    position: "absolute",
-    right: 8,
-    top: 0,
-    bottom: 0,
-    flexDirection: "row",
-    alignItems: "center",
   },
   actionIconButton: {
     minWidth: 44,
@@ -1219,7 +1414,7 @@ const styles = StyleSheet.create({
   emptyStateText: {
     maxWidth: "100%",
     textAlign: "center",
-    color: "#777",
+    color: "#595959",
     fontStyle: "italic",
   },
   selectorModal: {

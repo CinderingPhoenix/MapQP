@@ -1,16 +1,19 @@
-// map-logic.ts
-
+import { generateDirections, formatDirectionInstruction } from "./navigation-directions";
+export { generateDirections, formatDirectionInstruction } from "./navigation-directions";
+import type { NavigationStartupSession } from "../hooks/use-navigation-start-focus";
 import { useSettings } from "@/context/settings-context";
 import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Vibration } from "react-native";
-import { NavigationPoint, routeBetween, WalkingRoute } from "./routing";
-import { useFocusEffect } from "expo-router"; // ✅ Use Expo Router's hook instead
+import { AccessibilityInfo, Alert, AppState, Platform, Vibration } from "react-native";
+import { getRelaxedRoutingPreferences, getRoutingPreferences, routeBetween, WalkingRoute, RoutingPreferences } from "./routing";
+import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
+import { syncBackgroundNavigation, stopBackgroundNavigation, getSavedBackgroundRoute } from "./background-navigation";
+import { addNavigationExitListener, consumeNavigationExit } from "../../modules/navigation-notification";
 
 export type Point = {
   latitude: number;
@@ -19,6 +22,10 @@ export type Point = {
 };
 
 export type RoutePlan = WalkingRoute & {
+  previewKey?: string;
+  navigationId?: string;
+  backgroundRevision?: number;
+  arrivalTime: number;
   origin: Point;
   destination: Point;
 };
@@ -163,63 +170,23 @@ export function formatDistance(meters: number, units: "imperial" | "metric" = "m
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+export function formatArrivalTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
-export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric"): string {
-  return distMeters <= 5 ? `${instruction} now` : `${instruction} in ${formatDistance(distMeters, units)}`;
-}
-
-function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
-  let closestIndex = 0;
-  let closestDistance = Number.POSITIVE_INFINITY;
-  for (let index = 0; index < geometry.length; index++) {
-    const distance = getDistanceFromLatLonInMeters(geometry[index][0], geometry[index][1], point[0], point[1]);
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closestIndex = index;
-    }
-  }
-  return closestIndex;
-}
-
-export function formatDirectionInstruction(step: DirectionStep, style: "natural" | "degrees"): string {
-  if (style === "natural" || step.turnDegrees === undefined || step.instruction === "Arrive at destination") {
-    return step.instruction;
-  }
-  const degrees = Math.round(Math.abs(step.turnDegrees));
-  if (degrees <= 15) return "Continue straight";
-  if (step.turnDegrees > 0) return `Turn right ${degrees}°`;
-  return `Turn left ${degrees}°`;
-}
-
-export function generateDirections(geometry: [number, number][], navigationPath: NavigationPoint[] = []): DirectionStep[] {
-  const steps: DirectionStep[] = [];
-  if (!geometry || geometry.length < 2 || navigationPath.length < 3) return steps;
-
-  for (let index = 1; index < navigationPath.length - 1; index++) {
-    const decisionPoint = navigationPath[index];
-    if (decisionPoint.connectionCount <= 2) continue;
-
-    const previousPoint = navigationPath[index - 1].coordinate;
-    const currentPoint = decisionPoint.coordinate;
-    const nextPoint = navigationPath[index + 1].coordinate;
-    const incomingBearing = getBearing(...previousPoint, ...currentPoint);
-    const outgoingBearing = getBearing(...currentPoint, ...nextPoint);
-    let diff = outgoingBearing - incomingBearing;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    const instruction = diff > 45 ? "Turn right" : diff > 15 ? "Slight right" : diff < -45 ? "Turn left" : diff < -15 ? "Slight left" : "Continue straight";
-    const pointIndex = closestGeometryIndex(geometry, currentPoint);
-    const lastStep = steps[steps.length - 1];
-    if (!lastStep || lastStep.instruction !== instruction || pointIndex - lastStep.pointIndex > 3) {
-      steps.push({ instruction, pointIndex, turnDegrees: diff });
-    }
-  }
-  steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
-  return steps;
+export function formatInstructionWithDistance(instruction: string, distMeters: number, units: "imperial" | "metric" = "metric", isCurrentStep = true): string {
+  const message = instruction === "Arrive at destination"
+    ? "You will arrive at your destination"
+    : instruction;
+  return isCurrentStep && distMeters <= 5 ? `${message} now` : `${message} in ${formatDistance(distMeters, units)}`;
 }
 
 export function getDistanceToStepPoint(geometry: [number, number][], currentIndex: number, targetIndex: number, userLat?: number, userLng?: number): number {
@@ -305,32 +272,68 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
 }
 
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
-  return routes.reduce((fastest, candidate) => (candidate.duration < fastest.duration ? candidate : fastest));
+  return routes.reduce((fastest, candidate) => candidate.distance < fastest.distance ? candidate : fastest);
 }
 
 export function useMapNavigation(buildings: Building[]) {
-  const [isFocused, setIsFocused] = useState(true);
+  const [isFocused, setIsFocused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState === "active");
+  const foregroundRef = useRef(AppState.currentState === "active");
+  const [speechListening, setSpeechListening] = useState(false);
+  const [politeAnnouncement, setPoliteAnnouncement] = useState({ text: "", revision: 0 });
   const speechRef = useRef<NavigationSpeech | null>(null);
-  if (!speechRef.current) speechRef.current = new NavigationSpeech(Speech);
+  if (!speechRef.current) speechRef.current = new NavigationSpeech(Speech, (text) => {
+    setPoliteAnnouncement((previous) => ({ text, revision: previous.revision + 1 }));
+  });
   const navigationSpeech = speechRef.current;
   const audioMutedRef = useRef(false);
-  const screenFocusedRef = useRef(true);
+  const [startupSession, setStartupSession] = useState<NavigationStartupSession | null>(null);
+  const startupSessionRef = useRef<NavigationStartupSession | null>(null);
+  const [pickerDismissed, setPickerDismissed] = useState(true);
+  const pickerDismissedRef = useRef(true);
+  const onPickerTransition = useCallback((dismissed: boolean) => {
+    pickerDismissedRef.current = dismissed;
+    setPickerDismissed(dismissed);
+  }, []);
+  const [focusSpeechSession, setFocusSpeechSession] = useState<NavigationStartupSession | null>(null);
   const spokenDestinationRef = useRef<string | null>(null);
   const speechGeometryRef = useRef<[number, number][] | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      screenFocusedRef.current = true;
-      navigationSpeech.setEnabled(!audioMutedRef.current);
+      foregroundRef.current = AppState.currentState === "active";
+      setForeground(foregroundRef.current);
+      navigationSpeech.setEnabled(foregroundRef.current);
       setIsFocused(true);
+      // Stop incompatible speech immediately on the native event, before React
+      // finishes rendering the provider's corresponding preference update.
+      const reader = AccessibilityInfo.addEventListener("screenReaderChanged", (enabled) => {
+        navigationSpeech.setMode(enabled ? "screen-reader" : "tts");
+      });
+      const appState = AppState.addEventListener("change", (state) => {
+        foregroundRef.current = state === "active";
+        setForeground(foregroundRef.current);
+        // Foreground detection is refreshed by SettingsProvider. Wait for it
+        // rather than reviving speech using a potentially stale OFF reading.
+        if (state !== "active") {
+          if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
+          navigationSpeech.setMode(null);
+        }
+        navigationSpeech.setEnabled(state === "active");
+      });
       return () => {
-        screenFocusedRef.current = false;
+        if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
         setIsFocused(false);
         navigationSpeech.setEnabled(false);
-        Speech.stop();
+        reader.remove();
+        appState.remove();
       };
     }, [navigationSpeech])
   );
+  const onVoiceListeningChange = useCallback((listening: boolean) => {
+    setSpeechListening(listening);
+    return navigationSpeech.setListening(listening);
+  }, [navigationSpeech]);
 
   const kalmanStateRef = useRef<KalmanState | null>(null);
   const initialLocationSet = useRef(false);
@@ -345,6 +348,15 @@ export function useMapNavigation(buildings: Building[]) {
   const [routeDestinationBuilding, setRouteDestinationBuilding] = useState<string | null>(null);
   const [, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
+  const [routeAlternative, setRouteAlternative] = useState<(keyof RoutingPreferences)[] | null>(null);
+  const alternativeAnswerRef = useRef<((accepted: boolean) => void) | null>(null);
+  const answerRouteAlternative = useCallback((accepted: boolean) => {
+    const answer = alternativeAnswerRef.current;
+    alternativeAnswerRef.current = null;
+    setRouteAlternative(null);
+    answer?.(accepted);
+  }, []);
+  useEffect(() => () => { alternativeAnswerRef.current?.(false); }, []);
   const [routeSteps, setRouteSteps] = useState<DirectionStep[]>([]);
   const [currentRouteIndex, setCurrentRouteIndex] = useState(0);
   const [showRecenter, setShowRecenter] = useState(false);
@@ -360,19 +372,53 @@ export function useMapNavigation(buildings: Building[]) {
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
   const showRecenterRef = useRef(showRecenter);
-  const { distanceUnits, directionStyle, navigationMode } = useSettings();
+  const {
+    navigationMode,
+    repeatGuidanceEnabled,
+    repeatGuidanceSeconds,
+    distanceUnits,
+    directionStyle,
+    avoidIndoorRoutes,
+    avoidInaccessibleCrosswalks,
+    avoidStairs = false,
+    deviceAccessibility,
+    batterySaverEnabled = false,
+  } = useSettings();
+  const trackingEnabled = isFocused && foreground;
+  const hasActiveRoute = route !== null;
+  const needsPreciseLocation = hasActiveRoute || coordinates === null;
+  const lastLocationSave = useRef(0);
+  const readerStatus = deviceAccessibility.detectionStatus.screenReaderEnabled;
+  const readerEnabled = deviceAccessibility.screenReaderEnabled;
+  useEffect(() => {
+    navigationSpeech.setMode(foreground && readerStatus === "available"
+      ? readerEnabled ? "screen-reader" : "tts" : null);
+  }, [foreground, readerStatus, readerEnabled, navigationSpeech]);
+  const routingPreferencesRef = useRef({ navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks });
+  routingPreferencesRef.current = { navigationMode, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+  const routePolicyRef = useRef<{ buildingId: string; accessibleOnly: boolean; avoidIndoorRoutes: boolean; avoidInaccessibleCrosswalks: boolean } | null>(null);
+  const routeRequestIdRef = useRef(0);
+  useEffect(() => () => { routeRequestIdRef.current += 1; }, []);
 
   useEffect(() => { destinationBuildingRef.current = destinationBuilding; }, [destinationBuilding]);
   useEffect(() => { showRecenterRef.current = showRecenter; }, [showRecenter]);
   useEffect(() => { routeGeometryRef.current = route?.geometry ?? null; }, [route]);
 
   const handleCancelRoute = useCallback(() => {
+    void stopBackgroundNavigation().catch(error => console.warn("Unable to stop background navigation", error));
+    answerRouteAlternative(false);
     isRouteCancelledRef.current = true;
+    routeRequestIdRef.current += 1;
+    routePolicyRef.current = null;
+    setRouteLoading(false);
     destinationBuildingRef.current = "";
     autoRouteKeyRef.current = "";
     routeGeometryRef.current = null;
     isReroutingRef.current = false;
     navigationSpeech.cancel();
+    if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
+    startupSessionRef.current = null;
+    setStartupSession(null);
     spokenDestinationRef.current = null;
     speechGeometryRef.current = null;
     spokenStagesRef.current = {};
@@ -385,14 +431,22 @@ export function useMapNavigation(buildings: Building[]) {
     setRouteError("");
     setRouteSteps([]);
     setCurrentRouteIndex(0);
-  }, [navigationSpeech]);
+  }, [navigationSpeech, answerRouteAlternative]);
+
+  useEffect(() => {
+    const checkExit = () => { void consumeNavigationExit().then(exited => { if (exited) handleCancelRoute(); }); };
+    const exitListener = addNavigationExitListener(checkExit);
+    const stateListener = AppState.addEventListener("change", state => { if (state === "active") checkExit(); });
+    checkExit();
+    return () => { exitListener?.remove(); stateListener.remove(); };
+  }, [handleCancelRoute]);
 
   const prevNavigationModeRef = useRef(navigationMode);
   
   useEffect(() => {
     if (prevNavigationModeRef.current !== navigationMode) {
       prevNavigationModeRef.current = navigationMode;
-      if (route) {
+      if (route || routePolicyRef.current) {
         handleCancelRoute();
       }
     }
@@ -409,7 +463,7 @@ export function useMapNavigation(buildings: Building[]) {
   const toggleMute = useCallback(() => {
     const muted = !audioMutedRef.current;
     audioMutedRef.current = muted;
-    navigationSpeech.setEnabled(!muted && screenFocusedRef.current);
+    navigationSpeech.setMuted(muted);
     setIsAudioMuted(muted);
   }, [navigationSpeech]);
 
@@ -424,8 +478,13 @@ export function useMapNavigation(buildings: Building[]) {
     }, 50);
   }, []);
 
-  const planRoute = useCallback(async (currentCoords?: Coordinates) => {
+  const planRoute = useCallback(async (currentCoords?: Coordinates, newRoute = false) => {
     const targetBuilding = destinationBuildingRef.current;
+    const requestId = ++routeRequestIdRef.current;
+    const requestMode = navigationMode;
+    const isCurrentRequest = () => requestId === routeRequestIdRef.current &&
+      destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current &&
+      routingPreferencesRef.current.navigationMode === requestMode;
     setRouteError("");
     
     const selectedBuilding = buildings.find((building) => building.id === targetBuilding);
@@ -435,17 +494,27 @@ export function useMapNavigation(buildings: Building[]) {
     if (!selectedBuilding) return setRouteError("Choose a WPI destination building.");
     if (!activeCoords) return setRouteError("Waiting for your current location before planning.");
     
+    if (!routePolicyRef.current || routePolicyRef.current.buildingId !== targetBuilding) {
+      const { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
+      const accessibleOnly = avoidStairs;
+      routePolicyRef.current = { buildingId: targetBuilding, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+    }
+    const { accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routePolicyRef.current;
+    navigationSpeech.cancel();
     setRouteLoading(true);
+    isReroutingRef.current = true;
     try {
       const origin = { latitude: activeCoords.latitude, longitude: activeCoords.longitude, label: "Your current location" };
-      const accessibleOnly = navigationMode === "accessibility";
-      const entrances = selectedBuilding.entrances.filter(
-        (entrance) => !accessibleOnly || entrance.accessibility
-      );
-      if (entrances.length === 0) {
-        throw new Error("This building has no accessible entrance.");
-      }
-      const candidates = await Promise.all(entrances.map(async (entrance) => {
+      let preferences = getRoutingPreferences({
+        avoidStairs: accessibleOnly,
+        avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks,
+      });
+      const findCandidates = async (options: RoutingPreferences) => {
+        const entrances = selectedBuilding.entrances.filter(
+          (entrance) => !options.avoidStairs || entrance.accessibility
+        );
+        const candidates = await Promise.all(entrances.map(async (entrance) => {
         const destination = {
           latitude: entrance.latitude,
           longitude: entrance.longitude,
@@ -453,67 +522,93 @@ export function useMapNavigation(buildings: Building[]) {
         };
         try {
           return {
-            ...(await routeBetween(origin, destination, { accessibleOnly })),
+            ...(await routeBetween(origin, destination, options)),
             origin,
             destination,
           };
         } catch {
           return null;
         }
-      }));
-      if (destinationBuildingRef.current !== targetBuilding || isRouteCancelledRef.current) return;
-      const availableRoutes = candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
-      if (!availableRoutes.length) throw new Error("The walking route service could not find a route. Try again.");
-      const selectedRoute = fastestRoute(availableRoutes);
+        }));
+        return candidates.filter((candidate): candidate is RouteCandidate => candidate !== null);
+      };
+      let availableRoutes = await findCandidates(preferences);
+      if (!isCurrentRequest()) return;
+      if (!availableRoutes.length) {
+        setRouteError("A route couldn't be found with your current settings.");
+        for (const alternative of getRelaxedRoutingPreferences(preferences)) {
+          const candidates = await findCandidates(alternative.options);
+          if (!isCurrentRequest()) return;
+          if (!candidates.length) continue;
+          const accepted = await new Promise<boolean>((resolve) => {
+            alternativeAnswerRef.current = resolve;
+            setRouteAlternative(alternative.relaxed);
+          });
+          if (!isCurrentRequest()) return;
+          if (!accepted) {
+            handleCancelRoute();
+            return;
+          }
+          preferences = alternative.options;
+          routePolicyRef.current = {
+            buildingId: targetBuilding,
+            accessibleOnly: preferences.avoidStairs,
+            avoidIndoorRoutes: preferences.avoidIndoorRoutes,
+            avoidInaccessibleCrosswalks: preferences.avoidInaccessibleCrosswalks,
+          };
+          availableRoutes = candidates;
+          setRouteError("");
+          break;
+        }
+      }
+      if (!availableRoutes.length) {
+        Alert.alert("Route not found", "A route couldn't be found, even with routing restrictions turned off.");
+        throw new Error("A route couldn't be found, even with routing restrictions turned off.");
+      }
+      const fastest = fastestRoute(availableRoutes);
+      const selectedRoute = {
+        ...fastest,
+        previewKey: targetBuilding,
+        navigationId: `${Date.now()}-${requestId}`,
+        arrivalTime: Date.now() + fastest.duration * 1000,
+      };
       setRoute(selectedRoute);
       setRouteDestinationBuilding(targetBuilding);
       const steps = generateDirections(selectedRoute.geometry, selectedRoute.navigationPath);
       setRouteSteps(steps);
       setCurrentRouteIndex(0);
-      startRoutePreviewCountdown();
       const newNavigation = spokenDestinationRef.current !== targetBuilding;
+      if (newRoute || newNavigation) startRoutePreviewCountdown();
       const previousGeometry = speechGeometryRef.current;
       const geometryChanged = !previousGeometry || previousGeometry.length !== selectedRoute.geometry.length ||
         selectedRoute.geometry.some((point, index) =>
           point[0] !== previousGeometry[index][0] || point[1] !== previousGeometry[index][1]);
       if (newNavigation || geometryChanged) spokenStagesRef.current = {};
       speechGeometryRef.current = selectedRoute.geometry;
-      if (newNavigation) {
-        spokenDestinationRef.current = targetBuilding;
-        navigationSpeech.cancel();
-        const firstStep = steps[0];
-        const distance = firstStep
-          ? getDistanceToStepPoint(selectedRoute.geometry, 0, firstStep.pointIndex, activeCoords.latitude, activeCoords.longitude)
-          : selectedRoute.distance;
-        const instruction = firstStep
-          ? `${formatDirectionInstruction(firstStep, directionStyle)} in ${formatDistance(distance, distanceUnits)}`
-          : `Route distance ${formatDistance(distance, distanceUnits)}`;
-        const accepted = navigationSpeech.request(`Navigating to ${selectedBuilding.name}. ${instruction}.`, "startup");
-        if (accepted && firstStep) {
-          const stages = initialSpeechStages(distance);
-          if (firstStep.instruction === "Arrive at destination" && distance <= 5) stages.turn = true;
-          spokenStagesRef.current[firstStep.pointIndex] = stages;
-        }
-      }
     } catch (routeRequestError) {
-      if (destinationBuildingRef.current === targetBuilding && !isRouteCancelledRef.current) {
+      if (isCurrentRequest()) {
+        // A failed new request must not leave an older route looking like its result.
+        if (newRoute) handleCancelRoute();
         autoRouteKeyRef.current = "";
         setRouteError(routeRequestError instanceof Error ? routeRequestError.message : "The route could not be planned. Try again.");
       }
     } finally {
-      setRouteLoading(false);
-      isReroutingRef.current = false;
+      if (isCurrentRequest()) {
+        setRouteLoading(false);
+        isReroutingRef.current = false;
+      }
     }
   }, [
     coordinates,
     buildings,
-    navigationMode,
     navigationSpeech,
     distanceUnits,
     directionStyle,
     startRoutePreviewCountdown,
+    handleCancelRoute,
     isFocused,
     buildings,
+    handleCancelRoute,
   ]);
 
   const planRouteRef = useRef(planRoute);
@@ -524,10 +619,17 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
+    if (!trackingEnabled) return;
     const initializeLocation = async () => {
       const permissions = await Location.requestForegroundPermissionsAsync();
       if (permissions.status !== "granted") { if (isMounted) setError("Location permission is required to plan a route."); return; }
-      subscription = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 250, distanceInterval: 0, mayShowUserSettingsDialog: true }, (location) => {
+      if (!isMounted) return;
+      subscription = await Location.watchPositionAsync({
+        accuracy: batterySaverEnabled ? needsPreciseLocation ? Location.Accuracy.High : Location.Accuracy.Balanced : Location.Accuracy.BestForNavigation,
+        timeInterval: batterySaverEnabled ? hasActiveRoute ? 2000 : 10000 : 250,
+        distanceInterval: batterySaverEnabled ? needsPreciseLocation ? 2 : 10 : 0,
+        mayShowUserSettingsDialog: true,
+      }, (location) => {
         if (!isMounted) return;
         const processed = processAdvancedCoordinates({ ...location.coords, accuracy: location.coords.accuracy || 0, timestamp: location.timestamp } as Coordinates, kalmanStateRef);
         if (!processed) return;
@@ -543,7 +645,10 @@ export function useMapNavigation(buildings: Building[]) {
         const displayedCoordinates = { ...processed, latitude: displayLat, longitude: displayLng };
         setCoordinates(displayedCoordinates);
         if (!showRecenterRef.current) setMapCenter({ latitude: displayLat, longitude: displayLng });
-        SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        if (!batterySaverEnabled || Date.now() - lastLocationSave.current >= 30000) {
+          lastLocationSave.current = Date.now();
+          SecureStore.setItemAsync(LAST_LOCATION_STORAGE_KEY, JSON.stringify({ latitude: displayLat, longitude: displayLng })).catch((saveError) => console.error("Failed to save location", saveError));
+        }
         if (newRouteIndex !== currentRouteIndexRef.current) setCurrentRouteIndex(newRouteIndex);
         if (!initialLocationSet.current) { setMapCenter({ latitude: displayLat, longitude: displayLng }); initialLocationSet.current = true; }
         if (routeGeometryRef.current && !isReroutingRef.current && destinationBuildingRef.current) {
@@ -554,15 +659,17 @@ export function useMapNavigation(buildings: Building[]) {
         }
         setError("");
       });
+      if (!isMounted) subscription.remove();
     };
     initializeLocation().catch((locationError) => { if (isMounted) setError(locationError instanceof Error ? locationError.message : "Unable to access your location."); });
     return () => { isMounted = false; subscription?.remove(); };
-  }, []);
+  }, [trackingEnabled, batterySaverEnabled, batterySaverEnabled && needsPreciseLocation, batterySaverEnabled && hasActiveRoute]);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
+    if (!trackingEnabled || (batterySaverEnabled && (navigationMode !== "accessibility" || !hasActiveRoute))) return;
     Location.watchHeadingAsync((headingData) => {
       if (!isMounted) return;
       const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
@@ -580,7 +687,7 @@ export function useMapNavigation(buildings: Building[]) {
       isMounted = false;
       subscription?.remove();
     };
-  }, []);
+  }, [trackingEnabled, batterySaverEnabled, batterySaverEnabled && navigationMode, batterySaverEnabled && hasActiveRoute]);
 
   useEffect(() => {
     if (!destinationBuilding || !coordinates) return;
@@ -592,11 +699,25 @@ export function useMapNavigation(buildings: Building[]) {
   }, [coordinates, destinationBuilding, planRoute]);
 
   const handleDestinationChange = useCallback((buildingId: string) => {
+    if (!buildingId) { handleCancelRoute(); return; }
+    routeRequestIdRef.current += 1;
+    answerRouteAlternative(false);
     isRouteCancelledRef.current = false;
-    autoRouteKeyRef.current = "";
+    if (destinationBuildingRef.current !== buildingId || !startupSessionRef.current) {
+      if (startupSessionRef.current) startupSessionRef.current.cancelled = true;
+      const session = { handled: false, cancelled: false };
+      startupSessionRef.current = session;
+      setStartupSession(session);
+    }
+    destinationBuildingRef.current = buildingId;
+    const { avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks } = routingPreferencesRef.current;
+    const accessibleOnly = avoidStairs;
+    routePolicyRef.current = { buildingId, accessibleOnly, avoidIndoorRoutes, avoidInaccessibleCrosswalks };
+    // The explicit request below owns this selection; avoid a duplicate effect request.
+    autoRouteKeyRef.current = coordinates ? `current::${buildingId}` : "";
     setDestinationBuilding(buildingId);
-    if (buildingId) void planRoute();
-  }, [planRoute]);
+    void planRoute(undefined, true);
+  }, [coordinates, planRoute, handleCancelRoute, answerRouteAlternative]);
 
   const handleRecenter = useCallback(() => { setShowRecenter(false); setRecenterSignal((previous) => previous + 1); }, []);
   const upcomingSteps = routeSteps.filter((step) => step.pointIndex >= currentRouteIndex);
@@ -604,10 +725,139 @@ export function useMapNavigation(buildings: Building[]) {
   const nextStepInstruction = nextStep
     ? formatDirectionInstruction(nextStep, directionStyle)
     : null;
+  useEffect(() => {
+    // Settings can enable battery saver while this screen is unfocused.
+    // Stop the service and dismiss its notifications before any route checks.
+    if (batterySaverEnabled) {
+      void stopBackgroundNavigation().catch(error => console.warn("Unable to stop background navigation", error));
+      return;
+    }
+    if (!route || !routeSteps.length || !isFocused) return;
+    void syncBackgroundNavigation({
+      geometry: route.geometry,
+      steps: routeSteps.map(step => ({ ...step, instruction: formatDirectionInstruction(step, directionStyle) })),
+      destination: route.destination.label,
+      units: distanceUnits,
+      duration: route.duration,
+      navigationId: route.navigationId,
+      revision: route.backgroundRevision ?? 0,
+      destinationPoint: route.destination,
+      directionStyle,
+      preferences: {
+        avoidStairs: routePolicyRef.current?.accessibleOnly ?? avoidStairs,
+        avoidIndoorRoutes: routePolicyRef.current?.avoidIndoorRoutes ?? avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks: routePolicyRef.current?.avoidInaccessibleCrosswalks ?? avoidInaccessibleCrosswalks,
+      },
+      expiresAt: Date.now() + Math.max(route.duration * 3000, 2 * 60 * 60 * 1000),
+    }, batterySaverEnabled).catch(error => {
+      console.warn("Background navigation unavailable", error);
+      Alert.alert("Background directions unavailable", "Navigation will continue while the app is open. Background guidance could not be started on this device.");
+    });
+  }, [route, routeSteps, distanceUnits, directionStyle, isFocused, batterySaverEnabled]);
+  const activeRouteRef = useRef(route);
+  activeRouteRef.current = route;
+  useEffect(() => {
+    if (!foreground || !isFocused) return;
+    let active = true;
+    void getSavedBackgroundRoute().then(saved => {
+      const current = activeRouteRef.current;
+      if (!active || !current || !saved?.reroutePlan || !saved.navigationId ||
+          saved.navigationId !== current.navigationId ||
+          (saved.revision ?? 0) <= (current.backgroundRevision ?? 0)) return;
+      navigationSpeech.clearGuidance();
+      setRoute({ ...current, ...saved.reroutePlan,
+        backgroundRevision: saved.revision,
+        arrivalTime: Date.now() + saved.reroutePlan.duration * 1000 });
+      setRouteSteps(saved.steps);
+      setCurrentRouteIndex(0);
+      spokenStagesRef.current = {};
+      offRouteCountRef.current = 0;
+    }).catch(error => console.warn("Unable to restore background reroute", error));
+    return () => { active = false; };
+  }, [foreground, isFocused, navigationSpeech]);
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
+  const currentGuidanceRef = useRef({ route, nextStep });
+  currentGuidanceRef.current = { route, nextStep };
+
+  // Moving to a different maneuver or route invalidates speech that described
+  // the old one, even when a newer urgent threshold has not yet been reached.
+  useEffect(() => () => navigationSpeech.clearGuidance(), [route, nextStep, navigationSpeech]);
+
   useEffect(() => {
-    if (!isFocused || navigationMode !== "accessibility") {
+    let active = true;
+    setFocusSpeechSession(null);
+    if (startupSession && isFocused && foreground && !speechListening && readerStatus === "available" && readerEnabled && !isAudioMuted) {
+      void navigationSpeech.readyForFocusGuidance().then((ready) => {
+        if (active && ready) setFocusSpeechSession(startupSession);
+      });
+    }
+    return () => { active = false; };
+  }, [startupSession, isFocused, foreground, speechListening, readerStatus, readerEnabled, isAudioMuted, navigationSpeech]);
+
+  const startupReady = !!startupSession && !startupSession.handled && !startupSession.cancelled &&
+    isFocused && foreground && !speechListening && readerStatus === "available" && readerEnabled &&
+    !isAudioMuted && focusSpeechSession === startupSession && pickerDismissed && !!route && !!routeDestinationBuilding &&
+    routeDestinationBuilding === destinationBuilding && !isRouteCancelledRef.current && !isReroutingRef.current;
+  const onStartupHandoff = useCallback(() => {
+    if (!startupReady || !startupSession || startupSession !== startupSessionRef.current ||
+        startupSession.handled || startupSession.cancelled || isRouteCancelledRef.current || !foregroundRef.current ||
+        audioMutedRef.current || !pickerDismissedRef.current || isReroutingRef.current ||
+        currentGuidanceRef.current.route !== route || destinationBuildingRef.current !== routeDestinationBuilding) return false;
+    startupSession.handled = true;
+    spokenDestinationRef.current = routeDestinationBuilding;
+    if (nextStep) {
+      const previous = spokenStagesRef.current[nextStep.pointIndex];
+      const stages = initialSpeechStages(distToNextStepMeters);
+      stages.haptics = previous?.haptics;
+      if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+      spokenStagesRef.current[nextStep.pointIndex] = stages;
+    }
+    navigationSpeech.noteFocusGuidance();
+    return true;
+  }, [startupReady, startupSession, routeDestinationBuilding, route, nextStep, distToNextStepMeters, navigationSpeech]);
+
+  // Recompute startup from current location once detection/recognition is ready.
+  // No captured startup string waits through asynchronous detection or recording.
+  useEffect(() => {
+    if (!isFocused || !foreground || speechListening || readerStatus !== "available" ||
+        !route || !routeDestinationBuilding || isRouteCancelledRef.current || isReroutingRef.current ||
+        spokenDestinationRef.current === routeDestinationBuilding) return;
+    // Screen-reader startup belongs exclusively to the visible summary focus.
+    if (readerEnabled && !isAudioMuted) {
+      if (startupSession && !startupSession.guidancePrepared && !startupSession.cancelled) {
+        startupSession.guidancePrepared = true;
+        if (nextStep) {
+          const stages = initialSpeechStages(distToNextStepMeters);
+          stages.haptics = spokenStagesRef.current[nextStep.pointIndex]?.haptics;
+          if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+          spokenStagesRef.current[nextStep.pointIndex] = stages;
+        }
+      }
+      return;
+    }
+    const instruction = nextStep
+      ? `${formatDirectionInstruction(nextStep, directionStyle)} in ${formatDistance(distToNextStepMeters, distanceUnits)}`
+      : `Route distance ${formatDistance(route.distance, distanceUnits)}`;
+    const name = buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination";
+    const accepted = isAudioMuted || navigationSpeech.request(`Navigating to ${name}. ${instruction}.`,
+      nextStep && distToNextStepMeters <= 5
+        ? nextStep.instruction === "Arrive at destination" ? "arrival" : "urgent" : "startup",
+      () => currentGuidanceRef.current.route === route && currentGuidanceRef.current.nextStep === nextStep);
+    if (accepted) {
+      if (startupSession) startupSession.handled = true;
+      spokenDestinationRef.current = routeDestinationBuilding;
+      if (nextStep && !isAudioMuted) {
+        const stages = initialSpeechStages(distToNextStepMeters);
+        if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+        spokenStagesRef.current[nextStep.pointIndex] = stages;
+      }
+    }
+  }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, routeDestinationBuilding,
+    nextStep, distToNextStepMeters, directionStyle, distanceUnits, buildings, isAudioMuted, navigationSpeech, startupSession]);
+
+  useEffect(() => {
+    if (!isFocused || !foreground || speechListening || isReroutingRef.current || navigationMode !== "accessibility") {
       return;
     }
 
@@ -644,7 +894,7 @@ export function useMapNavigation(buildings: Building[]) {
       direction = "left";
     }
 
-    if (isAudioMuted) return;
+    if (isAudioMuted || (readerEnabled && startupSession && !startupSession.handled && !startupSession.cancelled)) return;
     if (nextStep?.instruction === "Arrive at destination" && distToNextStepMeters <= 5) return;
     if (diff <= 15 || diff >= 345) return;
 
@@ -661,7 +911,7 @@ export function useMapNavigation(buildings: Building[]) {
     if (navigationSpeech.request(orientationMessage, "optional")) {
       orientationPromptRef.current = { direction: promptDir, timestamp: now };
     }
-  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, navigationMode, isFocused, nextStep, distToNextStepMeters, navigationSpeech]);
+  }, [route, coordinates, currentHeading, currentRouteIndex, isAudioMuted, navigationMode, isFocused, foreground, speechListening, readerStatus, readerEnabled, nextStep, distToNextStepMeters, navigationSpeech, startupSession]);
 
   const repeatGuidanceRef = useRef({ nextStep, distToNextStepMeters, distanceUnits, directionStyle });
   useEffect(() => {
@@ -670,9 +920,10 @@ export function useMapNavigation(buildings: Building[]) {
 
   // Repeat only while idle; a stable interval reads the latest GPS distance.
   useEffect(() => {
-    if (!isFocused || navigationMode !== "accessibility" || !route || isAudioMuted) return;
+    if (!isFocused || !foreground || speechListening || navigationMode !== "accessibility" || !route || isAudioMuted || !repeatGuidanceEnabled) return;
     const intervalId = setInterval(() => {
-      if (isRouteCancelledRef.current) return;
+      if (isRouteCancelledRef.current || isReroutingRef.current ||
+          (readerEnabled && startupSession && !startupSession.handled && !startupSession.cancelled)) return;
       const current = repeatGuidanceRef.current;
       if (!current.nextStep) return;
       if (current.nextStep.instruction === "Arrive at destination" && current.distToNextStepMeters <= 5) return;
@@ -680,18 +931,20 @@ export function useMapNavigation(buildings: Building[]) {
         formatDirectionInstruction(current.nextStep, current.directionStyle),
         current.distToNextStepMeters, current.distanceUnits,
       ), "optional");
-    }, 9000);
+    }, repeatGuidanceSeconds * 1000);
     return () => clearInterval(intervalId);
-  }, [isFocused, navigationMode, route, isAudioMuted, navigationSpeech]);
+  }, [isFocused, foreground, speechListening, navigationMode, route, isAudioMuted, navigationSpeech, repeatGuidanceEnabled, repeatGuidanceSeconds, readerEnabled, startupSession]);
 
   useEffect(() => {
-    if (!isFocused || !route || !nextStep || !coordinates || isRouteCancelledRef.current) return;
+    if (!isFocused || !foreground || !route || !nextStep || !coordinates || isRouteCancelledRef.current || isReroutingRef.current) return;
     const stages = spokenStagesRef.current[nextStep.pointIndex] ?? {};
     spokenStagesRef.current[nextStep.pointIndex] = stages;
     
-    const speakPrompt = (text: string) => {
+    const speakPrompt = (text: string, stage: "m25" | "m5" | "turn") => {
       if (!isFocused) return;
-      if (Platform.OS !== "web") { 
+      const haptics = stages.haptics ??= {};
+      if (!haptics[stage] && Platform.OS !== "web") {
+        haptics[stage] = true;
         try { 
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
         } catch { 
@@ -702,29 +955,37 @@ export function useMapNavigation(buildings: Building[]) {
       // Still consume each haptic stage once while muted, as before. Muting
       // must not make every subsequent GPS sample vibrate/retry the same stage.
       if (audioMutedRef.current) return true;
-      return navigationSpeech.request(text, nextStep.instruction === "Arrive at destination" ? "arrival" : "maneuver");
+      if (readerEnabled && startupSession && !startupSession.handled && !startupSession.cancelled) {
+        if (stage === "m25" || readerStatus !== "available" || speechListening) return false;
+        startupSession.cancelled = true;
+      }
+      return navigationSpeech.request(text, nextStep.instruction === "Arrive at destination" ? "arrival"
+        : stage === "m25" ? "maneuver" : "urgent",
+        () => currentGuidanceRef.current.route === route && currentGuidanceRef.current.nextStep === nextStep);
     };
 
     if (nextStep.instruction === "Arrive at destination") {
       if (distToNextStepMeters <= 5 && !stages.turn) {
         const destinationName = route.destination?.label || "your destination";
-        if (speakPrompt(`You have arrived at ${destinationName}`)) stages.turn = true;
+        if (speakPrompt(`You have arrived at ${destinationName}`, "turn")) stages.turn = true;
       }
       return;
     }
 
     if (distToNextStepMeters <= 25 && distToNextStepMeters > 5 && !stages.m25) {
       const distance = distanceUnits === "imperial" ? "80 feet" : "25 meters";
-      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`)) stages.m25 = true;
+      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`, "m25")) stages.m25 = true;
     } else if (distToNextStepMeters <= 5 && distToNextStepMeters > 2 && !stages.m5) {
       const distance = distanceUnits === "imperial" ? "15 feet" : "5 meters";
-      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`)) stages.m5 = true;
+      if (speakPrompt(`In ${distance}, ${nextStepInstruction}`, "m5")) stages.m5 = true;
     } else if (distToNextStepMeters <= 2 && !stages.turn) {
-      if (speakPrompt(`${nextStepInstruction} now`)) stages.turn = true;
+      if (speakPrompt(`${nextStepInstruction} now`, "turn")) stages.turn = true;
     }
-  }, [isFocused, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech]);
+  }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech, startupSession]);
 
   return { 
+    navigationSpeech, onVoiceListeningChange, politeAnnouncement,
+    startupSession, startupReady, onStartupHandoff, onPickerTransition,
     coordinates, 
     mapCenter, 
     error, 
@@ -733,6 +994,8 @@ export function useMapNavigation(buildings: Building[]) {
     route, 
     routeDestinationBuilding,
     routeError, 
+    routeAlternative,
+    answerRouteAlternative,
     routeSteps, 
     currentRouteIndex, 
     showRecenter, 

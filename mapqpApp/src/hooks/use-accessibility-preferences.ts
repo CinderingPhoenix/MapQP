@@ -48,13 +48,15 @@ export function resolveAccessibilityPreferences(
     // readings and their detection statuses remain separately in the provider.
     darkerSystemColorsEnabled: device.darkerSystemColorsEnabled || custom.increaseContrastEnabled,
     highTextContrastEnabled: device.highTextContrastEnabled,
-    reduceTransparencyEnabled: device.reduceTransparencyEnabled || custom.reduceTransparencyEnabled,
+    // Transparency adjustments follow the device; legacy saved app values are ignored.
+    reduceTransparencyEnabled: device.reduceTransparencyEnabled,
     emphasizedTextEnabled: boldTextEnabled,
     loaded: settingsLoaded && device.loaded,
   };
 }
 
 export function useAccessibilityPreferences() {
-  const { deviceAccessibility, customAccessibilityPreferences, settingsLoaded } = useSettings();
-  return resolveAccessibilityPreferences(deviceAccessibility, customAccessibilityPreferences, settingsLoaded);
+  const { deviceAccessibility, customAccessibilityPreferences, settingsLoaded, batterySaverEnabled } = useSettings();
+  return { ...resolveAccessibilityPreferences(deviceAccessibility, customAccessibilityPreferences, settingsLoaded),
+    reduceMotionEnabled: batterySaverEnabled || deviceAccessibility.reduceMotionEnabled || customAccessibilityPreferences.reduceMotionEnabled };
 }

@@ -1,3 +1,24 @@
+export type RoutingPreferences = {
+  avoidStairs: boolean;
+  avoidIndoorRoutes: boolean;
+  avoidInaccessibleCrosswalks: boolean;
+};
+
+export function getRoutingPreferences(settings: Partial<RoutingPreferences> = {}): RoutingPreferences {
+  return { avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false, ...settings };
+}
+
+export function getRelaxedRoutingPreferences(preferences: RoutingPreferences) {
+  const enabled = (Object.keys(preferences) as (keyof RoutingPreferences)[])
+    .filter((key) => preferences[key]);
+  return Array.from({ length: (1 << enabled.length) - 1 }, (_, index) => {
+    const relaxed = enabled.filter((_, bit) => (index + 1) & (1 << bit));
+    const options = { ...preferences };
+    for (const key of relaxed) options[key] = false;
+    return { options, relaxed };
+  }).sort((a, b) => a.relaxed.length - b.relaxed.length);
+}
+
 // --- Types ---
 
 export type RoutePoint = {
@@ -34,21 +55,35 @@ export type GraphEdge = {
   nodeId: string;
   distance: number;
   accessible: boolean;
+  indoor: boolean;
+  roadCrossing: boolean;
 };
 
-// Updated to support tuple-based connections [toNodeId, accessible]
-export type WalkwayConnectionItem = string | [string, boolean, boolean?, boolean?] | {
+// Named flags make connection data readable without knowing tuple positions.
+// Legacy strings and tuples remain supported for downloaded map data.
+export type WalkwayConnection = {
   to: string;
   accessible?: boolean;
   indoor?: boolean;
   roadCrossing?: boolean;
 };
+export type WalkwayConnectionItem = WalkwayConnection | string | [
+  nodeId: string,
+  accessible: boolean,
+  indoor?: boolean,
+  roadCrossing?: boolean,
+];
 
-function connectionDetails(item: WalkwayConnectionItem) {
-  if (typeof item === "string") return { to: item, accessible: true };
-  if (Array.isArray(item)) return { to: item[0], accessible: item[1] !== false };
-  // An accessible crosswalk is inferred from accessible && roadCrossing.
-  return { to: item.to, accessible: item.accessible ?? true };
+export function normalizeWalkwayConnection(item: WalkwayConnectionItem) {
+  if (typeof item === "string") {
+    return { to: item, accessible: true, indoor: false, roadCrossing: false };
+  }
+  if (Array.isArray(item)) {
+    return { to: item[0], accessible: item[1] !== false, indoor: item[2] ?? false,
+      roadCrossing: item[3] ?? false };
+  }
+  return { to: item.to, accessible: item.accessible ?? true, indoor: item.indoor ?? false,
+    roadCrossing: item.roadCrossing ?? false };
 }
 
 export type BuildingEntranceObject = {
@@ -79,23 +114,85 @@ let walkwayConnections: Record<string, WalkwayConnectionItem[]> = {};
 let campusNodes: GraphNode[] = [];
 let campusNodesById = new Map<string, GraphNode>();
 let graphEdges = new Map<string, GraphEdge[]>();
+type WalkwaySegment = { from: GraphNode; to: GraphNode; edge: GraphEdge };
+let routingSegments: WalkwaySegment[] | null = null;
+let routingSnapshot: { points: Parameters<typeof initRoutingGraph>[0]; buildings: BuildingInput[] } | null = null;
+
+export function getRoutingGraphSnapshot() { return routingSnapshot; }
+
+// Downloaded nodes may use named fields; bundled and legacy maps use tuples.
+function parseWalkwayNode(node: unknown, index: number): GraphNode {
+  const value = node as GraphNode | null;
+  const id = Array.isArray(node) ? node[0] : value?.id;
+  const latitude = Array.isArray(node) ? node[1] : value?.latitude;
+  const longitude = Array.isArray(node) ? node[2] : value?.longitude;
+  if ((Array.isArray(node) && node.length !== 3) || typeof id !== "string" ||
+      typeof latitude !== "number" || !Number.isFinite(latitude) ||
+      typeof longitude !== "number" || !Number.isFinite(longitude)) {
+    throw new Error(`Invalid walkway node at index ${index}: expected [id, latitude, longitude] or { id, latitude, longitude }; received ${JSON.stringify(node)}.`);
+  }
+  return { id, latitude, longitude };
+}
+
+export function validateMapData(routePointsData: any, buildingData: any): void {
+  if (!routePointsData || !Array.isArray(routePointsData.nodes) ||
+      !routePointsData.connections || typeof routePointsData.connections !== "object" ||
+      Array.isArray(routePointsData.connections)) {
+    throw new Error("Invalid route data: expected nodes and connection lists.");
+  }
+  routePointsData.nodes.forEach(parseWalkwayNode);
+  for (const [id, connections] of Object.entries(routePointsData.connections)) {
+    if (!Array.isArray(connections)) throw new Error(`Invalid connection list for ${id}: expected an array.`);
+    for (const item of connections) {
+      if (typeof item === "string") continue;
+      if (!item || typeof (Array.isArray(item) ? item[0] : item.to) !== "string") {
+        throw new Error(`Invalid walkway connection for ${id}.`);
+      }
+    }
+  }
+  if (!Array.isArray(buildingData)) throw new Error("Invalid building data: expected an array.");
+  for (const building of buildingData) {
+    const name = Array.isArray(building) ? building[0] : building?.name;
+    const entrances = Array.isArray(building) ? building[1] : building?.entrances;
+    if (typeof name !== "string" || !Array.isArray(entrances)) {
+      throw new Error("Invalid building: expected a name and entrance list.");
+    }
+    for (const entrance of entrances) {
+      const lat = Array.isArray(entrance) ? entrance[0] : entrance?.latitude;
+      const lng = Array.isArray(entrance) ? entrance[1] : entrance?.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error(`Invalid entrance coordinates for ${name}.`);
+    }
+  }
+}
 
 export function initRoutingGraph(
-  routePointsData: { nodes: [string, number, number][]; connections: Record<string, WalkwayConnectionItem[]> },
+  routePointsData: { nodes: unknown[]; connections: Record<string, WalkwayConnectionItem[]> },
   buildingData: BuildingInput[]
 ) {
+  // Bundled data uses tuples; older saved/downloaded data may use objects.
+  const validatedNodes: GraphNode[] = routePointsData.nodes.map((node, index) => {
+    const fields = Array.isArray(node)
+      ? (node.length === 3 ? { id: node[0], latitude: node[1], longitude: node[2] } : null)
+      : (node !== null && typeof node === "object" ? node as Partial<GraphNode> : null);
+    const { id, latitude, longitude } = fields ?? {};
+    if (typeof id !== "string" ||
+        typeof latitude !== "number" || !Number.isFinite(latitude) ||
+        typeof longitude !== "number" || !Number.isFinite(longitude)) {
+      throw new Error(`Invalid walkway node at index ${index}: expected [id, latitude, longitude] or { id, latitude, longitude } with finite coordinates.`);
+    }
+    return { id, latitude, longitude };
+  });
+
   // Clear existing state for fresh over-the-air updates
   routeCache.clear();
+  routingSegments = null;
   graphEdges.clear();
   campusNodesById.clear();
 
-  // Map tuple nodes [id, latitude, longitude] to GraphNode objects
-  walkwayNodes = routePointsData.nodes.map(([id, latitude, longitude]) => ({
-    id,
-    latitude,
-    longitude,
-  }));
+  // Store normalized nodes as GraphNode objects.
+  walkwayNodes = validatedNodes;
   walkwayConnections = routePointsData.connections;
+  routingSnapshot = { points: routePointsData, buildings: buildingData };
 
   // Map building entrances supporting both object and tuple formats
   campusNodes = [
@@ -146,8 +243,7 @@ export function initRoutingGraph(
     }
 
     for (const item of toIds) {
-      const toId = connectionDetails(item).to;
-      const isAccessible = connectionDetails(item).accessible;
+      const { to: toId, accessible: isAccessible, indoor: isIndoor, roadCrossing } = normalizeWalkwayConnection(item);
 
       let toNode = campusNodesById.get(toId);
       if (!toNode) {
@@ -160,13 +256,17 @@ export function initRoutingGraph(
       connectWalkwayNodes(
         fromNode,
         toNode,
-        isAccessible
+        isAccessible,
+        isIndoor,
+        roadCrossing
       );
     }
   }
 
+  const walkwayNodeSet = new Set(walkwayNodes);
+
   // 2. Connect building entrances to the nearest existing walkway segments
-  for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
+  for (const node of campusNodes.filter((candidate) => !walkwayNodeSet.has(candidate))) {
     const existingEdges = graphEdges.get(node.id) ?? [];
     if (existingEdges.length === 0) {
       const entranceIsAccessible = accessibleEntranceIds.has(node.id);
@@ -182,6 +282,8 @@ export function initRoutingGraph(
             nodeId: node.id,
             distance: edge.distance,
             accessible: edge.accessible,
+            indoor: edge.indoor,
+            roadCrossing: edge.roadCrossing,
           },
         ]);
       }
@@ -189,7 +291,7 @@ export function initRoutingGraph(
   }
 
   // Entrance accessibility applies to every graph edge connected to that entrance
-  for (const node of campusNodes.filter((candidate) => !walkwayNodes.includes(candidate))) {
+  for (const node of campusNodes.filter((candidate) => !walkwayNodeSet.has(candidate))) {
     const entranceIsAccessible = accessibleEntranceIds.has(node.id);
     for (const edge of graphEdges.get(node.id) ?? []) {
       edge.accessible = edge.accessible && entranceIsAccessible;
@@ -201,6 +303,7 @@ export function initRoutingGraph(
       }
     }
   }
+  routingSegments = collectWalkwaySegments();
 }
 
 // --- Public API ---
@@ -213,7 +316,7 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
       if (!fromNode) return [];
       return toIds
         .map((item) => {
-          const toId = connectionDetails(item).to;
+          const toId = normalizeWalkwayConnection(item).to;
           const toNode = campusNodesById.get(toId);
           if (!toNode) return null;
           return [
@@ -229,76 +332,109 @@ export function getWalkwayDebugOverlay(): WalkwayDebugOverlay {
 export async function routeBetween(
   origin: RoutePoint,
   destination: RoutePoint,
-  options: { accessibleOnly?: boolean } = {},
+  options: Partial<RoutingPreferences> = {},
 ): Promise<WalkingRoute> {
   if (campusNodes.length === 0) throw new Error("Routing graph is not initialized.");
   
-  const accessibleOnly = options.accessibleOnly ?? false;
+  const preferences = { ...getRoutingPreferences(), ...options };
   const cacheKey = [
     origin.longitude,
     origin.latitude,
     destination.longitude,
     destination.latitude,
-    accessibleOnly ? "accessible" : "standard",
+    preferences.avoidStairs,
+    preferences.avoidIndoorRoutes,
+    preferences.avoidInaccessibleCrosswalks,
   ].join(",");
 
   const cachedRoute = routeCache.get(cacheKey);
   if (cachedRoute) return cachedRoute;
 
-  const route = findLocalWalkingRoute(origin, destination, accessibleOnly);
+  const route = findLocalWalkingRoute(origin, destination, preferences);
   routeCache.set(cacheKey, route);
   return route;
 }
 
 // --- Pathfinding & Geometry ---
 
+// Binary min-heap: selecting the next node costs O(log V), not a full scan.
+class RouteQueue {
+  private entries: { nodeId: string; distance: number }[] = [];
+
+  push(nodeId: string, distance: number) {
+    const entry = { nodeId, distance };
+    let index = this.entries.length;
+    this.entries.push(entry);
+    while (index > 0) {
+      const parent = (index - 1) >> 1;
+      if (this.entries[parent].distance <= distance) break;
+      this.entries[index] = this.entries[parent];
+      index = parent;
+    }
+    this.entries[index] = entry;
+  }
+
+  pop() {
+    const first = this.entries[0];
+    const last = this.entries.pop();
+    if (this.entries.length && last) {
+      let index = 0;
+      while (index * 2 + 1 < this.entries.length) {
+        let child = index * 2 + 1;
+        if (child + 1 < this.entries.length && this.entries[child + 1].distance < this.entries[child].distance) child++;
+        if (last.distance <= this.entries[child].distance) break;
+        this.entries[index] = this.entries[child];
+        index = child;
+      }
+      this.entries[index] = last;
+    }
+    return first;
+  }
+}
+
 function findLocalWalkingRoute(
   origin: RoutePoint,
   destination: RoutePoint,
-  accessibleOnly: boolean,
+  preferences: RoutingPreferences,
 ): WalkingRoute {
   const startId = "__origin";
   const destinationId = "__destination";
 
-  const nodes = [
-    { id: startId, latitude: origin.latitude, longitude: origin.longitude },
-    ...campusNodes,
-    { id: destinationId, latitude: destination.latitude, longitude: destination.longitude },
-  ];
+  const nodeById = (nodeId: string): GraphNode => {
+    if (nodeId === startId) return { id: startId, ...origin };
+    if (nodeId === destinationId) return { id: destinationId, ...destination };
+    return campusNodesById.get(nodeId)!;
+  };
 
   const edges = new Map(graphEdges);
-  edges.set(startId, nearestEdges(origin, accessibleOnly));
+  edges.set(startId, nearestEdges(origin, preferences));
   edges.set(destinationId, []);
 
-  for (const edge of nearestEdges(destination, accessibleOnly)) {
+  for (const edge of nearestEdges(destination, preferences)) {
     edges.set(edge.nodeId, [
       ...(edges.get(edge.nodeId) ?? []),
-      { nodeId: destinationId, distance: edge.distance, accessible: true },
+      { ...edge, nodeId: destinationId },
     ]);
   }
 
   const distances = new Map<string, number>([[startId, 0]]);
   const previous = new Map<string, string>();
-  const open = new Set([startId]);
+  const open = new RouteQueue();
+  open.push(startId, 0);
 
-  while (open.size > 0) {
-    const current = [...open].reduce((closest, nodeId) =>
-      (distances.get(nodeId) ?? Number.POSITIVE_INFINITY) <
-        (distances.get(closest) ?? Number.POSITIVE_INFINITY)
-        ? nodeId
-        : closest,
-    );
-
-    open.delete(current);
+  for (let entry = open.pop(); entry; entry = open.pop()) {
+    const current = entry.nodeId;
+    // A shorter path may have queued a newer entry for the same node.
+    if (entry.distance !== distances.get(current)) continue;
     if (current === destinationId) break;
 
     for (const edge of edges.get(current) ?? []) {
-      if (accessibleOnly && !edge.accessible) continue;
+      if (!isEdgeAllowed(edge, preferences)) continue;
       const nextDistance = (distances.get(current) ?? 0) + edge.distance;
       if (nextDistance < (distances.get(edge.nodeId) ?? Number.POSITIVE_INFINITY)) {
         distances.set(edge.nodeId, nextDistance);
         previous.set(edge.nodeId, current);
-        open.add(edge.nodeId);
+        open.push(edge.nodeId, nextDistance);
       }
     }
   }
@@ -308,22 +444,24 @@ function findLocalWalkingRoute(
   }
 
   const path = [destinationId];
-  while (path[0] !== startId) {
-    const parent = previous.get(path[0]);
+  while (path[path.length - 1] !== startId) {
+    const parent = previous.get(path[path.length - 1]);
     if (!parent) throw new Error("The local walking route is incomplete.");
-    path.unshift(parent);
+    path.push(parent);
   }
+  // Predecessors reconstruct from destination to origin; guidance follows travel order.
+  path.reverse();
 
-  const rawGeometry = path.map((nodeId) => {
-    const node = nodes.find((candidate) => candidate.id === nodeId)!;
+  // Preserve every graph vertex so the displayed line follows mapped walkways.
+  const geometry = path.map((nodeId) => {
+    const node = nodeById(nodeId);
     return [node.latitude, node.longitude] as [number, number];
   });
 
-  const geometry = smoothPolyline(rawGeometry);
   const navigationPath = path.map((nodeId) => ({
-    coordinate: nodes.find((candidate) => candidate.id === nodeId)!,
+    coordinate: nodeById(nodeId),
     connectionCount: (edges.get(nodeId) ?? []).filter(
-      (edge) => !accessibleOnly || edge.accessible
+      (edge) => isEdgeAllowed(edge, preferences)
     ).length,
   })).map(({ coordinate, connectionCount }) => ({
     coordinate: [coordinate.latitude, coordinate.longitude] as [number, number],
@@ -339,73 +477,70 @@ function findLocalWalkingRoute(
   };
 }
 
-function smoothPolyline(points: [number, number][], iterations = 2, tension = 0.25): [number, number][] {
-  if (points.length <= 2 || iterations <= 0) return points;
-  let current = points;
-  for (let i = 0; i < iterations; i++) {
-    const smoothed: [number, number][] = [current[0]];
-    for (let j = 0; j < current.length - 1; j++) {
-      const p0 = current[j];
-      const p1 = current[j + 1];
-      const q: [number, number] = [
-        (1 - tension) * p0[0] + tension * p1[0],
-        (1 - tension) * p0[1] + tension * p1[1],
-      ];
-      const r: [number, number] = [
-        tension * p0[0] + (1 - tension) * p1[0],
-        tension * p0[1] + (1 - tension) * p1[1],
-      ];
-      smoothed.push(q, r);
-    }
-    smoothed.push(current[current.length - 1]);
-    current = smoothed;
-  }
-  return current;
-}
-
 // --- Math & Distance Calculations ---
 
-function nearestEdges(point: Pick<RoutePoint, "latitude" | "longitude">, accessibleOnly = false): GraphEdge[] {
+function isEdgeAllowed(edge: GraphEdge, preferences: RoutingPreferences): boolean {
+  // Every enabled preference must pass; one preference cannot override another.
+  // Crossing accessibility is controlled separately from stair avoidance.
+  return (!preferences.avoidStairs || edge.roadCrossing || edge.accessible) &&
+    (!preferences.avoidIndoorRoutes || !edge.indoor) &&
+    (!preferences.avoidInaccessibleCrosswalks || !edge.roadCrossing || edge.accessible);
+}
+
+function collectWalkwaySegments(): WalkwaySegment[] {
+  const segments: WalkwaySegment[] = [];
+  const seen = new Set<string>();
+  for (const [fromId, neighbors] of graphEdges) {
+    const from = campusNodesById.get(fromId);
+    if (!from) continue;
+    for (const edge of neighbors) {
+      const to = campusNodesById.get(edge.nodeId);
+      if (!to) continue;
+      const key = JSON.stringify([fromId, edge.nodeId].sort());
+      if (seen.has(key)) continue;
+      seen.add(key);
+      segments.push({ from, to, edge });
+    }
+  }
+  return segments;
+}
+
+function nearestEdges(
+  point: Pick<RoutePoint, "latitude" | "longitude">,
+  preferences: RoutingPreferences = { avoidStairs: false, avoidIndoorRoutes: false, avoidInaccessibleCrosswalks: false },
+): GraphEdge[] {
   let bestEdges: GraphEdge[] = [];
   let minDistanceToSegment = Number.POSITIVE_INFINITY;
-  const seenEdges = new Set<string>();
+  // During initialization, entrance attachment still changes the graph.
+  // Once initialized, reuse the unique segment list for every route request.
+  for (const { from: fromNode, to: toNode, edge: neighbor } of routingSegments ?? collectWalkwaySegments()) {
+    if (!isEdgeAllowed(neighbor, preferences)) continue;
 
-  for (const [fromId, neighbors] of graphEdges.entries()) {
-    const fromNode = campusNodesById.get(fromId);
-    if (!fromNode) continue;
+    const { distToSegment, distToFrom, distToTo } = projectPointToSegment(
+      point.latitude,
+      point.longitude,
+      fromNode,
+      toNode
+    );
 
-    for (const neighbor of neighbors) {
-      const toId = neighbor.nodeId;
-      const toNode = campusNodesById.get(toId);
-      if (!toNode) continue;
-      if (accessibleOnly && !neighbor.accessible) continue;
-
-      const edgeKey = [fromId, toId].sort().join("::");
-      if (seenEdges.has(edgeKey)) continue;
-      seenEdges.add(edgeKey);
-
-      const { distToSegment, distToFrom, distToTo } = projectPointToSegment(
-        point.latitude,
-        point.longitude,
-        fromNode,
-        toNode
-      );
-
-      if (distToSegment < minDistanceToSegment) {
-        minDistanceToSegment = distToSegment;
-        bestEdges = [
-          {
-            nodeId: fromNode.id,
-            distance: distToSegment + distToFrom,
-            accessible: neighbor.accessible,
-          },
-          {
-            nodeId: toNode.id,
-            distance: distToSegment + distToTo,
-            accessible: neighbor.accessible,
-          },
-        ];
-      }
+    if (distToSegment < minDistanceToSegment) {
+      minDistanceToSegment = distToSegment;
+      bestEdges = [
+        {
+          nodeId: fromNode.id,
+          distance: distToSegment + distToFrom,
+          accessible: neighbor.accessible,
+          indoor: neighbor.indoor,
+          roadCrossing: neighbor.roadCrossing,
+        },
+        {
+          nodeId: toNode.id,
+          distance: distToSegment + distToTo,
+          accessible: neighbor.accessible,
+          indoor: neighbor.indoor,
+          roadCrossing: neighbor.roadCrossing,
+        },
+      ];
     }
   }
   return bestEdges;
@@ -432,10 +567,10 @@ function projectPointToSegment(pLat: number, pLng: number, a: GraphNode, b: Grap
   return { distToSegment, distToFrom, distToTo };
 }
 
-function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean) {
+function connectWalkwayNodes(first: GraphNode, second: GraphNode, accessible: boolean, indoor: boolean, roadCrossing: boolean) {
   const distance = distanceBetween(first.latitude, first.longitude, second.latitude, second.longitude);
-  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible });
-  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible });
+  addOrMergeEdge(first.id, { nodeId: second.id, distance, accessible, indoor, roadCrossing });
+  addOrMergeEdge(second.id, { nodeId: first.id, distance, accessible, indoor, roadCrossing });
 }
 
 function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
@@ -443,6 +578,9 @@ function addOrMergeEdge(nodeId: string, edge: GraphEdge) {
   const existingEdge = edges.find((candidate) => candidate.nodeId === edge.nodeId);
   if (existingEdge) {
     existingEdge.accessible = existingEdge.accessible && edge.accessible;
+    existingEdge.indoor = existingEdge.indoor || edge.indoor;
+    // A label on either direction applies to the bidirectional crossing.
+    existingEdge.roadCrossing = existingEdge.roadCrossing || edge.roadCrossing;
     return;
   }
   graphEdges.set(nodeId, [...edges, edge]);

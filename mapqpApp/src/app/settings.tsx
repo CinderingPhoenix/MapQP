@@ -1,15 +1,24 @@
+import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "../components/settings/color-vision-setting";
+import { useSettingsPalette, useSettingsColors, useSettingsStyles } from "../hooks/use-settings-theme";
+import { ThemeSetting, SettingsThemeDialog, SettingsStatusBar } from "../components/settings/theme-setting";
+import { PreferenceIcon } from "../components/settings/preference-icon";
+import { AccessibleSettings } from "../components/settings/accessible-settings";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Slider from "@react-native-community/slider";
-import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
+  AccessibilityInfo,
+  Modal,
   Platform,
   ScrollView,
-  Switch,
+  type SwitchProps,
   StyleSheet,
   Text,
   type AccessibilityActionEvent,
   type TextProps,
+  type TextStyle,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -25,30 +34,31 @@ import { useAuthGuard } from "../hooks/use-auth-guard";
 import defaultRoutePoints from "../data/route-points.json";
 import { useFocusEffect } from "expo-router";
 
+type SettingsIconName = keyof typeof MaterialCommunityIcons.glyphMap | "reduce-motion";
+
 const ACCESSIBILITY_CONTROLS: {
   label: string; preference: AccessibilityPreference; devicePreference: DeviceAccessibilityPreference;
+  icon: SettingsIconName;
+  description: string;
 }[] = [
-  { label: "Reduce Motion", preference: "reduceMotionEnabled", devicePreference: "reduceMotionEnabled" },
-  { label: "Bold Text", preference: "boldTextEnabled", devicePreference: "boldTextEnabled" },
-  { label: "Increase Contrast", preference: "increaseContrastEnabled", devicePreference: "darkerSystemColorsEnabled" },
-  { label: "Reduce Transparency", preference: "reduceTransparencyEnabled", devicePreference: "reduceTransparencyEnabled" },
+  { label: "Reduce Motion", preference: "reduceMotionEnabled", devicePreference: "reduceMotionEnabled", icon: "reduce-motion", description: "Reduces animations and movement in MapQP." },
+  { label: "Bold Text", preference: "boldTextEnabled", devicePreference: "boldTextEnabled", icon: "format-bold", description: "Makes supported app text thicker and easier to read." },
+  { label: "Increase Contrast", preference: "increaseContrastEnabled", devicePreference: "darkerSystemColorsEnabled", icon: "contrast-circle", description: "Increases contrast in supported interface elements to make them easier to distinguish." },
 ];
 
 const KEYS_TO_DELETE = [
+  "mapqp_tutorial_shown_once",
   "mapqp_microsoft_session",
+  "mapqp_access_token",
   "mapqp_temp_code_session",
   "mapqp_temp_code_expires_at",
   "wpi_map_last_location",
 ];
 
-// Keep the component type stable when accessibility preferences change.
-function AccessibleText({ boldTextEnabled, style, ...props }: TextProps & { boldTextEnabled: boolean }) {
-  return <Text {...props} style={[style, boldTextEnabled && styles.boldTextOverride]} />;
-}
-
 export default function SettingsPage() {
+  const navigation = useNavigation();
   useAuthGuard();
-  const { fontScale, width } = useWindowDimensions();
+  const [activeTab, setActiveTab] = useState<"general" | "routing">("general");
   useFocusEffect(
     useCallback(() => {
       Speech.stop();
@@ -56,19 +66,20 @@ export default function SettingsPage() {
   );
 
   const {
+    settingsAppearance,
+    setSettingsAppearance, 
+    setColorVisionPreset,
+    setThemePreference,
+    setBatterySaverEnabled,
     navigationMode,
     setNavigationMode,
     setHasSelectedMode,
-    distanceUnits,
     setDistanceUnits,
-    directionStyle,
     setDirectionStyle,
+    resetAvoidStairsPreference,
     fontSize,
     setFontSize,
-    deviceAccessibility,
-    customAccessibilityPreferences: savedAccessibilityPreferences,
     settingsLoaded,
-    setAccessibilityPreference,
     resetAccessibilitySettings,
   } = useSettings();
 
@@ -94,36 +105,32 @@ export default function SettingsPage() {
     void loadMapVersion();
   }, []);
 
-  const accessibilityPreferences = useAccessibilityPreferences();
-  const increasedContrast =
-    accessibilityPreferences.darkerSystemColorsEnabled ||
-    accessibilityPreferences.highTextContrastEnabled;
+  const accessibleAppearance = settingsAppearance === "accessible";
 
-  const stackControls = width < 360 || fontSize * Math.min(fontScale, 2.5) >= 1.35;
-  const deviceSettingValue = (preference: DeviceAccessibilityPreference) => {
-    const status = deviceAccessibility.detectionStatus[preference];
-    if (status === "loading") return "Loading";
-    if (status === "unavailable") return "Unavailable";
-    return deviceAccessibility[preference] ? "On" : "Off";
-  };
-
-  const deviceSettingStyles = (preference: DeviceAccessibilityPreference) => {
-    const verifiedOn =
-      deviceAccessibility.detectionStatus[preference] === "available" &&
-      deviceAccessibility[preference];
-    return [
-      styles.deviceValue,
-      verifiedOn ? styles.deviceValueOn : styles.deviceValueOff,
-      increasedContrast &&
-        (verifiedOn
-          ? styles.deviceValueOnHighContrast
-          : styles.deviceValueOffHighContrast),
-    ];
-  };
+  // Mount the selected map behind Settings; the stack's eventual replace reuses
+  // this preloaded route, including its WebView, instead of starting it on exit.
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    router.prefetch(navigationMode === "accessibility"
+      ? "/accessibility-navigation" : "/standard-navigation");
+  }, [navigationMode, settingsLoaded]);
 
   const changeNavigationMode = (mode: "standard" | "accessibility") => {
     Speech.stop();
     setNavigationMode(mode);
+    const state = navigation.getState();
+    if (!state) return;
+    const settingsIndex = state.index;
+    const source = state.routes[settingsIndex - 1];
+    const target = mode === "standard" ? "standard-navigation" : "accessibility-navigation";
+    if (state.routes[settingsIndex]?.name === "settings" && source &&
+        (source.name === "standard-navigation" || source.name === "accessibility-navigation") &&
+        source.name !== target) {
+      navigation.dispatch({
+        type: "REPLACE", target: state.key, source: source.key,
+        payload: { name: target },
+      });
+    }
   };
 
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -172,7 +179,12 @@ export default function SettingsPage() {
                 setHasSelectedMode(false);
                 setDistanceUnits("imperial");
                 setDirectionStyle("natural");
+                resetAvoidStairsPreference();
                 setFontSize(1);
+                setSettingsAppearance("standard");
+                setColorVisionPreset("default");
+                setThemePreference("light");
+                setBatterySaverEnabled(false);
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -199,993 +211,671 @@ export default function SettingsPage() {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBackFromSettings}
-          accessibilityRole="button"
-          accessibilityLabel={from ? "Back to navigation" : "Back"}
-          accessibilityHint={
-            from
-              ? "Returns to navigation and applies the selected navigation mode"
-              : "Returns to the previous screen"
-          }
-        >
-          <AccessibleText
-            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            allowFontScaling={false}
-            style={styles.backArrow}
-          >
-            ‹
-          </AccessibleText>
-        </TouchableOpacity>
+  // Standard keeps its existing Signal presentation, state and handlers.
+  if (!accessibleAppearance) return <SignalSettings
+    activeTab={activeTab} onTabChange={setActiveTab} from={from} mapVersion={mapVersion}
+    onBack={handleBackFromSettings} onHome={returnToLandingPage}
+    onDelete={deleteLocalStorage} onNavigationModeChange={changeNavigationMode}
+    onFontSizeAccessibilityAction={handleFontSizeAccessibilityAction}
+  />;
 
-        <AccessibleText
-          boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-          key={`settings-text-1-${fontScale}`}
-          accessibilityRole="header"
-          maxFontSizeMultiplier={2.5}
-          style={[styles.headerTitle, { fontSize: 21 * fontSize }]}
-        >
-          Settings
-        </AccessibleText>
+  return <AccessibleSettings mapVersion={mapVersion}
+    onBack={handleBackFromSettings} onHome={returnToLandingPage}
+    onDelete={deleteLocalStorage} onNavigationModeChange={changeNavigationMode}
+    onFontSizeAccessibilityAction={handleFontSizeAccessibilityAction}
+    accessibilityControls={ACCESSIBILITY_CONTROLS} />;
+}
 
-        <View style={styles.headerSpacer} />
+// Signal is intentionally separate from standardStyles: Accessible appearance
+// inherits those legacy styles, so changing them would also change Accessible.
+const BASE_SIGNAL = {
+  background: "#F7F6F2", heading: "#000000", ink: "#000000", muted: "#000000", status: "#000000",
+  divider: "#D0CDC9", accent: "#741B2B", off: "#686868", outline: "#686868",
+  disabled: "#E0DDD7",
+} as const;
+
+// Standard-only visual overrides. Effective settings remain owned by the
+// existing resolver; no saved values or shared Accessible styles are changed.
+function useSignalContrast() {
+  const preferences = useAccessibilityPreferences();
+  return preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+}
+
+function useSignalStyles() {
+  const signalStyles = useSettingsStyles(baseSignalStyles, "standard");
+  const vision = useSettingsPalette();
+  const increased = useSignalContrast();
+  if (vision.dark) return {
+    ...signalStyles,
+    choice: { ...signalStyles.choice, borderWidth: 2 },
+    deviceBadge: { ...signalStyles.deviceBadge, borderWidth: 1 },
+    switchOn: { ...signalStyles.switchOn, borderColor: increased ? vision.tokens.outline : vision.tokens.accent, borderWidth: 1, padding: 3 },
+    switchOff: { ...signalStyles.switchOff, borderColor: vision.tokens.outline, borderWidth: 1, padding: 3 },
+  };
+  const neutralBadge = { ...signalStyles.deviceBadge, backgroundColor: vision.readOnlyStatus.surface };
+  if (!increased) return vision.monochrome ? signalStyles : { ...signalStyles, deviceBadge: neutralBadge };
+  const contrasted = {
+    ...signalStyles,
+    container: { ...signalStyles.container, backgroundColor: vision.settingsBackground(BASE_SIGNAL.background) },
+    modeGroup: { ...signalStyles.modeGroup, backgroundColor: "#FFFFFF" },
+    choice: { ...signalStyles.choice, backgroundColor: "#FFFFFF", borderColor: "#272423", borderWidth: 2 },
+    choiceSelected: { ...signalStyles.choiceSelected, borderColor: "#272423" },
+    choiceLabel: { ...signalStyles.choiceLabel, fontWeight: "700" as const },
+    tabs: { ...signalStyles.tabs, borderBottomColor: "#70655F" },
+    tabSelected: { ...signalStyles.tabSelected, borderBottomWidth: 4 },
+    preferenceRow: { ...signalStyles.preferenceRow, borderBottomColor: "#272423", borderBottomWidth: 2 },
+    preferenceBlock: { ...signalStyles.preferenceBlock, borderBottomColor: "#272423", borderBottomWidth: 2 },
+    // These are grouping separators, not interactive control outlines.
+    switchRow: { ...signalStyles.switchRow, borderBottomColor: "#B9B1AA" },
+    routeInfo: { ...signalStyles.routeInfo, borderLeftColor: "#70655F" },
+    deviceBadge: { ...signalStyles.deviceBadge, backgroundColor: "#DAD6D0", borderWidth: 2, borderColor: "#272423" },
+    switchTrack: { ...signalStyles.switchTrack, borderWidth: 2, borderColor: "#272423", padding: 2 },
+    switchOff: { ...signalStyles.switchOff, backgroundColor: "#454545" },
+    switchReadOnly: { ...signalStyles.switchReadOnly, borderWidth: 2, padding: 2 },
+    disabled: { ...signalStyles.disabled, backgroundColor: "#DAD6D0" },
+    modalPanel: { ...signalStyles.modalPanel, backgroundColor: vision.settingsBackground(BASE_SIGNAL.background), borderColor: "#272423", borderWidth: 2 },
+    opaqueOverlay: { ...signalStyles.opaqueOverlay, backgroundColor: vision.settingsBackground(BASE_SIGNAL.background) },
+  };
+  return vision.monochrome ? vision.styles(contrasted) : { ...contrasted, deviceBadge: { ...contrasted.deviceBadge, backgroundColor: vision.readOnlyStatus.surface } };
+}
+
+function SignalText({ size = 17, weight = "400", color = BASE_SIGNAL.ink, style, textRef, ...props }:
+  TextProps & { size?: number; weight?: TextStyle["fontWeight"]; color?: string; textRef?: React.Ref<React.ElementRef<typeof Text>> }) {
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const { fontSize } = useSettings();
+  const preferences = useAccessibilityPreferences();
+  const highContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+  const vision = useSettingsPalette();
+  color = vision.dark && color === BASE_SIGNAL.ink ? vision.tokens.text : vision.color(color);
+  if (vision.dark && size <= 16) size = size === 15 ? 17 : 16;
+  return <Text ref={textRef} allowFontScaling maxFontSizeMultiplier={vision.dark ? undefined : 2.5} {...props}
+    style={[{ fontSize: size * fontSize, lineHeight: Math.ceil(size * fontSize * 1.4),
+      fontWeight: weight, color: highContrast && (color === SIGNAL.muted || color === SIGNAL.status || color === SIGNAL.outline) ? SIGNAL.ink : color,
+      flexShrink: 1 }, style, preferences.boldTextEnabled && standardStyles.boldTextOverride]} />;
+}
+
+function SignalSection({ title, description, children, titleRef }: {
+  title: string; description?: string; children: ReactNode; titleRef?: React.Ref<React.ElementRef<typeof Text>>;
+}) {
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  return <View style={signalStyles.section}>
+    <SignalText textRef={titleRef} size={24} weight="800" color={SIGNAL.heading} accessibilityRole="header">{title}</SignalText>
+    {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
+    {children}
+  </View>;
+}
+
+function useSignalStacked() {
+  const { width, fontScale } = useWindowDimensions();
+  const { fontSize } = useSettings();
+  return width < 360 || fontSize * Math.min(fontScale, 2.5) >= 1.35;
+}
+
+type SignalOption = {
+  label: string; accessibilityLabel: string; hint: string; selected: boolean; onPress: () => void;
+};
+
+function SignalChoice({ label, accessibilityLabel, hint, selected, onPress, disabled = false, vertical = false }: SignalOption & {
+  disabled?: boolean; vertical?: boolean;
+}) {
+  const vision = useSettingsPalette();
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const stacked = useSignalStacked();
+  const increased = useSignalContrast();
+  return <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}
+    accessibilityHint={hint} accessibilityState={{ selected, disabled }} disabled={disabled}
+    onPress={onPress} style={[signalStyles.choice, (vertical || stacked) && signalStyles.stackedChoice, selected && signalStyles.choiceSelected,
+      disabled && !selected && signalStyles.disabled, disabled && signalStyles.disabledChoice]}>
+    {selected && <MaterialCommunityIcons name={disabled ? "lock-check-outline" : "check"} size={16} color={vision.dark ? vision.tokens.onSelected : vision.color("#FFFFFF", "iconColor")} accessible={false}
+      accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+    {disabled && !selected && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={vision.color(SIGNAL.ink, "iconColor")}
+      accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+    <SignalText accessible={false} size={16} weight="600" color={selected ? "#FFFFFF" : SIGNAL.ink}
+      style={signalStyles.choiceLabel}>{label}</SignalText>
+  </TouchableOpacity>;
+}
+
+// Compact rows expose the existing choices in a native, scrollable dialog.
+// No draft preference or new persistence path is introduced.
+function SignalPreferenceRow({ label, value, description, options, disabled = false }: {
+  label: string; value: string; description?: string; options: SignalOption[]; disabled?: boolean;
+}) {
+  const vision = useSettingsPalette();
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const [open, setOpen] = useState(false);
+  const [presented, setPresented] = useState(false);
+  const [laidOut, setLaidOut] = useState(false);
+  const trigger = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+  const heading = useRef<React.ElementRef<typeof Text>>(null);
+  const wasOpen = useRef(false);
+  const focusHandled = useRef(false);
+  const stacked = useSignalStacked();
+  const { fontSize } = useSettings();
+  const { screenReaderEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
+  const increased = useSignalContrast();
+
+  const restoreFocus = useCallback(() => {
+    if (screenReaderEnabled && trigger.current) {
+      if (Platform.OS === "web") trigger.current.focus();
+      else AccessibilityInfo.sendAccessibilityEvent(trigger.current, "focus");
+    }
+  }, [screenReaderEnabled]);
+
+  useEffect(() => {
+    if (open) { wasOpen.current = true; return; }
+    setPresented(false); setLaidOut(false); focusHandled.current = false;
+    if (!wasOpen.current || Platform.OS === "ios") return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => { wasOpen.current = false; restoreFocus(); });
+    });
+    return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+  }, [open, restoreFocus]);
+
+  useEffect(() => {
+    if (!open || !presented || !laidOut || !screenReaderEnabled || focusHandled.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (heading.current) {
+        focusHandled.current = true;
+        if (Platform.OS === "web") heading.current.focus();
+        else AccessibilityInfo.sendAccessibilityEvent(heading.current, "focus");
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, presented, laidOut, screenReaderEnabled]);
+
+  return <>
+    <TouchableOpacity ref={trigger} accessible accessibilityRole="button" accessibilityLabel={`${label}, ${value}`}
+      accessibilityHint={`${description ? `${description} ` : ""}Opens the available choices.`}
+      accessibilityState={{ disabled, expanded: open }} disabled={disabled} onPress={() => setOpen(true)}
+      style={[signalStyles.preferenceBlock, disabled && signalStyles.disabled]}>
+      <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]}>
+        <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel]} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <SignalText weight="500">{label}</SignalText>
+        </View>
+        <View style={[signalStyles.valueWithChevron, stacked && signalStyles.stackedValue]} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <SignalText size={15} weight="600" color={disabled ? SIGNAL.status : SIGNAL.accent}>{value}</SignalText>
+          {disabled && increased && <MaterialCommunityIcons name="lock-outline" size={16} color={vision.color(SIGNAL.ink, "iconColor")}
+            accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+          <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(disabled ? SIGNAL.status : SIGNAL.accent, "iconColor")} accessible={false} allowFontScaling={false} />
+        </View>
       </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Navigation Mode */}
-        <AccessibleText
-          boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-          key={`settings-text-2-${fontScale}`}
-          maxFontSizeMultiplier={2.5}
-          accessibilityRole="header"
-          style={[
-            styles.sectionLabel,
-            styles.interactiveSectionLabel,
-            styles.sectionBandRed,
-            increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
-          ]}
-        >
-          NAVIGATION MODE
-        </AccessibleText>
-
-        <View
-          style={[
-            styles.settingsCard,
-            styles.navigationCard,
-            increasedContrast && styles.settingsCardHighContrast,
-          ]}
-        >
-          <View style={styles.optionRow}>
-            <AccessibleText
-              boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              key={`settings-text-3-${fontScale}`}
-              maxFontSizeMultiplier={2.5}
-              style={[styles.settingTitle, { fontSize: 16 * fontSize }]}
-            >
-              Navigation mode
-            </AccessibleText>
-
-            <View
-              style={[
-                styles.segmentedControl,
-                stackControls && styles.segmentedControlStacked,
-                styles.redSegmentTrack,
-                increasedContrast && styles.segmentedControlHighContrast,
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
-                  navigationMode === "standard" &&
-                    styles.segmentButtonSelected,
-                ]}
-                onPress={() => changeNavigationMode("standard")}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Standard navigation mode"
-                accessibilityHint="Uses standard navigation when you return to the map"
-                accessibilityState={{
-                  selected: navigationMode === "standard",
-                }}
-              >
-                <AccessibleText
-                  boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  key={`settings-text-4-${fontScale}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[
-                    styles.segmentText,
-                    increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
-                    navigationMode === "standard" &&
-                      styles.segmentTextSelected,
-                  ]}
-                >
-                  Standard
-                </AccessibleText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
-                  navigationMode === "accessibility" &&
-                    styles.segmentButtonSelected,
-                ]}
-                onPress={() => changeNavigationMode("accessibility")}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Accessible navigation mode"
-                accessibilityHint="Uses accessible navigation when you return to the map"
-                accessibilityState={{
-                  selected: navigationMode === "accessibility",
-                }}
-              >
-                <AccessibleText
-                  boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  key={`settings-text-5-${fontScale}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[
-                    styles.segmentText,
-                    increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
-                    navigationMode === "accessibility" &&
-                      styles.segmentTextSelected,
-                  ]}
-                >
-                  Accessible
-                </AccessibleText>
-              </TouchableOpacity>
-            </View>
-          </View>
+      {description && <SignalText size={14} color={SIGNAL.muted} accessible={false}
+        accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{description}</SignalText>}
+    </TouchableOpacity>
+    <Modal visible={open} transparent animationType="none" onShow={() => setPresented(true)}
+      onRequestClose={() => setOpen(false)} onDismiss={() => { wasOpen.current = false; restoreFocus(); }}>
+      <SafeAreaView style={[signalStyles.modalOverlay, reduceTransparencyEnabled && signalStyles.opaqueOverlay]}>
+        <View style={signalStyles.modalPanel} accessibilityViewIsModal importantForAccessibility="yes">
+          <ScrollView contentContainerStyle={signalStyles.modalContent} keyboardShouldPersistTaps="handled">
+            <Text ref={heading} accessible accessibilityRole="header" onLayout={() => setLaidOut(true)}
+              style={[signalStyles.modalHeading, { fontSize: 23 * fontSize, lineHeight: Math.ceil(32 * fontSize) },
+                boldTextEnabled && standardStyles.boldTextOverride]} allowFontScaling maxFontSizeMultiplier={2.5}>{label}</Text>
+            {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
+            {options.map((option) => <SignalChoice key={option.accessibilityLabel} {...option} vertical
+              disabled={disabled} onPress={() => { setOpen(false); option.onPress(); }} />)}
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Cancel ${label} selection`}
+              onPress={() => setOpen(false)} style={signalStyles.cancelButton}>
+              <SignalText color={SIGNAL.accent} weight="600">Cancel</SignalText>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
+      </SafeAreaView>
+    </Modal>
+  </>;
+}
 
-        {/* Navigation Preferences */}
-        <AccessibleText
-          boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-          key={`settings-text-6-${fontScale}`}
-          maxFontSizeMultiplier={2.5}
-          accessibilityRole="header"
-          style={[
-            styles.sectionLabel,
-            styles.interactiveSectionLabel,
-            styles.sectionBandRed,
-            increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
-          ]}
-        >
-          NAVIGATION PREFERENCES
-        </AccessibleText>
+function SignalSwitch(props: SwitchProps) {
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const stacked = useSignalStacked();
+  const { value, disabled, onValueChange, ...accessibilityProps } = props;
+  return <TouchableOpacity {...accessibilityProps} accessible accessibilityRole="switch"
+    accessibilityState={{ ...props.accessibilityState, checked: !!value, disabled: !!disabled }}
+    disabled={disabled} activeOpacity={1} onPress={() => { if (!disabled) onValueChange?.(!value); }}
+    style={[signalStyles.switchControl, stacked && signalStyles.switchControlLarge]}>
+    <SignalText size={14} color={SIGNAL.status} accessible={false} accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">{`${value ? "On" : "Off"}${disabled ? " (read only)" : ""}`}</SignalText>
+    <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+      style={[signalStyles.switchTrack, value ? signalStyles.switchOn : signalStyles.switchOff,
+        disabled && signalStyles.switchReadOnly]}>
+      <View style={signalStyles.switchThumb} />
+    </View>
+  </TouchableOpacity>;
+}
 
-        <View
-          style={[
-            styles.settingsCard,
-            styles.preferencesCard,
-            increasedContrast && styles.settingsCardHighContrast,
-          ]}
-        >
-          <View style={styles.optionRow}>
-            <AccessibleText
-              boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              key={`settings-text-7-${fontScale}`}
-              maxFontSizeMultiplier={2.5}
-              style={[styles.settingTitle, { fontSize: 16 * fontSize }]}
-            >
-              Distance units
-            </AccessibleText>
+function SignalSwitchRow({ label, description, status, icon, children }: {
+  label: string; description?: string; status?: string; icon?: SettingsIconName; children: ReactNode;
+}) {
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const stacked = useSignalStacked();
+  return <View style={signalStyles.switchRow}>
+    <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]}>
+      <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel, icon && signalStyles.iconLabel]}
+        accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {icon && <PreferenceIcon name={icon} />}
+        <SignalText weight="500">{label}</SignalText>
+      </View>
+      {children}
+    </View>
+    {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
+    {status && <SignalText size={14} weight="500" color={SIGNAL.status}>{status}</SignalText>}
+  </View>;
+}
 
-            <View
-              style={[
-                styles.segmentedControl,
-                stackControls && styles.segmentedControlStacked,
-                styles.redSegmentTrack,
-                increasedContrast && styles.segmentedControlHighContrast,
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
-                  distanceUnits === "imperial" &&
-                    styles.segmentButtonSelected,
-                ]}
-                onPress={() => setDistanceUnits("imperial")}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Feet and miles"
-                accessibilityHint="Displays distances in feet and miles"
-                accessibilityState={{
-                  selected: distanceUnits === "imperial",
-                }}
-              >
-                <AccessibleText
-                  boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  key={`settings-text-8-${fontScale}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[
-                    styles.segmentText,
-                    increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
-                    distanceUnits === "imperial" &&
-                      styles.segmentTextSelected,
-                  ]}
-                >
-                  ft / mi
-                </AccessibleText>
-              </TouchableOpacity>
+function SignalGuidanceSettings({ titleRef }: { titleRef?: React.Ref<React.ElementRef<typeof Text>> }) {
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const { repeatGuidanceEnabled, repeatGuidanceSeconds, setRepeatGuidanceEnabled, setRepeatGuidanceSeconds,
+    settingsLoaded, settingsReadSucceeded } = useSettings();
+  const stacked = useSignalStacked();
+  const disabled = !settingsLoaded || !settingsReadSucceeded;
+  return <SignalSection title="Spoken guidance" description="During accessibility navigation." titleRef={titleRef}>
+    <SignalSwitchRow label="Repeat instructions">
+      <SignalSwitch value={repeatGuidanceEnabled} disabled={disabled} onValueChange={setRepeatGuidanceEnabled}
+        accessibilityLabel="Repeat spoken instruction"
+        accessibilityHint="Repeats the current instruction during accessibility navigation. Turning this off keeps new direction announcements enabled." />
+    </SignalSwitchRow>
+    <View style={signalStyles.frequencyGroup}>
+      <View style={[signalStyles.textSizeHeading, stacked && signalStyles.stackedRow]}>
+        <SignalText size={14} weight="500">Interval in seconds</SignalText>
+        <SignalText size={15} weight="600" color={SIGNAL.accent}>{repeatGuidanceSeconds} seconds</SignalText>
+      </View>
+      <View style={[signalStyles.frequencyOptions, stacked && signalStyles.stackedChoices]}>
+        {[5, 9, 15, 30, 60].map((seconds) => <SignalChoice key={seconds} label={String(seconds)}
+          accessibilityLabel={`Repeat every ${seconds} seconds`} hint={`Repeats the current instruction every ${seconds} seconds.`}
+          selected={repeatGuidanceSeconds === seconds} disabled={disabled || !repeatGuidanceEnabled}
+          onPress={() => setRepeatGuidanceSeconds(seconds)} />)}
+      </View>
+      {!repeatGuidanceEnabled && <SignalText size={14} color={SIGNAL.muted}>
+        Enable repetition to change its frequency. Your selected frequency is saved.
+      </SignalText>}
+    </View>
+    <SignalText size={14} color={SIGNAL.muted}>
+      Turning repetition off keeps new direction announcements on.
+    </SignalText>
+  </SignalSection>;
+}
 
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
-                  distanceUnits === "metric" &&
-                    styles.segmentButtonSelected,
-                ]}
-                onPress={() => setDistanceUnits("metric")}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Meters and kilometers"
-                accessibilityHint="Displays distances in meters and kilometers"
-                accessibilityState={{
-                  selected: distanceUnits === "metric",
-                }}
-              >
-                <AccessibleText
-                  boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  key={`settings-text-9-${fontScale}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[
-                    styles.segmentText,
-                    increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
-                    distanceUnits === "metric" &&
-                      styles.segmentTextSelected,
-                  ]}
-                >
-                  m / km
-                </AccessibleText>
-              </TouchableOpacity>
-            </View>
-          </View>
+function SignalActionRow({ label, description, onPress, accessibilityLabel = label, accessibilityHint, chevron = true }: {
+  label: string; description?: string; onPress: () => void; accessibilityLabel?: string;
+  accessibilityHint: string; chevron?: boolean;
+}) {
+  const vision = useSettingsPalette();
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const [pressed, setPressed] = useState(false);
+  const preferences = useAccessibilityPreferences();
+  const increasedContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
+  return <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={accessibilityLabel}
+    accessibilityHint={accessibilityHint} onPress={onPress}
+    activeOpacity={chevron ? undefined : 1}
+    onPressIn={!chevron ? () => setPressed(true) : undefined}
+    onPressOut={!chevron ? () => setPressed(false) : undefined}
+    style={[signalStyles.preferenceRow, !chevron && signalStyles.deleteAction,
+      !chevron && { backgroundColor: vision.dark ? (pressed ? vision.tokens.dangerPressed : vision.tokens.dangerSurface) : vision.color(pressed ? "#8F1C28" : "#B42332", "backgroundColor"),
+        borderColor: vision.dark ? vision.tokens.outline : vision.monochrome ? vision.palette.outline : increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332"),
+        borderBottomColor: vision.dark ? vision.tokens.outline : vision.monochrome ? vision.palette.outline : increasedContrast ? "#000000" : (pressed ? "#8F1C28" : "#B42332") }]}>
+    {!chevron && <MaterialCommunityIcons name="trash-can-outline" size={24} color={vision.dark ? vision.tokens.dangerText : vision.color("#FFFFFF", "iconColor")} accessible={false}
+      accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+    <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <SignalText weight={chevron ? "500" : "700"} color={chevron ? SIGNAL.ink : vision.dark ? vision.tokens.dangerText : "#FFFFFF"}>{label}</SignalText>
+      {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
+    </View>
+    {chevron && <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
+      accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
+  </TouchableOpacity>;
+}
 
-          <Divider />
+type SignalSettingsProps = {
+  activeTab: "general" | "routing"; onTabChange: (tab: "general" | "routing") => void;
+  from?: string; mapVersion: string; onBack: () => void; onHome: () => void; onDelete: () => void;
+  onNavigationModeChange: (mode: "standard" | "accessibility") => void;
+  onFontSizeAccessibilityAction: (event: AccessibilityActionEvent) => void;
+};
 
-          <View style={styles.optionRow}>
-            <AccessibleText
-              boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              key={`settings-text-10-${fontScale}`}
-              maxFontSizeMultiplier={2.5}
-              style={[styles.settingTitle, { fontSize: 16 * fontSize }]}
-            >
-              Direction style
-            </AccessibleText>
+function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHome, onDelete,
+  onNavigationModeChange, onFontSizeAccessibilityAction }: SignalSettingsProps) {
+  const vision = useSettingsPalette();
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  const signalStyles = useSignalStyles();
+  const { settingsAppearance, setSettingsAppearance, navigationMode, distanceUnits, setDistanceUnits,
+    directionStyle, setDirectionStyle, fontSize, setFontSize, deviceAccessibility,
+    customAccessibilityPreferences: savedAccessibilityPreferences, settingsLoaded, settingsReadSucceeded,
+    setAccessibilityPreference, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks,
+    configureAvoidStairs, configureRoutingPreferences, batterySaverEnabled, setBatterySaverEnabled } = useSettings();
+  const stacked = useSignalStacked();
+  const { screenReaderEnabled, reduceMotionEnabled } = useAccessibilityPreferences();
+  const increased = useSignalContrast();
+  const colorVision = useColorVisionDialog();
+  const themeDialog = useColorVisionDialog();
+  const scroll = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const guidanceHeading = useRef<React.ElementRef<typeof Text>>(null);
+  const pendingGuidance = useRef(false);
+  const sectionsY = useRef(0);
+  const guidanceY = useRef(0);
+  const guidanceLayout = useRef({ sections: false, guidance: false, content: false });
+  const guidanceFrame = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (guidanceFrame.current !== null) cancelAnimationFrame(guidanceFrame.current);
+  }, []);
+  // The Routing tab remounts its scroll view. Wait for its native layout before
+  // scrolling, and move assistive focus to the same section (never a stale tab).
+  const locateGuidance = () => {
+    if (!pendingGuidance.current || activeTab !== "routing" ||
+        !guidanceLayout.current.sections || !guidanceLayout.current.guidance || !guidanceLayout.current.content) return;
+    if (guidanceFrame.current !== null) cancelAnimationFrame(guidanceFrame.current);
+    guidanceFrame.current = requestAnimationFrame(() => {
+      guidanceFrame.current = null;
+      if (!pendingGuidance.current) return;
+      scroll.current?.scrollTo({ y: Math.max(0, sectionsY.current + guidanceY.current - 12), animated: !reduceMotionEnabled && !screenReaderEnabled });
+      if (screenReaderEnabled && guidanceHeading.current) {
+        if (Platform.OS === "web") guidanceHeading.current.focus();
+        else AccessibilityInfo.sendAccessibilityEvent(guidanceHeading.current, "focus");
+      }
+      pendingGuidance.current = false;
+    });
+  };
+  const changeTab = (tab: "general" | "routing") => {
+    pendingGuidance.current = false;
+    guidanceLayout.current = { sections: false, guidance: false, content: false };
+    onTabChange(tab);
+  };
+  const disabled = !settingsLoaded || !settingsReadSucceeded;
+  const deviceValue = (preference: DeviceAccessibilityPreference) => {
+    const status = deviceAccessibility.detectionStatus[preference];
+    return status === "loading" ? "Loading" : status === "unavailable" ? "Unavailable" : deviceAccessibility[preference] ? "On" : "Off";
+  };
 
-            <View
-              style={[
-                styles.segmentedControl,
-                stackControls && styles.segmentedControlStacked,
-                styles.redSegmentTrack,
-                increasedContrast && styles.segmentedControlHighContrast,
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
-                  directionStyle === "natural" &&
-                    styles.segmentButtonSelected,
-                ]}
-                onPress={() => setDirectionStyle("natural")}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Natural directions"
-                accessibilityHint="Uses directions such as turn left or turn right"
-                accessibilityState={{
-                  selected: directionStyle === "natural",
-                }}
-              >
-                <AccessibleText
-                  boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  key={`settings-text-11-${fontScale}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[
-                    styles.segmentText,
-                    increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
-                    directionStyle === "natural" &&
-                      styles.segmentTextSelected,
-                  ]}
-                >
-                  Natural
-                </AccessibleText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  stackControls && styles.segmentButtonStacked,
-                  directionStyle === "degrees" &&
-                    styles.segmentButtonSelected,
-                ]}
-                onPress={() => setDirectionStyle("degrees")}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel="Degree based directions"
-                accessibilityHint="Uses turning angles in degrees"
-                accessibilityState={{
-                  selected: directionStyle === "degrees",
-                }}
-              >
-                <AccessibleText
-                  boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                  key={`settings-text-12-${fontScale}`}
-                  maxFontSizeMultiplier={2.5}
-                  style={[
-                    styles.segmentText,
-                    increasedContrast && styles.segmentTextHighContrast,
-                    { fontSize: 13 * fontSize },
-                    directionStyle === "degrees" &&
-                      styles.segmentTextSelected,
-                  ]}
-                >
-                  Degrees
-                </AccessibleText>
-              </TouchableOpacity>
-            </View>
-          </View>
+  return <SafeAreaView style={signalStyles.container}>
+    <SettingsStatusBar />
+    <View style={signalStyles.pinnedHeader} accessibilityElementsHidden={colorVision.visible || themeDialog.visible} aria-hidden={colorVision.visible || themeDialog.visible} importantForAccessibility={colorVision.visible || themeDialog.visible ? "no-hide-descendants" : "auto"}>
+        <View style={signalStyles.topRow}>
+          <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={from ? "Back to navigation" : "Back"}
+            accessibilityHint={from ? "Returns to navigation and applies the selected navigation mode" : "Returns to the previous screen"}
+            style={signalStyles.backButton}>
+            <MaterialCommunityIcons name="chevron-left" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false} allowFontScaling={false} />
+            <SignalText accessible={false} size={16} weight="500" color={SIGNAL.accent}>{from ? "Back to map" : "Back"}</SignalText>
+          </TouchableOpacity>
+          <SignalText size={16} weight="700">MapQP</SignalText>
         </View>
-
-        {/* Display */}
-        <AccessibleText
-          boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-          key={`settings-text-13-${fontScale}`}
-          maxFontSizeMultiplier={2.5}
-          accessibilityRole="header"
-          style={[
-            styles.sectionLabel,
-            styles.displaySectionLabel,
-            styles.sectionBandPurple,
-            increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
-          ]}
-        >
-          DISPLAY
-        </AccessibleText>
-
-        <View
-          style={[
-            styles.settingsCard,
-            styles.displayCard,
-            increasedContrast && styles.settingsCardHighContrast,
-          ]}
-        >
-          <View style={styles.sliderRow}>
-            <AccessibleText
-              boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              key={`settings-text-14-${fontScale}`}
-              maxFontSizeMultiplier={2.5}
-              style={[styles.settingTitle, { fontSize: 16 * fontSize }]}
-            >
-              Text size
-            </AccessibleText>
-
-            <View style={styles.sliderContainer}>
-              <AccessibleText
-                boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                key={`settings-text-15-${fontScale}`}
-                maxFontSizeMultiplier={2.5}
-                accessible={false}
-                style={[
-                  styles.smallA,
-                  increasedContrast && styles.secondaryTextHighContrast,
-                  { fontSize: 14 * fontSize },
-                ]}
-              >
-                A
-              </AccessibleText>
-
-              <View
-                style={styles.slider}
-                accessible
-                accessibilityRole="adjustable"
-                accessibilityLabel="Text size"
-                accessibilityHint={
-                  Platform.OS === "ios"
-                    ? "Swipe up or down to adjust text size"
-                    : "Use the increase or decrease accessibility action to adjust text size"
-                }
-                accessibilityValue={{
-                  min: 80,
-                  max: 180,
-                  now: Math.round(fontSize * 100),
-                  text: `${Math.round(fontSize * 100)} percent`,
-                }}
-                accessibilityActions={[
-                  { name: "increment" },
-                  { name: "decrement" },
-                ]}
-                onAccessibilityAction={handleFontSizeAccessibilityAction}
-              >
-                <Slider
-                  style={{ flex: 1, height: 40 }}
-                  minimumValue={0.8}
-                  maximumValue={1.8}
-                  step={0.1}
-                  value={fontSize}
-                  onValueChange={setFontSize}
-                  minimumTrackTintColor="#6848A0"
-                  maximumTrackTintColor="#D1D5DB"
-                  thumbTintColor="#6848A0"
-                  accessible={false}
-                  importantForAccessibility="no-hide-descendants"
-                />
-              </View>
-
-              <AccessibleText
-                boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                key={`settings-text-16-${fontScale}`}
-                maxFontSizeMultiplier={2.5}
-                accessible={false}
-                style={[
-                  styles.largeA,
-                  increasedContrast && styles.secondaryTextHighContrast,
-                  { fontSize: 24 * fontSize },
-                ]}
-              >
-                A
-              </AccessibleText>
-            </View>
-
-            <AccessibleText
-              boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              key={`settings-text-17-${fontScale}`}
-              maxFontSizeMultiplier={2.5}
-              style={[
-                styles.fontSizeValue,
-                increasedContrast && styles.secondaryTextHighContrast,
-                { fontSize: 12 * fontSize },
-              ]}
-            >
-              {Math.round(fontSize * 100)}%
-            </AccessibleText>
-          </View>
+    </View>
+    <ScrollView accessibilityElementsHidden={colorVision.visible || themeDialog.visible} aria-hidden={colorVision.visible || themeDialog.visible} importantForAccessibility={colorVision.visible || themeDialog.visible ? "no-hide-descendants" : "auto"} ref={scroll} key={activeTab} showsVerticalScrollIndicator={false}
+      onContentSizeChange={() => { guidanceLayout.current.content = true; locateGuidance(); }} contentContainerStyle={signalStyles.content}>
+      <View style={signalStyles.header}>
+        <View style={signalStyles.titleGroup}>
+          <SignalText size={30} weight="700" color={SIGNAL.heading} accessibilityRole="header">Settings</SignalText>
         </View>
-
-        {/* Accessibility preferences */}
-        <AccessibleText
-          boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-          key={`settings-text-18-${fontScale}`}
-          maxFontSizeMultiplier={2.5}
-          accessibilityRole="header"
-          style={[
-            styles.sectionLabel,
-            styles.deviceSectionLabel,
-            styles.sectionBandTeal,
-            increasedContrast && styles.sectionLabelHighContrast,
-            { fontSize: 12 * fontSize },
-          ]}
-        >
-          ACCESSIBILITY
-        </AccessibleText>
-        <View key={`device-description-${fontScale}`} style={styles.deviceDescriptionContainer}>
-          <AccessibleText
-            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            allowFontScaling={false}
-            style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
-              {
-                fontSize: 13 * fontSize * fontScale,
-                lineHeight: Math.ceil(19 * fontSize * fontScale),
-              }]}
-          >
-            Enabled device preferences always apply. You can enable additional preferences in MapQP. Your choices are saved independently.
-          </AccessibleText>
-        </View>
-        <View style={[styles.settingsCard, styles.deviceSettingsCard,
-          increasedContrast && styles.settingsCardHighContrast]}>
-          <View style={styles.deviceSettingRow} accessible accessibilityRole="text"
-            accessibilityLabel={`Screen reader, ${deviceSettingValue("screenReaderEnabled")}. Controlled by your device.`}>
-            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              maxFontSizeMultiplier={2.5}
-              style={[styles.settingTitle, styles.deviceSettingTitle, { fontSize: 16 * fontSize }]}>
-              Screen Reader
-            </AccessibleText>
-            <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-              maxFontSizeMultiplier={2.5}
-              style={[...deviceSettingStyles("screenReaderEnabled"), { fontSize: 14 * fontSize }]}>
-              {deviceSettingValue("screenReaderEnabled")}
-            </AccessibleText>
-          </View>
-          <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            maxFontSizeMultiplier={2.5}
-            style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
-              { fontSize: 13 * fontSize }]}>
-            VoiceOver and TalkBack are controlled in device settings. MapQP always keeps screen-reader support active.
-          </AccessibleText>
-          {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference }) => {
-            const detectedPreference = preference === "increaseContrastEnabled" && Platform.OS === "android"
-              ? "highTextContrastEnabled" : devicePreference;
-            const control = accessibilityControlState(deviceAccessibility, detectedPreference,
-              savedAccessibilityPreferences[preference], settingsLoaded);
-            return (
-              <View key={preference}>
-                <Divider />
-                <View style={[styles.deviceSettingRow, styles.accessibilitySourceRow,
-                  stackControls && styles.accessibilitySourceRowStacked]}>
-                  <View style={[styles.accessibilitySourceLabel,
-                    stackControls && styles.accessibilitySourceLabelStacked]} accessible={false}>
-                    <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                      maxFontSizeMultiplier={2.5} accessible={false}
-                      style={[styles.settingTitle, styles.wrappingLabel, { fontSize: 16 * fontSize }]}>
-                      {label}
-                    </AccessibleText>
-                    <AccessibleText boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-                      maxFontSizeMultiplier={2.5} accessible={false}
-                      style={[styles.deviceSectionDescription, increasedContrast && styles.secondaryTextHighContrast,
-                        { fontSize: 13 * fontSize }]}>
-                      {control.explanation}
-                    </AccessibleText>
-                  </View>
-                  <Switch
-                    style={stackControls ? styles.stackedSwitch : undefined}
-                    value={control.enabled}
-                    disabled={control.disabled}
-                    onValueChange={(enabled) => {
-                      if (!control.disabled) setAccessibilityPreference(preference, enabled);
-                    }}
-                    accessibilityRole="switch"
-                    accessibilityLabel={label}
-                    accessibilityValue={{ text: control.explanation }}
-                    accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
-                    accessibilityHint={control.disabled ? undefined : "Changes only your saved MapQP preference"}
-                  />
-                </View>
-              </View>
-            );
+        <View style={signalStyles.tabs} accessibilityRole="tablist">
+          {(["general", "routing"] as const).map((tab) => {
+            const selected = activeTab === tab;
+            const label = tab === "general" ? "General" : "Routing";
+            return <TouchableOpacity key={tab} accessible accessibilityRole="tab" accessibilityLabel={label}
+              accessibilityState={{ selected }} onPress={() => changeTab(tab)}
+              style={[signalStyles.tab, selected && signalStyles.tabSelected]}>
+              <SignalText accessible={false} weight={selected ? "600" : "500"}
+                color={selected ? SIGNAL.accent : SIGNAL.outline} style={[signalStyles.centered, selected && increased && { textDecorationLine: "underline", fontWeight: "700" }]}>{label}</SignalText>
+            </TouchableOpacity>;
           })}
         </View>
-
-        <TouchableOpacity
-          style={[styles.landingButton, increasedContrast && styles.settingsCardHighContrast]}
-          onPress={() => router.push("/report-bug")}
-          accessibilityRole="button"
-          accessibilityLabel="Report a Bug"
-          accessibilityHint="Opens the bug reporting form. Submitting reports is not yet available."
-        >
-          <AccessibleText
-            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
-          >
-            Report a Bug
-          </AccessibleText>
-        </TouchableOpacity>
-
-        {/* About / Route Version Info */}
-        <Text style={[styles.sectionLabel, { fontSize: 12 * fontSize }]}>
-          ABOUT
-        </Text>
-
-        <View style={styles.settingsCard}>
-          <View style={styles.infoRow}>
-            <Text style={[styles.settingTitle, { fontSize: 16 * fontSize }]}>
-              Route Data Version
-            </Text>
-            <Text style={[styles.infoValue, { fontSize: 15 * fontSize }]}>
-              v{mapVersion}
-            </Text>
+      </View>
+      <View onLayout={(event) => {
+        sectionsY.current = event.nativeEvent.layout.y; guidanceLayout.current.sections = true; locateGuidance();
+      }}
+        style={signalStyles.sections}>
+        {activeTab === "general" ? <>
+          <SignalSection title="Navigation">
+            <View style={signalStyles.modeGroup}>
+              <SignalText weight="600">Navigation mode</SignalText>
+              <View style={[signalStyles.choices, stacked && signalStyles.stackedChoices]}>
+                <SignalChoice label="Standard" accessibilityLabel="Standard navigation mode"
+                  hint="Uses standard navigation when you return to the map" selected={navigationMode === "standard"}
+                  onPress={() => onNavigationModeChange("standard")} />
+                <SignalChoice label="Accessibility" accessibilityLabel="Accessible navigation mode"
+                  hint="Uses accessible navigation when you return to the map" selected={navigationMode === "accessibility"}
+                  onPress={() => onNavigationModeChange("accessibility")} />
+              </View>
+            </View>
+          </SignalSection>
+          <SignalSection title="Appearance">
+            <SignalPreferenceRow label="Settings layout" value={settingsAppearance === "standard" ? "Standard" : "Accessible"}
+              disabled={disabled}
+              options={(["standard", "accessible"] as const).map((appearance) => ({
+                label: appearance === "standard" ? "Standard" : "Accessible",
+                accessibilityLabel: `${appearance === "standard" ? "Standard" : "Accessible"} Settings layout`,
+                hint: `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`,
+                selected: settingsAppearance === appearance, onPress: () => setSettingsAppearance(appearance),
+              }))} />
+            <ThemeSetting onPress={themeDialog.show} triggerRef={themeDialog.triggerRef} />
+            <ColorVisionSetting onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
+          </SignalSection>
+          <SignalSection title="Text & navigation preferences">
+            <View style={signalStyles.sliderGroup}>
+              <View style={[signalStyles.textSizeHeading, stacked && signalStyles.stackedRow]}>
+                <SignalText weight="500">Text size</SignalText>
+                <SignalText size={15} weight="600" color={SIGNAL.accent} accessible={false}>{Math.round(fontSize * 100)}%</SignalText>
+              </View>
+              <View style={signalStyles.sliderRow}>
+                <SignalText size={15} color={SIGNAL.muted} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
+                <View style={signalStyles.slider} accessible accessibilityRole="adjustable" accessibilityLabel="Text size"
+                  accessibilityHint={Platform.OS === "ios"
+                    ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
+                    : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"}
+                  accessibilityValue={{ min: 80, max: 180, now: Math.round(fontSize * 100), text: `${Math.round(fontSize * 100)} percent` }}
+                  accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+                  onAccessibilityAction={onFontSizeAccessibilityAction}>
+                  <Slider style={signalStyles.sliderInput} minimumValue={0.8} maximumValue={1.8} step={0.1}
+                    value={fontSize} onValueChange={setFontSize} minimumTrackTintColor={vision.dark ? vision.tokens.accent : vision.color(SIGNAL.accent, "backgroundColor")}
+                    maximumTrackTintColor={vision.dark ? vision.tokens.outline : vision.monochrome ? vision.palette.outline : increased ? "#272423" : SIGNAL.outline} thumbTintColor={vision.dark ? vision.tokens.accent : vision.color(SIGNAL.accent, "backgroundColor")} accessible={false}
+                    accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+                </View>
+                <SignalText size={25} weight="600" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
+              </View>
+            </View>
+            <SignalPreferenceRow label="Distance units" value={distanceUnits === "imperial" ? "Feet / miles" : "Meters / km"}
+              options={[
+                { label: "Feet / miles", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
+                  selected: distanceUnits === "imperial", onPress: () => setDistanceUnits("imperial") },
+                { label: "Meters / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
+                  selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
+              ]} />
+            <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
+              description="Choose between natural (Turn Left/Right) or degrees (Turn Left/Right 90°)."
+              options={[
+                { label: "Natural", accessibilityLabel: "Natural directions", hint: "Uses directions such as turn left or turn right",
+                  selected: directionStyle === "natural", onPress: () => setDirectionStyle("natural") },
+                { label: "Degrees", accessibilityLabel: "Degree based directions", hint: "Uses turning angles in degrees",
+                  selected: directionStyle === "degrees", onPress: () => setDirectionStyle("degrees") },
+              ]} />
+          </SignalSection>
+          <SignalSection title="Accessibility" description="Device settings take priority. MapQP switches add preferences when device settings are off.">
+            <View accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceValue("screenReaderEnabled")}. Controlled by your device.`}
+              accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
+              style={signalStyles.switchRow}>
+              <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel, signalStyles.iconLabel]}>
+                  <PreferenceIcon name="account-voice" />
+                  <SignalText weight="500">Screen reader</SignalText>
+                </View>
+                <View style={signalStyles.deviceBadge}>
+                  {!vision.monochrome && !increased && <View pointerEvents="none" accessible={false}
+                    accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+                    style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0,
+                      borderRadius: 6, borderWidth: 1, borderColor: vision.readOnlyStatus.outline }} /> }
+                  <SignalText size={14} weight="600" color={SIGNAL.status}>{deviceValue("screenReaderEnabled")}</SignalText>
+                </View>
+              </View>
+              <SignalText size={14} color={SIGNAL.muted} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">VoiceOver or TalkBack reads screen content aloud.</SignalText>
+              <SignalText size={14} weight="500" color={SIGNAL.status} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Device {deviceValue("screenReaderEnabled").toLowerCase()} · Read only</SignalText>
+            </View>
+            {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, description, icon }) => {
+              const detectedPreference = preference === "increaseContrastEnabled" && Platform.OS === "android"
+                ? "highTextContrastEnabled" : devicePreference;
+              const control = accessibilityControlState(deviceAccessibility, detectedPreference, savedAccessibilityPreferences[preference], settingsLoaded);
+              const status = deviceAccessibility.detectionStatus[detectedPreference];
+              const deviceControlled = deviceAccessibility[detectedPreference];
+              const sourceDescription = !settingsLoaded || status === "loading" ? control.explanation
+                : deviceControlled ? (status === "unavailable" ? "Device status unavailable. Using the last detected device preference." : "Controlled by device settings.")
+                : status === "unavailable" ? "Device status unavailable. Saved MapQP preference." : "Saved MapQP preference.";
+              const summary = `Device ${deviceValue(detectedPreference).toLowerCase()} · MapQP ${settingsLoaded ? savedAccessibilityPreferences[preference] ? "on" : "off" : "loading"}`
+                + (control.disabled ? ` · ${deviceControlled ? "Read only" : "Loading"}` : "")
+                + (status === "unavailable" && deviceControlled ? " · Last detected on" : "");
+              return <SignalSwitchRow key={preference} label={label.charAt(0) + label.slice(1).toLowerCase()}
+                status={summary} icon={icon}>
+                <SignalSwitch value={control.enabled} disabled={control.disabled} accessibilityLabel={label}
+                  accessibilityValue={{ text: sourceDescription }} accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
+                  accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
+                    : control.disabled ? "This preference cannot be changed while settings are loading." : "Changes only your saved MapQP preference."}`}
+                  onValueChange={(enabled) => { if (!control.disabled) setAccessibilityPreference(preference, enabled); }} />
+              </SignalSwitchRow>;
+            })}
+            <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline">
+              <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
+                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
+            </SignalSwitchRow>
+          </SignalSection>
+          <SignalSection title="App & support">
+            <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
+              description="Send a bug report to the mapQP team."
+              accessibilityHint="Opens the form to submit a bug report."
+              onPress={() => router.push("/report-bug")} />
+            <View style={[signalStyles.preferenceRow, stacked && signalStyles.stackedRow]}>
+              <SignalText size={15} color={SIGNAL.status}>Route data version</SignalText>
+              <SignalText size={15} color={SIGNAL.status}>v{mapVersion}</SignalText>
+            </View>
+            <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
+              accessibilityHint="Return to the MapQP home screen" onPress={onHome}
+              style={[signalStyles.homeAction, increased && signalStyles.homeActionContrast]}>
+              <MaterialCommunityIcons name="home-outline" size={24} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+              <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <SignalText weight="600">Return to Home</SignalText>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
+                accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+            </TouchableOpacity>
+          </SignalSection>
+          <View style={signalStyles.deleteSection}>
+            <SignalActionRow label="Delete all local data" accessibilityHint="Opens a confirmation dialog before deleting saved data"
+              onPress={onDelete} chevron={false} />
+            <SignalText size={14} color={SIGNAL.muted}>Removes saved app data from this device. Confirmation required.</SignalText>
           </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.landingButton}
-          onPress={returnToLandingPage}
-          accessibilityRole="button"
-          accessibilityLabel="Back to landing page"
-          accessibilityHint="Leaves navigation and returns to the landing page"
-        >
-          <AccessibleText
-            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            key={`settings-text-31-${fontScale}`}
-            maxFontSizeMultiplier={2.5}
-            style={[styles.landingButtonText, { fontSize: 15 * fontSize }]}
-          >
-            Back to landing page
-          </AccessibleText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Delete all local data"
-          accessibilityHint="Opens a confirmation dialog before deleting saved data"
-          style={styles.deleteStorageButton}
-          onPress={deleteLocalStorage}
-        >
-          <AccessibleText
-            boldTextEnabled={accessibilityPreferences.boldTextEnabled}
-            key={`settings-text-32-${fontScale}`}
-            style={[styles.deleteStorageText, { fontSize: 15 * fontSize }]}
-          >
-            Delete all local data
-          </AccessibleText>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
-  );
+        </> : <>
+          <SignalSection title="Route preferences" description="Changes apply when you start a new route.">
+            <SignalSwitchRow label="Avoid stairs" icon="stairs" description="Avoid stairs and inaccessible building entrances.">
+              <SignalSwitch value={avoidStairs} disabled={disabled} accessibilityLabel="Avoid stairs"
+                accessibilityHint="Avoid stairs and inaccessible building entrances. Changes apply when you start a new route."
+                onValueChange={(enabled) => { if (!disabled) void configureAvoidStairs(enabled).catch(() => Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
+            </SignalSwitchRow>
+            {([
+              { key: "avoidIndoorRoutes", icon: "office-building", label: "Avoid routes through buildings", accessibilityLabel: "Avoid routes through buildings", value: avoidIndoorRoutes,
+                description: "Don't use buildings as a way to reach another destination.", hint: "Don't use buildings as a way to reach another destination." },
+              { key: "avoidInaccessibleCrosswalks", icon: "walk", label: "Accessible crossings only", accessibilityLabel: "Avoid Inaccessible Road Crossings",
+                value: avoidInaccessibleCrosswalks, description: "Avoid crosswalks that don't have audible indicators.",
+                hint: "Avoid crosswalks that don't have audible indicators." },
+            ] as const).map(({ key, icon, label, accessibilityLabel, value, description, hint }) => <SignalSwitchRow key={key} label={label} icon={icon} description={description}>
+              <SignalSwitch value={value} disabled={disabled} accessibilityLabel={accessibilityLabel} accessibilityHint={hint}
+                onValueChange={(enabled) => { if (!disabled) void configureRoutingPreferences({ [key]: enabled }).catch(() =>
+                  Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
+            </SignalSwitchRow>)}
+          </SignalSection>
+          <View onLayout={(event) => {
+            guidanceY.current = event.nativeEvent.layout.y; guidanceLayout.current.guidance = true; locateGuidance();
+          }}>
+            <SignalGuidanceSettings titleRef={guidanceHeading} />
+          </View>
+          <View style={signalStyles.routeInfo}>
+            <SignalText size={17} weight="600" color={SIGNAL.heading} accessibilityRole="header">About your route</SignalText>
+            <SignalText size={14} color={SIGNAL.muted}>Accessibility is based on campus map data, not live conditions. Check your surroundings as you travel.</SignalText>
+          </View>
+        </>}
+      </View>
+      <View style={signalStyles.footer}>
+        <SignalText size={13} color={SIGNAL.status} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
+      </View>
+    </ScrollView>
+    <ColorVisionDialog visible={colorVision.visible} onClose={colorVision.close} triggerRef={colorVision.triggerRef} />
+    <SettingsThemeDialog visible={themeDialog.visible} onClose={themeDialog.close} triggerRef={themeDialog.triggerRef} />
+  </SafeAreaView>;
 }
 
-function Divider() {
-  return <View style={styles.divider} accessible={false} />;
-}
+const baseSignalStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BASE_SIGNAL.background },
+  content: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 20, paddingBottom: 16 },
+  pinnedHeader: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 20, paddingTop: 4 },
+  header: { gap: 8, paddingTop: 4 },
+  topRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  backButton: { minHeight: 44, flexDirection: "row", alignItems: "center", flexShrink: 1 },
+  titleGroup: { paddingVertical: 4 },
+  tabs: { flexDirection: "row", gap: 8, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
+  tab: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 10, paddingHorizontal: 4,
+    alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
+  tabSelected: { borderBottomColor: BASE_SIGNAL.accent },
+  centered: { textAlign: "center" },
+  sections: { gap: 24, paddingTop: 20, paddingBottom: 12 },
+  section: { gap: 4 },
+  modeGroup: { gap: 10, padding: 12, borderRadius: 12, backgroundColor: "#EEECE5" },
+  choices: { flexDirection: "row", gap: 4 },
+  stackedChoices: { flexDirection: "column", alignItems: "stretch" },
+  choice: { flexGrow: 1, flexBasis: 0, minWidth: 0, minHeight: 48, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: 8, paddingHorizontal: 8, paddingVertical: 12, borderRadius: 8,
+    borderWidth: 1, borderColor: BASE_SIGNAL.outline, backgroundColor: "#F0EEEA" },
+  choiceSelected: { backgroundColor: BASE_SIGNAL.accent, borderColor: BASE_SIGNAL.accent },
+  stackedChoice: { flexBasis: "auto", flexGrow: 0, flexShrink: 0, width: "100%" },
+  choiceLabel: { textAlign: "center" },
+  preferenceRow: { minHeight: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
+  preferenceBlock: { gap: 4, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
+  preferenceHeading: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  rowLabel: { flex: 1, minWidth: 0, gap: 4 },
+  iconLabel: { flexDirection: "row", alignItems: "center", gap: 12 },
+  valueWithChevron: { maxWidth: "45%", flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
+  stackedRow: { flexDirection: "column", alignItems: "stretch" },
+  stackedLabel: { flex: 0, flexBasis: "auto", width: "100%" },
+  stackedValue: { maxWidth: "100%", alignSelf: "flex-start" },
+  switchRow: { gap: 6, paddingTop: 8, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
+  deviceBadge: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: "#E9E7DF" },
+  switchControl: { minHeight: 48, maxWidth: "100%", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8, flexShrink: 0 },
+  switchControlLarge: { alignSelf: "flex-start", flexShrink: 1, flexWrap: "wrap" },
+  switchTrack: { width: 52, height: 32, borderRadius: 16, padding: 4, justifyContent: "center", flexShrink: 0 },
+  switchOn: { backgroundColor: BASE_SIGNAL.accent, alignItems: "flex-end" },
+  switchOff: { backgroundColor: BASE_SIGNAL.off, alignItems: "flex-start" },
+  switchReadOnly: { borderWidth: 1, borderStyle: "dashed", borderColor: BASE_SIGNAL.ink, padding: 3 },
+  switchThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#FFFFFF" },
+  sliderGroup: { gap: 4, paddingTop: 12, paddingBottom: 4 },
+  textSizeHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
+  sliderRow: { flexDirection: "row", alignItems: "center", gap: 16 },
+  slider: { flex: 1, minWidth: 0, minHeight: 48, justifyContent: "center" },
+  sliderInput: { width: "100%", height: 48 },
+  frequencyGroup: { gap: 12, paddingVertical: 12 },
+  frequencyOptions: { flexDirection: "row", gap: 6 },
+  homeAction: { width: "100%", minHeight: 52, flexDirection: "row", alignItems: "center", gap: 12,
+    marginTop: 12, padding: 16, borderWidth: 1, borderColor: "#94877F", borderRadius: 12, backgroundColor: "#FFFFFF" },
+  homeActionContrast: { borderWidth: 2, borderColor: "#272423" },
+  deleteSection: { gap: 4 },
+  deleteAction: { minHeight: 48, borderWidth: 2, borderBottomWidth: 2, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: BASE_SIGNAL.divider, paddingLeft: 16, paddingVertical: 8 },
+  footer: { alignItems: "center", paddingTop: 20, paddingBottom: 12 },
+  // Disabled choices/rows keep full text contrast; the fill, neutral value and
+  // locked selected indicator distinguish them without changing their geometry.
+  disabled: { backgroundColor: BASE_SIGNAL.disabled },
+  disabledChoice: { borderStyle: "dashed" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(37,39,32,0.35)", justifyContent: "center", padding: 24 },
+  opaqueOverlay: { backgroundColor: BASE_SIGNAL.background },
+  modalPanel: { maxHeight: "90%", maxWidth: 480, width: "100%", alignSelf: "center", backgroundColor: BASE_SIGNAL.background,
+    borderWidth: 1, borderColor: BASE_SIGNAL.outline, borderRadius: 16, overflow: "hidden" },
+  modalContent: { padding: 24, gap: 16 },
+  modalHeading: { color: BASE_SIGNAL.heading, fontSize: 23, lineHeight: 32, fontWeight: "600" },
+  cancelButton: { minHeight: 48, alignItems: "center", justifyContent: "center" },
+});
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F3F5F8",
-  },
-  header: {
-    minHeight: 68,
-    paddingVertical: 12,
-    backgroundColor: "#AC2B37",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backArrow: {
-    color: "#FFFFFF",
-    fontSize: 38,
-  },
-  headerTitle: {
-    flex: 1,
-    color: "#FFFFFF",
-    fontSize: 21,
-    fontWeight: "800",
-    textAlign: "center",
-    flexShrink: 1,
-  },
-  headerSpacer: {
-    width: 48,
-  },
-  scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#7A7A7A",
-    marginLeft: 6,
-    marginBottom: 8,
-    marginTop: 12,
-    letterSpacing: 0.8,
-  },
-  interactiveSectionLabel: {
-    color: "#761723",
-  },
-  deviceSectionLabel: {
-    color: "#064C52",
-  },
-  deviceDescriptionContainer: {
-    width: "100%",
-    paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 20,
-    alignSelf: "stretch",
-  },
-  deviceSectionDescription: {
-    color: "#425466",
-  },
-  sectionBandRed: {
-    backgroundColor: "#F9E5E7",
-    borderLeftWidth: 5,
-    borderLeftColor: "#AC2B37",
-    borderRadius: 9,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginLeft: 0,
-    overflow: "hidden",
-  },
-  displaySectionLabel: {
-    color: "#40256F",
-  },
-  sectionBandPurple: {
-    backgroundColor: "#EDE7F8",
-    borderLeftWidth: 5,
-    borderLeftColor: "#6848A0",
-    borderRadius: 9,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginLeft: 0,
-    overflow: "hidden",
-  },
-  sectionBandTeal: {
-    backgroundColor: "#DDF2F0",
-    borderLeftWidth: 5,
-    borderLeftColor: "#087F8C",
-    borderRadius: 9,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginLeft: 0,
-    overflow: "hidden",
-  },
-  sectionLabelHighContrast: {
-    textDecorationLine: "underline",
-  },
-  settingsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  navigationCard: {
-    backgroundColor: "#FFF7F7",
-    borderWidth: 1,
-    borderColor: "#E8B7BC",
-    borderLeftWidth: 5,
-    borderLeftColor: "#AC2B37",
-  },
-  preferencesCard: {
-    backgroundColor: "#FFF7F7",
-    borderWidth: 1,
-    borderColor: "#E8B7BC",
-    borderLeftWidth: 5,
-    borderLeftColor: "#AC2B37",
-  },
-  displayCard: {
-    backgroundColor: "#F7F3FD",
-    borderWidth: 1,
-    borderColor: "#C8B7E3",
-    borderLeftWidth: 5,
-    borderLeftColor: "#6848A0",
-  },
-  redSegmentTrack: {
-    backgroundColor: "#F4E0E3",
-  },
-  deviceSettingsCard: {
-    backgroundColor: "#F2FAF9",
-    borderWidth: 1,
-    borderColor: "#A6D5D0",
-    borderLeftWidth: 4,
-    borderLeftColor: "#087F8C",
-  },
-  settingsCardHighContrast: {
-    borderWidth: 2,
-    borderColor: "#111827",
-  },
-  optionRow: {
-    paddingVertical: 16,
-  },
-  infoRow: {
-    paddingVertical: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  infoValue: {
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 4,
-  },
-  accessibilitySourceRow: {
-    paddingVertical: 14,
-  },
-  accessibilitySourceRowStacked: {
-    flexDirection: "column",
-    alignItems: "stretch",
-  },
-  accessibilitySourceLabel: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 220,
-    minWidth: 0,
-    maxWidth: "100%",
-  },
-  accessibilitySourceLabelStacked: {
-    flexBasis: "auto",
-    flexGrow: 0,
-    width: "100%",
-  },
-  stackedSwitch: {
-    alignSelf: "flex-start",
-  },
-  wrappingLabel: {
-    width: "100%",
-    paddingVertical: 2,
-  },
-  deviceSettingTitle: {
-    flex: 1,
-    flexBasis: "50%",
-    flexShrink: 1,
-  },
-  segmentedControl: {
-    flexDirection: "row",
-    backgroundColor: "#F1F2F4",
-    borderRadius: 10,
-    padding: 3,
-    marginTop: 12,
-  },
-  segmentedControlStacked: {
-    flexDirection: "column",
-  },
-  segmentButtonStacked: {
-    flex: 0,
-    flexBasis: "auto",
-    width: "100%",
-  },
-  segmentedControlHighContrast: {
-    backgroundColor: "#F4E0E3",
-    borderWidth: 2,
-    borderColor: "#111827",
-  },
-  segmentButton: {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    minHeight: 48,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  segmentButtonSelected: {
-    backgroundColor: "#AC2B37",
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center",
-    width: "100%",
-    paddingVertical: 2,
-    color: "#6B7280",
-  },
-  segmentTextHighContrast: {
-    color: "#111827",
-  },
-  segmentTextSelected: {
-    color: "#FFFFFF",
-  },
-  sliderRow: {
-    paddingVertical: 18,
-  },
-  sliderContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 14,
-  },
-  slider: {
-    flex: 1,
-    height: 48,
-    marginHorizontal: 8,
-  },
-  smallA: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#40256F",
-  },
-  largeA: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#40256F",
-  },
-  fontSizeValue: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
-    textAlign: "center",
-  },
-  secondaryTextHighContrast: {
-    color: "#111827",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#D7DFE5",
-  },
-  deviceSettingRow: {
-    minHeight: 60,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    gap: 12,
-  },
-  deviceValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    flexShrink: 1,
-    maxWidth: "100%",
-    overflow: "hidden",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    minWidth: 52,
-    textAlign: "center",
-  },
-  deviceValueOn: {
-    color: "#064C52",
-    backgroundColor: "#E2F4F2",
-  },
-  deviceValueOff: {
-    color: "#374151",
-    backgroundColor: "#F0F1F3",
-  },
-  deviceValueOnHighContrast: {
-    color: "#FFFFFF",
-    backgroundColor: "#075E68",
-    borderWidth: 2,
-    borderColor: "#111827",
-  },
-  deviceValueOffHighContrast: {
-    color: "#111827",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#111827",
-  },
-  boldTextOverride: {
-    fontWeight: "900",
-  },
-  landingButton: {
-    marginTop: 28,
-    minHeight: 48,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "#F9E5E7",
-    borderWidth: 1,
-    borderColor: "#E8B7BC",
-    borderRadius: 12,
-  },
-  landingButtonText: {
-    width: "100%",
-    maxWidth: "100%",
-    textAlign: "center",
-    paddingVertical: 2,
-    color: "#761723",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  deleteStorageButton: {
-    minHeight: 48,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    borderColor: "#B42318",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    backgroundColor: "#FFF0EE",
-    marginTop: 12,
-    paddingVertical: 13,
-  },
-  deleteStorageText: {
-    width: "100%",
-    maxWidth: "100%",
-    textAlign: "center",
-    paddingVertical: 2,
-    color: "#B42318",
-    fontSize: 15,
-    fontWeight: "700",
-  },
+const standardStyles = StyleSheet.create({
+  boldTextOverride: { fontWeight: "900" },
 });

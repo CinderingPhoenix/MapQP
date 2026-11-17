@@ -1,4 +1,3 @@
-
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -68,10 +67,13 @@
       animation: none !important;
     }
 
-    .compass-control.accessibility-compass-control {
-      width: 72px !important;
-      height: 72px !important;
-      line-height: 72px !important;
+    .compass-control.accessibility-compass-control,
+    .mute-control.accessibility-mute-control {
+      box-sizing: border-box;
+      padding: 0;
+      width: 80px !important;
+      height: 80px !important;
+      line-height: 80px !important;
     }
 
     .accessibility-compass-control .compass-icon {
@@ -94,6 +96,8 @@
       margin-top: 12px !important;
     }
 
+    .accessibility-mute-control svg { width: 40px; height: 40px; }
+
     /* Destination uses a square shape, not color alone. */
     .destination-marker-shape {
       width: 20px;
@@ -112,6 +116,62 @@
     .increase-contrast .leaflet-control-attribution,
     .increase-contrast .leaflet-control-attribution a { color: #111; background: #fff; }
     .reduce-transparency .leaflet-control-attribution { background: #fff; }
+
+    /* Interface paint only: never target tiles, markers, paths or map rotation. */
+    .map-ui-dark {
+      --map-compass-idle: var(--map-ui-surface);
+      --map-compass-active: var(--map-ui-selected);
+    }
+    .map-ui-dark .leaflet-tile-pane {
+      filter:
+        invert(1)
+        hue-rotate(180deg)
+        grayscale(0.75)
+        contrast(0.85)
+        brightness(1.2);
+    }
+    html.map-ui-dark, .map-ui-dark body, .map-ui-dark #map {
+      background: var(--map-ui-background);
+    }
+    .map-ui-dark .settings-control,
+    .map-ui-dark .compass-control,
+    .map-ui-dark .mute-control {
+      background: var(--map-ui-surface);
+      border: 2px solid var(--map-ui-outline);
+      color: var(--map-ui-icon);
+    }
+    .map-ui-dark .compass-control[aria-pressed="true"],
+    .map-ui-dark .mute-control[aria-pressed="true"] { background: var(--map-ui-selected); }
+    .map-ui-dark .settings-control svg,
+    .map-ui-dark .mute-control svg { fill: currentColor; }
+    .map-ui-dark .mute-control[aria-pressed="true"] { color: var(--map-ui-danger); }
+    .map-ui-dark .compass-icon polygon:nth-child(1),
+    .map-ui-dark .compass-icon polygon:nth-child(2) { fill: var(--map-ui-compassNorth); }
+    .map-ui-dark .compass-icon polygon:nth-child(3),
+    .map-ui-dark .compass-icon polygon:nth-child(4) { fill: var(--map-ui-compassSouth); }
+    .map-ui-dark .settings-control:focus-visible,
+    .map-ui-dark .compass-control:focus-visible,
+    .map-ui-dark .mute-control:focus-visible {
+      outline: 3px solid var(--map-ui-focus);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 6px var(--map-ui-surface);
+    }
+    .map-ui-dark .leaflet-control-attribution {
+      color: var(--map-ui-text);
+      background: var(--map-ui-surface);
+      border: 1px solid var(--map-ui-outline);
+    }
+    .map-ui-dark .leaflet-control-attribution a {
+      color: var(--map-ui-icon);
+      background: var(--map-ui-surface);
+    }
+    /* Override the existing Light accessibility rules, including link ink. */
+    .map-ui-dark.increase-contrast .leaflet-control-attribution,
+    .map-ui-dark.increase-contrast .leaflet-control-attribution a,
+    .map-ui-dark.reduce-transparency .leaflet-control-attribution {
+      background: var(--map-ui-surface);
+      color: var(--map-ui-text);
+    }
   </style>
 </head>
 <body>
@@ -121,6 +181,8 @@
     var marker = null;
     var circle = null;
     var remainingPolyline = null;
+    var remainingOutline = null;
+    var routeColor = '#1d5962';
     var traversedPolyline = null;
     var destMarker = null;
     var isHeadingFocused = false;
@@ -128,6 +190,23 @@
     var currentCompassAngle = null;
     // Remain still until React Native supplies the device preference.
     window.reduceMotionEnabled = true;
+
+    window.setRouteColor = function(color) {
+      routeColor = color;
+      if (remainingPolyline) remainingPolyline.setStyle({ color: routeColor });
+    };
+
+    // Safe before initMap and repeatable after load. No control reconstruction,
+    // camera calls, navigation messages, or state changes beyond CSS paint.
+    window.setMapUIPresentation = function(presentation) {
+      var root = document.documentElement;
+      var colors = presentation.colors;
+      ['background', 'surface', 'raised', 'icon', 'disabledIcon', 'outline', 'selected',
+       'text', 'secondary', 'danger', 'focus', 'compassNorth', 'compassSouth'].forEach(function(role) {
+        root.style.setProperty('--map-ui-' + role, colors[role]);
+      });
+      root.classList.toggle('map-ui-dark', !!presentation.dark);
+    };
 
     window.setVisualAccessibility = function(bold, contrast, opaque) {
       document.documentElement.classList.toggle('bold-text', !!bold);
@@ -238,6 +317,7 @@
      */
     function createTraversedPolyline(geometry) {
       return L.polyline(geometry, {
+        smoothFactor: 0,
         color: '#888888',
         weight: 6,
         opacity: 0.8,
@@ -247,11 +327,25 @@
     }
 
     /**
+     * Adds a light border so the route stays visible over similar map colors.
+     */
+    function createRemainingOutline(geometry) {
+      return L.polyline(geometry, {
+        smoothFactor: 0,
+        color: '#ffffff',
+        weight: 10,
+        opacity: 1,
+        interactive: false
+      }).addTo(map);
+    }
+
+    /**
      * Creates a solid line for the remaining route.
      */
     function createRemainingPolyline(geometry) {
       return L.polyline(geometry, {
-        color: '#1d5962',
+        smoothFactor: 0,
+        color: routeColor,
         weight: 6,
         opacity: 0.9
       }).addTo(map);
@@ -290,6 +384,7 @@
         rData.geometry
       );
 
+      remainingOutline = createRemainingOutline(split.remaining);
       traversedPolyline = createTraversedPolyline(
         split.traversed
       );
@@ -308,6 +403,119 @@
         animate: !window.reduceMotionEnabled
       });
     }
+
+    // Camera-only commands never change routeData, markers, or GPS subscriptions.
+    function reportCamera(type, command) {
+      if (!map || !window.ReactNativeWebView) return;
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: type, command: command,
+        zoom: map.getZoom(), minZoom: map.getMinZoom(), maxZoom: map.getMaxZoom()
+      }));
+    }
+
+    function beginManualExploration() {
+      window.manualCameraExploration = true;
+      cancelBearingAnimations();
+      map.stop();
+      isHeadingFocused = false;
+      var compass = document.querySelector('.compass-control');
+      if (compass) {
+        compass.setAttribute('aria-pressed', 'false');
+        compass.style.backgroundColor = 'var(--map-compass-idle, white)';
+      }
+      window.ReactNativeWebView.postMessage('USER_DRAGGED');
+    }
+
+    window.cameraCommand = function(command) {
+      if (!map || ['zoom-in', 'zoom-out', 'pan-up', 'pan-down', 'pan-left', 'pan-right'].indexOf(command) < 0) return;
+      beginManualExploration();
+      if (command === 'zoom-in' || command === 'zoom-out') {
+        var delta = command === 'zoom-in' ? 1 : -1;
+        map.setZoom(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + delta)), { animate: !window.reduceMotionEnabled });
+      } else {
+        var size = map.getSize();
+        var target = L.point(size.x / 2, size.y / 2);
+        if (command === 'pan-up') target.y -= size.y / 4;
+        if (command === 'pan-down') target.y += size.y / 4;
+        if (command === 'pan-left') target.x -= size.x / 4;
+        if (command === 'pan-right') target.x += size.x / 4;
+        // The rotation plugin converts screen coordinates to geographic coordinates.
+        map.panTo(map.containerPointToLatLng(target), {
+          animate: !window.reduceMotionEnabled,
+          duration: 0.35,
+          easeLinearity: 0.25
+        });
+      }
+      reportCamera('CAMERA_COMMAND_COMPLETE', command);
+    };
+
+    // Voice requests use the same operations, but acknowledge only the target
+    // camera position. Existing touch commands retain their original protocol.
+    var cancelVoiceCamera = null;
+    window.voiceCameraCommand = function(command, id) {
+      function reply(message) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'VOICE_CAMERA_RESULT', id: id, message: message }));
+      }
+      if (!map) { reply('Map is still loading.'); return; }
+      if (cancelVoiceCamera) cancelVoiceCamera();
+      var timer = null;
+      var done = false;
+      function finish(message) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        map.off('moveend zoomend', check);
+        map.off('dragstart zoomstart', interrupted);
+        cancelVoiceCamera = null;
+        reply(message);
+      }
+      function interrupted() { if (armed) finish('Map movement interrupted. Try again.'); }
+      var armed = false;
+      var targetCenter, targetZoom;
+      function check() {
+        if (!armed) return;
+        if (Math.abs(map.getZoom() - targetZoom) < 0.001 && map.getCenter().distanceTo(targetCenter) < 1) {
+          var messages = { 'zoom-in': 'Map zoomed in.', 'zoom-out': 'Map zoomed out.',
+            'pan-left': 'Map moved left.', 'pan-right': 'Map moved right.',
+            'pan-up': 'Map moved up.', 'pan-down': 'Map moved down.', 'recenter': 'Map recentered.' };
+          finish(messages[command]);
+        }
+      }
+      try {
+        if (['zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'pan-up', 'pan-down', 'recenter'].indexOf(command) < 0) {
+          reply('That map command is not supported.'); return;
+        }
+        map.stop();
+        targetZoom = map.getZoom();
+        targetCenter = map.getCenter();
+        if (command === 'zoom-in' || command === 'zoom-out') {
+          targetZoom += command === 'zoom-in' ? 1 : -1;
+          if (targetZoom > map.getMaxZoom() || targetZoom < map.getMinZoom()) {
+            reply(command === 'zoom-in' ? 'Maximum zoom reached.' : 'Minimum zoom reached.'); return;
+          }
+        } else if (command === 'recenter') {
+          if (!marker) { reply('Current location is unavailable.'); return; }
+          targetCenter = marker.getLatLng();
+        } else {
+          var size = map.getSize();
+          var point = L.point(size.x / 2, size.y / 2);
+          if (command === 'pan-left') point.x -= size.x / 4;
+          if (command === 'pan-right') point.x += size.x / 4;
+          if (command === 'pan-up') point.y -= size.y / 4;
+          if (command === 'pan-down') point.y += size.y / 4;
+          targetCenter = map.containerPointToLatLng(point);
+        }
+        cancelVoiceCamera = function() { finish('Map movement interrupted. Try again.'); };
+        map.on('moveend zoomend', check);
+        timer = setTimeout(function() { finish('Map command timed out. Try again.'); }, 3500);
+        // Register before moving; reduced-motion operations can finish synchronously.
+        armed = true;
+        if (command === 'recenter') window.resetView();
+        else window.cameraCommand(command);
+        check();
+        if (!done) map.on('dragstart zoomstart', interrupted);
+      } catch (error) { finish('Could not move the map. Try again.'); }
+    };
 
     /**
      * Initializes Leaflet and its map controls.
@@ -448,7 +656,7 @@
             );
 
             if (isHeadingFocused) {
-              container.style.backgroundColor = '#d3e3fd';
+              container.style.backgroundColor = 'var(--map-compass-active, #d3e3fd)';
 
               window.ReactNativeWebView.postMessage(
                 'HEADING_LOCKED'
@@ -458,7 +666,7 @@
                 animate: !window.reduceMotionEnabled
               });
             } else {
-              container.style.backgroundColor = 'white';
+              container.style.backgroundColor = 'var(--map-compass-idle, white)';
 
               window.ReactNativeWebView.postMessage(
                 'HEADING_UNLOCKED'
@@ -512,7 +720,9 @@
         onAdd: function(map) {
           var container = L.DomUtil.create(
             'button',
-            'leaflet-bar leaflet-control mute-control'
+            accessibilityMode
+              ? 'leaflet-bar leaflet-control mute-control accessibility-mute-control'
+              : 'leaflet-bar leaflet-control mute-control'
           );
 
           container.type = 'button';
@@ -563,29 +773,23 @@
 
       map.addControl(new MuteControl());
 
-      // Detect manual map interaction
-      map.on('dragstart rotatestart', function() {
-        if (isHeadingFocused) {
-          isHeadingFocused = false;
-
-          var compass = document.querySelector(
-            '.compass-control'
-          );
-
-          if (compass) {
-            compass.style.backgroundColor = 'white';
-            compass.setAttribute('aria-pressed', 'false');
-          }
-
-          window.ReactNativeWebView.postMessage(
-            'HEADING_UNLOCKED'
-          );
-        }
-
-        window.ReactNativeWebView.postMessage(
-          'USER_DRAGGED'
-        );
+      // Gestures and native buttons share the same exploration state.
+      map.on('dragstart rotatestart', beginManualExploration);
+      map.on('zoomstart', function(e) {
+        // Programmatic follow zooms are not gestures. Leaflet's gesture handlers
+        // supply originalEvent only on some paths, so capture input at the DOM.
+        if (e.originalEvent) beginManualExploration();
       });
+      var mapElement = document.getElementById('map');
+      L.DomEvent.on(mapElement, 'wheel dblclick', beginManualExploration);
+      L.DomEvent.on(mapElement, 'touchstart', function(e) {
+        if (e.touches && e.touches.length > 1) beginManualExploration();
+      });
+      L.DomEvent.on(mapElement, 'keydown', function(e) {
+        if (['+', '-', '=', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.key) >= 0) beginManualExploration();
+      });
+      map.on('zoomend moveend', function() { reportCamera('CAMERA_STATE'); });
+      reportCamera('MAP_READY');
 
       updateControlPositions(!!routeData);
     };
@@ -652,8 +856,8 @@
 
       if (compass) {
         compass.style.backgroundColor = focused
-          ? '#d3e3fd'
-          : 'white';
+          ? 'var(--map-compass-active, #d3e3fd)'
+          : 'var(--map-compass-idle, white)';
 
         compass.setAttribute(
           'aria-pressed',
@@ -751,6 +955,62 @@
     /**
      * Updates user position and route geometry.
      */
+    // Display-only estimates: never sent to the native routing/speech hook.
+    var motionTimer = null;
+    var motionEnabled = false;
+    var motionTimestamp = null;
+    var motionDeadline = 0;
+    var motionRouteKey = null;
+    function drawMotionPosition(point) {
+      if (!map || !marker || !circle || !point) return;
+      marker.setLatLng(point);
+      circle.setLatLng(point);
+      if (isHeadingFocused && !window.manualCameraExploration) {
+        map.panTo(point, { animate: false });
+      }
+    }
+    function stopMotion() {
+      if (motionTimer !== null) clearInterval(motionTimer);
+      motionTimer = null;
+      motionEnabled = false;
+      motionTimestamp = null;
+      if (window.positionInterpolator) window.positionInterpolator.reset();
+    }
+    window.updateMotionSample = function(fix, geometry, enabled) {
+      if (!window.positionInterpolator) return;
+      if (!enabled || document.hidden) {
+        stopMotion();
+        drawMotionPosition([fix.latitude, fix.longitude]);
+        return;
+      }
+      if (fix.timestamp !== motionTimestamp) {
+        motionTimestamp = fix.timestamp;
+        motionDeadline = Date.now() + 3600;
+      }
+      var routeKey = JSON.stringify(geometry);
+      if (routeKey !== motionRouteKey) {
+        window.positionInterpolator.reset();
+        motionRouteKey = routeKey;
+      }
+      motionEnabled = true;
+      window.positionInterpolator.update(fix, geometry, Date.now());
+      if (motionTimer === null && Date.now() < motionDeadline) {
+        // Ten frames/sec gives continuous walking motion without a 60fps loop
+        // or repeated React/WebView bridge traffic.
+        motionTimer = setInterval(function() {
+          if (document.hidden) { stopMotion(); return; }
+          drawMotionPosition(window.positionInterpolator.sample(Date.now()));
+          if (Date.now() >= motionDeadline) {
+            clearInterval(motionTimer); motionTimer = null;
+          }
+        }, 100);
+      }
+    };
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) stopMotion();
+    });
+    window.addEventListener('pagehide', stopMotion);
+
     window.updateMap = function(
       userLat,
       userLng,
@@ -761,11 +1021,13 @@
 
       var userLatLng = [userLat, userLng];
 
-      marker.setLatLng(userLatLng);
-      circle.setLatLng(userLatLng);
+      if (!motionEnabled) {
+        marker.setLatLng(userLatLng);
+        circle.setLatLng(userLatLng);
+      }
       circle.setRadius(acc);
 
-      if (isHeadingFocused) {
+      if (isHeadingFocused && !motionEnabled) {
         map.setView(
           userLatLng,
           Math.max(map.getZoom(), 32),
@@ -789,6 +1051,12 @@
         if (remainingPolyline) {
           map.removeLayer(remainingPolyline);
         }
+
+        if (remainingOutline) {
+          map.removeLayer(remainingOutline);
+        }
+
+        remainingOutline = createRemainingOutline(split.remaining);
 
         traversedPolyline = createTraversedPolyline(
           split.traversed
@@ -827,6 +1095,11 @@
           remainingPolyline = null;
         }
 
+        if (remainingOutline) {
+          map.removeLayer(remainingOutline);
+          remainingOutline = null;
+        }
+
         if (destMarker) {
           map.removeLayer(destMarker);
           destMarker = null;
@@ -851,6 +1124,7 @@
      * Adjusts map control positions based on route state.
      */
     var directionsExpanded = false;
+    var summaryClearance = 0;
 
     function updateControlPositions(hasRoute) {
       var rightControlContainer = document.querySelector(
@@ -861,28 +1135,29 @@
         '.leaflet-top.leaflet-left'
       );
 
-      var topPosition;
+      // Native summary measurements are in the same viewport as this WebView.
+      // Keep the existing idle/active anchors, but clear the actual summary.
+      var top = hasRoute ? Math.max(150, summaryClearance) : 60;
+      var topPosition = top + 'px';
+      if (rightControlContainer) rightControlContainer.style.top = topPosition;
+      if (leftControlContainer) leftControlContainer.style.top = topPosition;
 
-      if (directionsExpanded) {
-        topPosition = '68%';
-      } else {
-        topPosition = hasRoute ? '150px' : '60px';
+      var leftBottom = top;
+      if (leftControlContainer && leftControlContainer.getBoundingClientRect) {
+        leftBottom = Math.max(top, leftControlContainer.getBoundingClientRect().bottom);
       }
-
-      if (rightControlContainer) {
-        rightControlContainer.style.top = topPosition;
-      }
-
-      if (leftControlContainer) {
-        leftControlContainer.style.top = topPosition;
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'MAP_CONTROLS_LAYOUT', hasRoute: !!hasRoute,
+          expanded: !!directionsExpanded, clearance: summaryClearance,
+          top: top, leftBottom: leftBottom
+        }));
       }
     }
 
-    window.updateDirectionsExpanded = function(
-      expanded,
-      hasRoute
-    ) {
-      directionsExpanded = expanded;
+    window.updateDirectionsExpanded = function(expanded, hasRoute, clearance) {
+      directionsExpanded = !!expanded;
+      summaryClearance = Number.isFinite(clearance) ? Math.max(0, clearance) : 0;
       updateControlPositions(hasRoute);
     };
   </script>

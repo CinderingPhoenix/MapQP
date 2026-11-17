@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { isReviewSession } from '../utils/review-access';
 
 const AUTH_STORAGE_KEY = 'mapqp_microsoft_session';
 const TEMP_CODE_STORAGE_KEY = 'mapqp_temp_code_session';
@@ -24,14 +25,14 @@ export function useAuthGuard() {
         ]);
 
         // Valid Microsoft Session
-        if (msSession) {
+        if (msSession || isReviewSession(tempCode)) {
           setIsChecking(false);
           return;
         }
 
         // Valid Temporary Code Session
         if (tempCode && expiresAtStr) {
-          const expiresAt = Number.parseInt(expiresAtStr, 10);
+          const expiresAt = Number(expiresAtStr);
           if (!Number.isNaN(expiresAt) && Date.now() < expiresAt) {
             setIsChecking(false);
             return;
@@ -40,6 +41,7 @@ export function useAuthGuard() {
 
         // Unauthorized: clear storage and redirect back to login
         await Promise.all([
+          SecureStore.deleteItemAsync('mapqp_access_token'),
           SecureStore.deleteItemAsync(AUTH_STORAGE_KEY),
           SecureStore.deleteItemAsync(TEMP_CODE_STORAGE_KEY),
           SecureStore.deleteItemAsync(TEMP_CODE_EXPIRES_AT_KEY),
