@@ -17,7 +17,7 @@ CLIENT_ID=...
 
 From the repository root, run:
 
-```sh
+```
 cd mapqpApp/adminPage
 npm install
 npm run dev
