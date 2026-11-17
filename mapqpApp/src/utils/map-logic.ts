@@ -732,6 +732,12 @@ export function useMapNavigation(buildings: Building[]) {
     ? formatDirectionInstruction(nextStep, directionStyle)
     : null;
   useEffect(() => {
+    // Settings can enable battery saver while this screen is unfocused.
+    // Stop the service and dismiss its notifications before any route checks.
+    if (batterySaverEnabled) {
+      void stopBackgroundNavigation().catch(error => console.warn("Unable to stop background navigation", error));
+      return;
+    }
     if (!route || !routeSteps.length || !isFocused) return;
     void syncBackgroundNavigation({
       geometry: route.geometry,
@@ -749,11 +755,11 @@ export function useMapNavigation(buildings: Building[]) {
         avoidInaccessibleCrosswalks: routePolicyRef.current?.avoidInaccessibleCrosswalks ?? avoidInaccessibleCrosswalks,
       },
       expiresAt: Date.now() + Math.max(route.duration * 3000, 2 * 60 * 60 * 1000),
-    }).catch(error => {
+    }, batterySaverEnabled).catch(error => {
       console.warn("Background navigation unavailable", error);
       Alert.alert("Background directions unavailable", "Navigation will continue while the app is open. Background guidance could not be started on this device.");
     });
-  }, [route, routeSteps, distanceUnits, directionStyle, isFocused]);
+  }, [route, routeSteps, distanceUnits, directionStyle, isFocused, batterySaverEnabled]);
   const activeRouteRef = useRef(route);
   activeRouteRef.current = route;
   useEffect(() => {

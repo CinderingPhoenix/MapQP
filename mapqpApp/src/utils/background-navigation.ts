@@ -107,7 +107,8 @@ export function getSavedBackgroundRoute(): Promise<BackgroundRoute | null> {
   });
 }
 
-export function syncBackgroundNavigation(route: BackgroundRoute) {
+export function syncBackgroundNavigation(route: BackgroundRoute, batterySaverEnabled = false) {
+  if (batterySaverEnabled) return stopBackgroundNavigation();
   if (Platform.OS === "web") return Promise.resolve();
   return serialize(async () => {
     if (!await TaskManager.isAvailableAsync()) return;

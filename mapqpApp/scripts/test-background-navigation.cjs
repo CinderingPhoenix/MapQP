@@ -88,6 +88,31 @@ function harness({ platform = 'android', foreground = false, nativeAvailable = t
   };
 }
 
+test('battery saver stops background GPS, clears notifications and ignores subsequent fixes', async () => {
+  const h = harness();
+  await h.api.syncBackgroundNavigation(h.route);
+  const count = h.updates.length;
+  await h.api.syncBackgroundNavigation(h.route, true);
+  assert.equal(h.saved, undefined);
+  assert.equal(h.stopped.length, 1);
+  assert.ok(h.dismissed.includes('mapqp-current-direction'));
+  await h.fix(42.0002, -71);
+  assert.equal(h.updates.length, count);
+  assert.equal(h.notifications.length, 0);
+  await h.api.syncBackgroundNavigation(h.route, false);
+  assert.equal(h.started.length, 1);
+  assert.ok(h.saved);
+});
+
+test('battery saver prevents background startup and permission prompts on a new route', async () => {
+  const h = harness({ running: false, notificationsGranted: false, locationGranted: false });
+  await h.api.syncBackgroundNavigation(h.route, true);
+  assert.equal(h.started.length, 0);
+  assert.equal(h.prompts.length, 0);
+  assert.equal(h.updates.length, 0);
+  assert.equal(h.saved, undefined);
+});
+
 test('persistent notification starts with a direction, then refreshes distance within the same maneuver', async () => {
   const h = harness();
   await h.api.syncBackgroundNavigation(h.route);
