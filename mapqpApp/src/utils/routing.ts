@@ -65,6 +65,7 @@ export type WalkwayConnection = {
   to: string;
   accessible?: boolean;
   indoor?: boolean;
+  internal?: boolean;
   roadCrossing?: boolean;
 };
 export type WalkwayConnectionItem = WalkwayConnection | string | [
@@ -82,7 +83,7 @@ export function normalizeWalkwayConnection(item: WalkwayConnectionItem) {
     return { to: item[0], accessible: item[1] !== false, indoor: item[2] ?? false,
       roadCrossing: item[3] ?? false };
   }
-  return { to: item.to, accessible: item.accessible ?? true, indoor: item.indoor ?? false,
+  return { to: item.to, accessible: item.accessible ?? true, indoor: item.indoor ?? item.internal ?? false,
     roadCrossing: item.roadCrossing ?? false };
 }
 
@@ -214,6 +215,14 @@ export function initRoutingGraph(
   ];
 
   campusNodesById = new Map(campusNodes.map((node) => [node.id, node]));
+  // Some map exports refer to building entrances by a slug instead of name.
+  const entranceAliases = new Map<string, string | null>();
+  for (const node of campusNodes.slice(walkwayNodes.length)) {
+    const alias = node.id.toLowerCase().replace(/\s+/g, "-");
+    entranceAliases.set(alias, entranceAliases.has(alias) ? null : node.id);
+  }
+  const resolveNode = (id: string) => campusNodesById.get(id) ??
+    campusNodesById.get(entranceAliases.get(id) ?? "");
   
   const accessibleEntranceIds = new Set(
     buildingData.flatMap((item) => {
@@ -233,26 +242,17 @@ export function initRoutingGraph(
 
   // 1. Build bidirectional edges for pre-defined walkway paths
   for (const [fromId, toIds] of Object.entries(walkwayConnections)) {
-    let fromNode = campusNodesById.get(fromId);
-    if (!fromNode) {
-      // Fallback: automatically register missing nodes to prevent crashes
-      fromNode = { id: fromId, latitude: 0, longitude: 0 };
-      campusNodesById.set(fromId, fromNode);
-      campusNodes.push(fromNode);
-      graphEdges.set(fromId, []);
-    }
+    const fromNode = resolveNode(fromId);
+    if (!fromNode) continue;
 
     for (const item of toIds) {
       const { to: toId, accessible: isAccessible, indoor: isIndoor, roadCrossing } = normalizeWalkwayConnection(item);
 
-      let toNode = campusNodesById.get(toId);
-      if (!toNode) {
-        // Fallback: automatically register missing target nodes to prevent crashes
-        toNode = { id: toId, latitude: 0, longitude: 0 };
-        campusNodesById.set(toId, toNode);
-        campusNodes.push(toNode);
-        graphEdges.set(toId, []);
-      }
+      // Unmarked legacy entrance links may cross a building; only admit them
+      // when the map explicitly identifies them as indoor connections.
+      if (!campusNodesById.has(fromId) && !campusNodesById.has(toId) && !isIndoor) continue;
+      const toNode = resolveNode(toId);
+      if (!toNode) continue;
       connectWalkwayNodes(
         fromNode,
         toNode,
