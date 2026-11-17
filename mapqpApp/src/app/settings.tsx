@@ -555,9 +555,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
   };
 
   return <SafeAreaView style={signalStyles.container}>
-    <ScrollView ref={scroll} key={activeTab} showsVerticalScrollIndicator={false}
-      onContentSizeChange={() => { guidanceLayout.current.content = true; locateGuidance(); }} contentContainerStyle={signalStyles.content}>
-      <View style={signalStyles.header}>
+    <View style={signalStyles.pinnedHeader}>
         <View style={signalStyles.topRow}>
           <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={from ? "Back to navigation" : "Back"}
             accessibilityHint={from ? "Returns to navigation and applies the selected navigation mode" : "Returns to the previous screen"}
@@ -567,6 +565,10 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           </TouchableOpacity>
           <SignalText size={16} weight="700">MapQP</SignalText>
         </View>
+    </View>
+    <ScrollView ref={scroll} key={activeTab} showsVerticalScrollIndicator={false}
+      onContentSizeChange={() => { guidanceLayout.current.content = true; locateGuidance(); }} contentContainerStyle={signalStyles.content}>
+      <View style={signalStyles.header}>
         <View style={signalStyles.titleGroup}>
           <SignalText size={30} weight="700" color={SIGNAL.heading} accessibilityRole="header">Settings</SignalText>
         </View>
@@ -690,7 +692,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
             })}
             <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline">
               <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
-                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Turn guidance stays on." />
+                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
             </SignalSwitchRow>
           </SignalSection>
           <SignalSection title="Spoken guidance">
@@ -769,6 +771,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
 const signalStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: SIGNAL.background },
   content: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 20, paddingBottom: 16 },
+  pinnedHeader: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 20, paddingTop: 4 },
   header: { gap: 8, paddingTop: 4 },
   topRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   backButton: { minHeight: 44, flexDirection: "row", alignItems: "center", flexShrink: 1 },

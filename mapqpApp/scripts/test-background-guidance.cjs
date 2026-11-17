@@ -24,8 +24,11 @@ test('does not declare arrival when passing a different part of the route', () =
   assert.equal(guidance(route, 42.0005, -71).arrived, false);
   assert.equal(guidance(route, 42.001, -70.999).arrived, true);
 });
-test('off-route guidance asks to reopen the app instead of giving a false turn', () => {
-  assert.equal(guidance(route, 42.005, -71).key, 'off-route');
+test('off-route guidance indicates automatic recalculation instead of asking to reopen', () => {
+  const result = guidance(route, 42.005, -71);
+  assert.equal(result.key, 'off-route');
+  assert.match(result.body, /Recalculating/);
+  assert.doesNotMatch(result.body, /Open mapQP/);
 });
 test('imperial directions use feet', () => {
   assert.match(guidance({ ...route, units: 'imperial' }, 42.0005, -71).body, /ft/);

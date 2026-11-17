@@ -28,6 +28,7 @@ export type RoutePoint = {
 };
 
 export type WalkingRoute = {
+  routingCost?: number;
   geometry: [number, number][];
   navigationPath: NavigationPoint[];
   distance: number;
@@ -116,6 +117,9 @@ let campusNodesById = new Map<string, GraphNode>();
 let graphEdges = new Map<string, GraphEdge[]>();
 type WalkwaySegment = { from: GraphNode; to: GraphNode; edge: GraphEdge };
 let routingSegments: WalkwaySegment[] | null = null;
+let routingSnapshot: { points: Parameters<typeof initRoutingGraph>[0]; buildings: BuildingInput[] } | null = null;
+
+export function getRoutingGraphSnapshot() { return routingSnapshot; }
 
 // Downloaded nodes may use named fields; bundled and legacy maps use tuples.
 function parseWalkwayNode(node: unknown, index: number): GraphNode {
@@ -189,6 +193,7 @@ export function initRoutingGraph(
   // Store normalized nodes as GraphNode objects.
   walkwayNodes = validatedNodes;
   walkwayConnections = routePointsData.connections;
+  routingSnapshot = { points: routePointsData, buildings: buildingData };
 
   // Map building entrances supporting both object and tuple formats
   campusNodes = [
@@ -329,6 +334,7 @@ export async function routeBetween(
   origin: RoutePoint,
   destination: RoutePoint,
   options: Partial<RoutingPreferences> = {},
+  travelHeading?: number | null,
 ): Promise<WalkingRoute> {
   if (campusNodes.length === 0) throw new Error("Routing graph is not initialized.");
   
@@ -341,12 +347,13 @@ export async function routeBetween(
     preferences.avoidStairs,
     preferences.avoidIndoorRoutes,
     preferences.avoidInaccessibleCrosswalks,
+    travelHeading,
   ].join(",");
 
   const cachedRoute = routeCache.get(cacheKey);
   if (cachedRoute) return cachedRoute;
 
-  const route = findLocalWalkingRoute(origin, destination, preferences);
+  const route = findLocalWalkingRoute(origin, destination, preferences, travelHeading);
   routeCache.set(cacheKey, route);
   return route;
 }
@@ -392,6 +399,7 @@ function findLocalWalkingRoute(
   origin: RoutePoint,
   destination: RoutePoint,
   preferences: RoutingPreferences,
+  travelHeading?: number | null,
 ): WalkingRoute {
   const startId = "__origin";
   const destinationId = "__destination";
@@ -426,7 +434,13 @@ function findLocalWalkingRoute(
 
     for (const edge of edges.get(current) ?? []) {
       if (!isEdgeAllowed(edge, preferences)) continue;
-      const nextDistance = (distances.get(current) ?? 0) + edge.distance;
+      // Score the nearby path as well as departure: two small turns must not
+      // disguise a reversal. Physical distance and ETA exclude these costs.
+      const atOrigin = current === startId || distanceBetween(origin.latitude, origin.longitude,
+        nodeById(current).latitude, nodeById(current).longitude) < 1;
+      const turnCost = (atOrigin ? departurePenalty(origin, nodeById(edge.nodeId), travelHeading) : 0) +
+        backwardTravelPenalty(origin, nodeById(current), nodeById(edge.nodeId), travelHeading);
+      const nextDistance = (distances.get(current) ?? 0) + edge.distance + turnCost;
       if (nextDistance < (distances.get(edge.nodeId) ?? Number.POSITIVE_INFINITY)) {
         distances.set(edge.nodeId, nextDistance);
         previous.set(edge.nodeId, current);
@@ -463,10 +477,12 @@ function findLocalWalkingRoute(
     coordinate: [coordinate.latitude, coordinate.longitude] as [number, number],
     connectionCount,
   }));
-  const distance = distances.get(destinationId)!;
+  const distance = path.slice(1).reduce((total, id, index) => total +
+    (edges.get(path[index])!.find(edge => edge.nodeId === id)!.distance), 0);
 
   return {
     geometry,
+    routingCost: distances.get(destinationId)!,
     navigationPath,
     distance,
     duration: distance / WALKING_SPEED_METERS_PER_SECOND,
@@ -474,6 +490,53 @@ function findLocalWalkingRoute(
 }
 
 // --- Math & Distance Calculations ---
+
+export type MotionFix = { latitude: number; longitude: number; timestamp: number;
+  accuracy: number | null; heading?: number | null; speed?: number | null };
+
+// Use course over ground, never the direction the phone happens to face.
+export function getMotionHeading(fix: MotionFix, previous?: MotionFix | null): number | undefined {
+  if ((fix.accuracy ?? Infinity) > 20) return;
+  if (fix.heading != null && Number.isFinite(fix.heading) && fix.heading >= 0 &&
+      fix.heading < 360 && (fix.speed ?? 0) >= 0.5) return fix.heading;
+  if (!previous || (previous.accuracy ?? Infinity) > 20) return;
+  const elapsed = fix.timestamp - previous.timestamp;
+  const moved = distanceBetween(previous.latitude, previous.longitude, fix.latitude, fix.longitude);
+  if (elapsed <= 0 || elapsed > 30000 || moved < Math.max(4, fix.accuracy ?? 0, previous.accuracy ?? 0)) return;
+  return course(previous, fix);
+}
+
+function course(a: Pick<RoutePoint, "latitude" | "longitude">, b: Pick<RoutePoint, "latitude" | "longitude">) {
+  return (Math.atan2((b.longitude - a.longitude) * Math.cos((a.latitude + b.latitude) * Math.PI / 360),
+    b.latitude - a.latitude) * 180 / Math.PI + 360) % 360;
+}
+
+function departurePenalty(origin: RoutePoint, next: GraphNode, heading?: number | null) {
+  if (heading == null || !Number.isFinite(heading) || heading < 0 || heading >= 360 ||
+      distanceBetween(origin.latitude, origin.longitude, next.latitude, next.longitude) < 1) return 0;
+  const angle = Math.abs((course(origin, next) - heading + 540) % 360 - 180);
+  return 300 * (1 - Math.cos(angle * Math.PI / 180)) / 2;
+}
+
+function backwardTravelPenalty(origin: RoutePoint, from: GraphNode, to: GraphNode, heading?: number | null) {
+  if (heading == null || !Number.isFinite(heading) || heading < 0 || heading >= 360) return 0;
+  const length = distanceBetween(from.latitude, from.longitude, to.latitude, to.longitude);
+  if (length < 1) return 0;
+  const backwards = Math.max(0, -Math.cos((course(from, to) - heading) * Math.PI / 180));
+  if (backwards === 0) return 0;
+  // Strongly favor keeping forward progress near the reroute location. Taper
+  // over 80 m so legitimate later bends toward the destination remain possible.
+  const samples = Math.max(1, Math.ceil(length / 10));
+  let weightedLength = 0;
+  for (let i = 0; i < samples; i++) {
+    const t = (i + 0.5) / samples;
+    const distance = distanceBetween(origin.latitude, origin.longitude,
+      from.latitude + (to.latitude - from.latitude) * t,
+      from.longitude + (to.longitude - from.longitude) * t);
+    weightedLength += length / samples * Math.max(0, 1 - distance / 80);
+  }
+  return 20 * backwards * weightedLength;
+}
 
 function isEdgeAllowed(edge: GraphEdge, preferences: RoutingPreferences): boolean {
   // Every enabled preference must pass; one preference cannot override another.

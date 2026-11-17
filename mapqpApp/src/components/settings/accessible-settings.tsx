@@ -346,17 +346,14 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
     void save.catch(() => Alert.alert("Could not save preference", "Please try changing the switch again."));
   };
   return <SafeAreaView style={s.container}>
+    <View style={{ paddingHorizontal: gutter, paddingTop: 12 }}>
+      <Action label="‹ Back to map" back onPress={onBack} />
+    </View>
     <ScrollView contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
       <View style={s.header}>
-        <Action label="‹ Back to map" back onPress={onBack} />
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
-        <Section title="Battery">
-          <ToggleRow label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
-            onChange={settings.setBatterySaverEnabled}
-            description="Uses fewer location updates, less compass activity, and fewer animations. Your screen can sleep; navigation may pause while locked or in the background. Turn guidance stays on." />
-        </Section>
         <Section title="Navigation mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}
             disabled={disabled} onPress={() => onNavigationModeChange("standard")} />
@@ -432,7 +429,13 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             <Choice label="Degrees" selected={settings.directionStyle === "degrees"} disabled={disabled} onPress={() => settings.setDirectionStyle("degrees")} />
           </Choices></View>
       </Accordion>
-      <Accordion title="Accessibility" icon={HEADER_ICONS.accessibility}><AccessibilityPanel controls={accessibilityControls} /></Accordion>
+      <Accordion title="Accessibility" icon={HEADER_ICONS.accessibility}>
+        <AccessibilityPanel controls={accessibilityControls} />
+        <Divider />
+        <ToggleRow label="Battery Saver" icon="battery-heart-outline" value={settings.batterySaverEnabled} disabled={disabled}
+          onChange={settings.setBatterySaverEnabled}
+          description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
+      </Accordion>
       <Accordion title="Routing & spoken guidance" icon={HEADER_ICONS.routing}>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>
