@@ -122,6 +122,14 @@
       --map-compass-idle: var(--map-ui-surface);
       --map-compass-active: var(--map-ui-selected);
     }
+    .map-ui-dark .leaflet-tile-pane {
+      filter:
+        invert(1)
+        hue-rotate(180deg)
+        grayscale(0.75)
+        contrast(0.85)
+        brightness(1.2);
+    }
     html.map-ui-dark, .map-ui-dark body, .map-ui-dark #map {
       background: var(--map-ui-background);
     }
