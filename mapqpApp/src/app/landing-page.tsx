@@ -1,10 +1,14 @@
+import { StatusBar } from "expo-status-bar";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { landingPresentation } from "../theme/landing-theme";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useIsFocused, useNavigation, type NativeStackNavigationProp } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState, useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
 import { useSettings } from "../context/settings-context";
 import { useAuthGuard } from "../hooks/use-auth-guard";
@@ -20,7 +24,9 @@ export default function LandingPage() {
   const { isChecking: authChecking } = useAuthGuard();
   const { setNavigationMode, setHasSelectedMode, settingsLoaded } = useSettings();
   const { fontScale, width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
+  const presentation = landingPresentation(theme.preset, theme.increased, theme.resolvedTheme, theme.opaque);
+  const styles = presentation.landingStyles(baseStyles);
   const { screenReaderEnabled, loaded: accessibilityLoaded, darkerSystemColorsEnabled, highTextContrastEnabled, reduceTransparencyEnabled, boldTextEnabled } = useAccessibilityPreferences();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const opaqueSurfaces = increasedContrast || reduceTransparencyEnabled;
@@ -162,7 +168,9 @@ export default function LandingPage() {
 
   return (
     <View style={styles.container} onTouchStart={() => { if (!onboardingBlocksFocus) initialFocusHandled.current = true; }}>
+      {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
       <View style={styles.mapBackground} pointerEvents={onboardingBlocksFocus ? "none" : "auto"}
+        aria-hidden={onboardingBlocksFocus}
         accessibilityElementsHidden={onboardingBlocksFocus}
         importantForAccessibility={onboardingBlocksFocus ? "no-hide-descendants" : "auto"}>
         <ExpoImage
@@ -174,10 +182,12 @@ export default function LandingPage() {
           transition={0}
           accessible={false}
         />
+        {theme.dark && <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+          style={[StyleSheet.absoluteFill, { backgroundColor: presentation.scrim }]} />}
         <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.header, opaqueSurfaces && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 3, borderBottomColor: "#761723" }]}>
+          <View style={[styles.header, opaqueSurfaces && !theme.dark && { backgroundColor: "#fff" }, increasedContrast && { borderBottomWidth: 3, borderBottomColor: presentation.original ? "#761723" : presentation.accent }]}>
             <ExpoImage
-              source={require("../../assets/images/mapqp-logo.png")}
+              source={theme.dark ? require("../../assets/images/mapqp-logo-dark.png") : require("../../assets/images/mapqp-logo.png")}
               style={styles.mapqpLogo}
               contentFit="contain"
               cachePolicy="memory-disk"
@@ -187,7 +197,7 @@ export default function LandingPage() {
             />
             <View style={styles.headerRight}>
               <ExpoImage
-                source={require("../../assets/images/wpi-logo.png")}
+                source={theme.dark ? require("../../assets/images/wpi-logo-dark.png") : require("../../assets/images/wpi-logo.png")}
                 style={styles.wpiLogo}
                 contentFit="contain"
                 cachePolicy="memory-disk"
@@ -202,7 +212,7 @@ export default function LandingPage() {
           <View style={[styles.quickActions, increasedContrast && styles.quickActionsHighContrast]}>
           {/* Settings Button */}
           <TouchableOpacity
-            style={[styles.quickActionButton, increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+            style={[styles.quickActionButton, increasedContrast && { borderWidth: 2, borderColor: presentation.original ? "#172033" : presentation.outline }]}
             onPress={() => router.push("/settings")}
             activeOpacity={0.7}
             accessible
@@ -210,29 +220,29 @@ export default function LandingPage() {
             accessibilityLabel="Settings"
             accessibilityHint="Opens the application settings"
           >
-            <Ionicons name="settings-outline" size={24} color="#172033" accessible={false}
+            <Ionicons name="settings-outline" size={24} color={presentation.utilityIcon} accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
             <Text style={[styles.quickActionText, boldTextEnabled && { fontWeight: "900" },
-              increasedContrast && { color: "#000" }]}>Settings</Text>
-            <Ionicons name="chevron-forward" size={20} color="#172033" accessible={false}
+              increasedContrast && { color: theme.dark ? theme.tokens.text : "#000" }]}>Settings</Text>
+            <Ionicons name="chevron-forward" size={20} color={presentation.utilityIcon} accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
 
-          <View style={[styles.quickActionDivider, increasedContrast && { backgroundColor: "#172033" }]} />
+          <View style={[styles.quickActionDivider, increasedContrast && { backgroundColor: presentation.original ? "#172033" : presentation.outline }]} />
           {/* Reopen Tutorial Button */}
           <TouchableOpacity
             style={[styles.quickActionButton,
-              increasedContrast && { borderWidth: 2, borderColor: "#172033" }]}
+              increasedContrast && { borderWidth: 2, borderColor: presentation.original ? "#172033" : presentation.outline }]}
             onPress={() => { initialFocusHandled.current = false; setTutorialDismissed(false); setShowTutorial(true); }}
             activeOpacity={0.7}
             accessible accessibilityRole="button" accessibilityLabel="Tutorial & Bug Reports"
             accessibilityHint="Opens tutorials and the option to report a bug."
           >
-            <Ionicons name="book-outline" size={24} color="#172033" accessible={false}
+            <Ionicons name="book-outline" size={24} color={presentation.utilityIcon} accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
             <Text style={[styles.quickActionText, boldTextEnabled && { fontWeight: "900" },
-              increasedContrast && { color: "#000" }]}>Tutorial &amp; Bug Reports</Text>
-            <Ionicons name="chevron-forward" size={20} color="#172033" accessible={false}
+              increasedContrast && { color: theme.dark ? theme.tokens.text : "#000" }]}>Tutorial &amp; Bug Reports</Text>
+            <Ionicons name="chevron-forward" size={20} color={presentation.utilityIcon} accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
           </TouchableOpacity>
           </View>
@@ -272,9 +282,7 @@ export default function LandingPage() {
                   accessibilityHint="Choose routing preferences, then open standard campus navigation"
                 >
                   <LinearGradient
-                    colors={opaqueSurfaces
-                      ? ["#FFF5F5", "#F9E5E7"]
-                      : ["rgba(255,245,245,0.96)", "rgba(249,229,231,0.96)"]}
+                    colors={presentation.gradient("standard", opaqueSurfaces)}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={[styles.modeButton, styles.standardModeButton, largeText && styles.modeButtonLargeText, increasedContrast && styles.modeButtonHighContrast]}
@@ -310,15 +318,15 @@ export default function LandingPage() {
                   accessibilityHint="Choose routing preferences, then open accessible campus navigation. Avoid stairs is selected by default."
                 >
                   <LinearGradient
-                    colors={opaqueSurfaces
-                      ? ["#F1FAF9", "#DDF2F0"]
-                      : ["rgba(241,250,249,0.96)", "rgba(221,242,240,0.96)"]}
+                    colors={presentation.gradient("accessibility", opaqueSurfaces)}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={[styles.modeButton, styles.accessibilityModeButton, largeText && styles.modeButtonLargeText, increasedContrast && styles.modeButtonHighContrast]}
                   >
                     <View style={[styles.modeIcon, styles.accessibilityIcon]}>
-                      <Text style={styles.accessibilityIconText} allowFontScaling={false}>♿</Text>
+                      {theme.preset === "default" ? <Text style={styles.accessibilityIconText} allowFontScaling={false}>♿</Text>
+                        : <MaterialCommunityIcons name="wheelchair-accessibility" size={29} color="#FFFFFF" allowFontScaling={false}
+                            accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />}
                     </View>
                     <Text
                       key={`accessibility-title-${fontScale}`}
@@ -370,7 +378,7 @@ export default function LandingPage() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   safeArea: { flex: 1, backgroundColor: "transparent" },
   header: {

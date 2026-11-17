@@ -1,5 +1,8 @@
+import { StatusBar } from "expo-status-bar";
+import { useAppTheme } from "../hooks/use-app-theme";
+import { reportBugPresentation } from "../theme/report-bug-theme";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type Ref } from "react";
 import {
   AccessibilityInfo,
@@ -41,21 +44,28 @@ const categoryIcons: Record<BugReportCategory, ComponentProps<typeof MaterialCom
 
 // Keep this component stable so editing and preference changes retain input focus.
 function ReportText({ bold, style, ref, ...props }: TextProps & { bold: boolean; ref?: Ref<ComponentRef<typeof Text>> }) {
-  return <Text {...props} ref={ref} style={[style, bold && styles.boldText]} />;
+  return <Text {...props} ref={ref} style={[style, bold && baseStyles.boldText]} />;
 }
 
-function InlineError({ message, fontSize, bold, onLayout }: {
-  message: string; fontSize: number; bold: boolean; onLayout: (event: LayoutChangeEvent) => void;
+function InlineError({ message, fontSize, bold, onLayout, color }: {
+  message: string; fontSize: number; bold: boolean; color: string; onLayout: (event: LayoutChangeEvent) => void;
 }) {
-  return <View style={styles.errorRow} onLayout={onLayout}>
-    <MaterialCommunityIcons name="alert-outline" size={20} color="#B42332" accessible={false}
+  return <View style={baseStyles.errorRow} onLayout={onLayout}>
+    <MaterialCommunityIcons name="alert-outline" size={20} color={color} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
-    <ReportText bold={bold} style={[styles.error, { fontSize: 15 * fontSize, lineHeight: Math.ceil(23 * fontSize) }]}>{message}</ReportText>
+    <ReportText bold={bold} style={[baseStyles.error, { color, fontSize: 15 * fontSize, lineHeight: Math.ceil(23 * fontSize) }]}>{message}</ReportText>
   </View>;
 }
 
 export default function ReportBugPage() {
   useAuthGuard();
+  const theme = useAppTheme();
+  const focused = useIsFocused();
+  const presentation = reportBugPresentation(theme.preset, theme.increased, theme.resolvedTheme);
+  const styles = presentation.styles(baseStyles);
+  // Read the current paint after an in-flight request, without restarting it.
+  const alertAppearance = useRef(theme.dark);
+  alertAppearance.current = theme.dark;
   const { fontSize, navigationMode } = useSettings();
   const preferences = useAccessibilityPreferences();
   const contrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
@@ -244,11 +254,11 @@ export default function ReportBugPage() {
         [{ text: "OK", onPress: () => router.replace(
           navigationMode === "accessibility" ? "/accessibility-navigation" : "/standard-navigation"
         ) }],
-        { cancelable: false },
+        { cancelable: false, userInterfaceStyle: alertAppearance.current ? "dark" : undefined },
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to send your report. Please try again.";
-      Alert.alert("Report not sent", message);
+      Alert.alert("Report not sent", message, undefined, { userInterfaceStyle: alertAppearance.current ? "dark" : undefined });
     } finally {
       submitting.current = false;
       setSending(false);
@@ -257,12 +267,13 @@ export default function ReportBugPage() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {focused && <StatusBar style={theme.dark ? "light" : "dark"} animated={false} />}
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}
+          <TouchableOpacity activeOpacity={theme.dark ? 0.9 : undefined} style={styles.backButton} onPress={() => router.back()}
             accessibilityRole="button" accessibilityLabel="Back to Settings"
             accessibilityHint="Returns to the previous screen. This draft is not saved after leaving.">
-            <MaterialCommunityIcons name="chevron-left" size={20} color="#741B2B" accessible={false}
+            <MaterialCommunityIcons name="chevron-left" size={20} color={presentation.accent} accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
             <ReportText bold={preferences.boldTextEnabled} accessible={false}
               style={[textStyle, styles.backText]}>Back to Settings</ReportText>
@@ -275,7 +286,7 @@ export default function ReportBugPage() {
           <View style={styles.titleGroup}>
             <View style={styles.titleRow}>
               <View style={styles.bugTile} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <MaterialCommunityIcons name="bug-outline" size={25} color="#741B2B" accessible={false}
+                <MaterialCommunityIcons name="bug-outline" size={25} color={presentation.accent} accessible={false}
                   accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
               </View>
               <ReportText bold={preferences.boldTextEnabled} accessibilityRole="header"
@@ -284,7 +295,7 @@ export default function ReportBugPage() {
             <ReportText bold={preferences.boldTextEnabled} style={textStyle}>Help us improve your campus navigation experience.</ReportText>
           </View>
           <View style={[styles.notice, contrast && styles.highContrastBorder]}>
-            <MaterialCommunityIcons name="information-outline" size={20} color="#741B2B" accessible={false}
+            <MaterialCommunityIcons name="information-outline" size={20} color={presentation.accent} accessible={false}
               accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
             <View style={styles.noticeCopy}>
               <ReportText bold={preferences.boldTextEnabled} accessibilityRole="header"
@@ -308,7 +319,7 @@ export default function ReportBugPage() {
             <ReportText bold={preferences.boldTextEnabled} style={textStyle}>Choose the closest match.</ReportText>
             <View style={[styles.categoryGroup, contrast && styles.highContrastBorder]} accessible={false} accessibilityRole="radiogroup" accessibilityLabel="Problem category, required">
               {BUG_REPORT_CATEGORIES.map(({ value, label }, index) => (
-                <TouchableOpacity key={value} disabled={sending}
+                <TouchableOpacity activeOpacity={theme.dark ? 0.95 : undefined} key={value} disabled={sending}
                   style={[styles.category, index > 0 && styles.categorySeparator,
                     draft.category === value && styles.selectedCategory,
                     draft.category === value && contrast && styles.selectedCategoryContrast]}
@@ -322,7 +333,7 @@ export default function ReportBugPage() {
                     {draft.category === value && <View style={styles.radioDot} />}
                   </View>
                   <View style={styles.categoryIcon} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                    <MaterialCommunityIcons name={categoryIcons[value]} size={20} color="#805563" accessible={false}
+                    <MaterialCommunityIcons name={categoryIcons[value]} size={20} color={presentation.categoryIcon} accessible={false}
                       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
                   </View>
                   <ReportText bold={preferences.boldTextEnabled} accessible={false}
@@ -334,7 +345,7 @@ export default function ReportBugPage() {
               ))}
             </View>
             {checked && errors.category && <InlineError key={`category-${focusRequest?.sequence ?? 0}`}
-              message={errors.category} fontSize={fontSize} bold={preferences.boldTextEnabled} onLayout={measureError} />}
+              message={errors.category} fontSize={fontSize} bold={preferences.boldTextEnabled} color={presentation.error} onLayout={measureError} />}
           </View>
 
           <View style={styles.form} testID="bug-form-section"
@@ -355,13 +366,15 @@ export default function ReportBugPage() {
                 onChangeText={(description) => setDraft((previous) => ({ ...previous, description }))}
                 onBlur={() => { editingField.current = null; setDescriptionTouched(true); }}
                 multiline textAlignVertical="top" maxLength={BUG_REPORT_TEXT_LIMIT}
-                placeholder="Describe the problem..." placeholderTextColor="#70655F" allowFontScaling
+                placeholder="Describe the problem..." placeholderTextColor={presentation.placeholder}
+                keyboardAppearance={theme.dark ? "dark" : undefined}
+                selectionColor={theme.dark ? presentation.accent : undefined} allowFontScaling
                 accessibilityLabel="Description, required"
                 accessibilityLabelledBy="bug-description-label"
                 accessibilityHint={`Describe what went wrong. Maximum 5,000 characters.${descriptionError ? ` ${descriptionError}` : ""}`}
                 aria-invalid={Boolean(descriptionError)} />
               {descriptionError && <InlineError key={`description-${focusRequest?.sequence ?? 0}`}
-                message={descriptionError} fontSize={fontSize} bold={preferences.boldTextEnabled} onLayout={measureError} />}
+                message={descriptionError} fontSize={fontSize} bold={preferences.boldTextEnabled} color={presentation.error} onLayout={measureError} />}
               <ReportText bold={preferences.boldTextEnabled} style={countStyle}>
                 {draft.description.length.toLocaleString()} / 5,000 characters
               </ReportText>
@@ -383,13 +396,15 @@ export default function ReportBugPage() {
                 onBlur={() => { editingField.current = null; }}
                 onChangeText={(stepsToReproduce) => setDraft((previous) => ({ ...previous, stepsToReproduce }))}
                 multiline textAlignVertical="top" maxLength={BUG_REPORT_TEXT_LIMIT}
-                placeholder="Add the steps..." placeholderTextColor="#70655F" allowFontScaling
+                placeholder="Add the steps..." placeholderTextColor={presentation.placeholder}
+                keyboardAppearance={theme.dark ? "dark" : undefined}
+                selectionColor={theme.dark ? presentation.accent : undefined} allowFontScaling
                 accessibilityLabel="Steps to Reproduce, optional"
                 accessibilityLabelledBy="bug-steps-label"
                 accessibilityHint={`List the actions that led to the problem. Maximum 5,000 characters.${stepsError ? ` ${stepsError}` : ""}`}
                 aria-invalid={Boolean(stepsError)} />
               {stepsError && <InlineError key={`steps-${focusRequest?.sequence ?? 0}`}
-                message={stepsError} fontSize={fontSize} bold={preferences.boldTextEnabled} onLayout={measureError} />}
+                message={stepsError} fontSize={fontSize} bold={preferences.boldTextEnabled} color={presentation.error} onLayout={measureError} />}
               <ReportText bold={preferences.boldTextEnabled} style={countStyle}>
                 {draft.stepsToReproduce.length.toLocaleString()} / 5,000 characters
               </ReportText>
@@ -416,7 +431,7 @@ export default function ReportBugPage() {
           {checked && !Object.keys(errors).length && <ReportText bold={preferences.boldTextEnabled} style={textStyle}>
             Required fields are complete. Your report is ready to submit.
           </ReportText>}
-          <TouchableOpacity style={[styles.submitButton, submitDisabled && styles.submitButtonDisabled,
+          <TouchableOpacity activeOpacity={theme.dark ? 0.9 : undefined} style={[styles.submitButton, submitDisabled && styles.submitButtonDisabled,
             contrast && styles.highContrastBorder]}
             onPress={sendReport} disabled={submitDisabled} accessibilityRole="button" accessibilityLabel="Submit Report"
             accessibilityHint={submitDisabled && !sending
@@ -437,7 +452,7 @@ export default function ReportBugPage() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   flex: { flex: 1 }, container: { flex: 1, backgroundColor: "#F7F6F2" },
   header: { paddingHorizontal: 20, paddingTop: 4 },
   backButton: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "stretch", maxWidth: "100%" },

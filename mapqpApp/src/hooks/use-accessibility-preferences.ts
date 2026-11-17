@@ -48,7 +48,8 @@ export function resolveAccessibilityPreferences(
     // readings and their detection statuses remain separately in the provider.
     darkerSystemColorsEnabled: device.darkerSystemColorsEnabled || custom.increaseContrastEnabled,
     highTextContrastEnabled: device.highTextContrastEnabled,
-    reduceTransparencyEnabled: device.reduceTransparencyEnabled || custom.reduceTransparencyEnabled,
+    // Transparency adjustments follow the device; legacy saved app values are ignored.
+    reduceTransparencyEnabled: device.reduceTransparencyEnabled,
     emphasizedTextEnabled: boldTextEnabled,
     loaded: settingsLoaded && device.loaded,
   };

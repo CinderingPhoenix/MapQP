@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getMotionHeading, getRoutingGraphSnapshot, initRoutingGraph, routeBetween, type MotionFix } from "./routing";
+import { getRoutingGraphSnapshot, initRoutingGraph, routeBetween } from "./routing";
 import { generateDirections, formatDirectionInstruction } from "./navigation-directions";
-import { getBackgroundGuidance, type BackgroundRoute } from "./background-guidance";
+import { getBackgroundGuidance, type BackgroundRoute, type MotionFix } from "./background-guidance";
 
 const GRAPH_KEY = "mapqp-background-routing-graph-v1";
 
@@ -12,9 +12,6 @@ export async function saveBackgroundRoutingGraph() {
 
 export async function updateBackgroundRoute(route: BackgroundRoute,
   fix: MotionFix) {
-  const travelHeading = getMotionHeading(fix, route.motionFix);
-  if ((fix.accuracy ?? Infinity) <= 20 && (!route.motionFix ||
-      fix.timestamp - route.motionFix.timestamp > 30000 || travelHeading !== undefined)) route.motionFix = fix;
   if (getBackgroundGuidance(route, fix.latitude, fix.longitude).key !== "off-route") {
     route.offRouteSamples = 0;
     route.rerouteFailed = false;
@@ -34,7 +31,7 @@ export async function updateBackgroundRoute(route: BackgroundRoute,
     const graph = JSON.parse(saved) as NonNullable<ReturnType<typeof getRoutingGraphSnapshot>>;
     initRoutingGraph(graph.points, graph.buildings);
     const origin = { latitude: fix.latitude, longitude: fix.longitude, label: "Your current location" };
-    const plan = await routeBetween(origin, route.destinationPoint, route.preferences, travelHeading);
+    const plan = await routeBetween(origin, route.destinationPoint, route.preferences);
     if (plan.geometry.length < 2) throw new Error("Invalid replacement route");
     route.geometry = plan.geometry;
     route.duration = plan.duration;

@@ -1,3 +1,5 @@
+import { useAppTheme } from "../hooks/use-app-theme";
+import { landingPresentation } from "../theme/landing-theme";
 import { useSettings } from "../context/settings-context";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
 import { useState, useEffect, type ComponentProps } from "react";
@@ -402,10 +404,14 @@ interface TutorialModalProps {
 }
 
 export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: TutorialModalProps) {
+  const theme = useAppTheme();
+  const presentation = landingPresentation(theme.preset, theme.increased, theme.resolvedTheme, theme.opaque);
+  const styles = presentation.tutorialStyles(baseStyles);
   const nativeDismiss = useModalDismissal(visible, onDismiss);
-  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth, fontScale } = useWindowDimensions();
   const { fontSize } = useSettings();
   const preferences = useAccessibilityPreferences();
+  const largeTutorialText = fontSize * fontScale >= 1.5;
   const increasedContrast = preferences.darkerSystemColorsEnabled || preferences.highTextContrastEnabled;
   const textStyle = (base: TextStyle, treatment: "ordinary" | "accent" | "onControl" | "callout" = "ordinary", baselineScale = 1): TextStyle => ({
     fontSize: (base.fontSize ?? 14) * baselineScale * fontSize,
@@ -415,10 +421,10 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
       fontWeight: base.fontWeight === "800" ? "900" : base.fontWeight === "700" ? "800" : "700",
     } : {}),
     ...(treatment === "ordinary" && (preferences.boldTextEnabled || increasedContrast)
-      ? { color: "#111827" } : {}),
-    ...(treatment === "accent" && increasedContrast ? { color: "#761723" } : {}),
+      ? { color: theme.dark ? theme.tokens.text : "#111827" } : {}),
+    ...(treatment === "accent" && increasedContrast ? { color: presentation.original ? "#761723" : presentation.accent } : {}),
     ...(treatment === "onControl" ? { color: "#FFFFFF" } : {}),
-    ...(treatment === "callout" && increasedContrast ? { color: "#111827" } : {}),
+    ...(treatment === "callout" && increasedContrast ? { color: theme.dark ? theme.tokens.text : "#111827" } : {}),
   });
   const contrastBorder = increasedContrast && styles.contrastBorder;
   const previewHeight = Math.min(360, screenHeight * 0.38, Math.max(120, screenWidth - 128) * 2.22);
@@ -480,19 +486,19 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
       onRequestClose={onClose}
     >
       <View style={[styles.modalOverlay, preferences.reduceTransparencyEnabled && styles.opaqueOverlay]}>
-        <View style={styles.tutorialCard}>
-          <View style={styles.header}>
+        <View style={styles.tutorialCard} accessibilityViewIsModal importantForAccessibility="yes">
+          <View style={[styles.header, largeTutorialText && { flexDirection: "column", alignItems: "stretch" }]}>
             <Text accessibilityRole="header" style={[styles.headerTitle, textStyle(styles.headerTitle)]}>Tutorial &amp; Bug Reports</Text>
             <TouchableOpacity style={styles.skipButton}
               onPress={selectedTopic === null ? onClose : () => { setCurrentPage(0); setSelectedTopic(null); }}
               accessible accessibilityRole="button"
               accessibilityLabel={selectedTopic === null ? "Skip Tutorial" : "Back to tutorial topics"}
               accessibilityHint={selectedTopic === null ? "Closes the tutorial." : "Returns to the main tutorial screen."}>
-              <Text style={[styles.skipText, textStyle(styles.skipText)]}>{selectedTopic === null ? "Skip Tutorial" : "Back"}</Text>
+              <Text style={[styles.skipText, textStyle(styles.skipText)]}>{selectedTopic === null ? "Skip Tutorial" : "Return"}</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.tabs} accessibilityRole="tablist">
+          <View style={[styles.tabs, largeTutorialText && { flexDirection: "column" }]} accessibilityRole="tablist">
             {tutorialModes.map((tab) => (
               <TouchableOpacity
                 key={tab.value}
@@ -511,21 +517,21 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
 
           {selectedTopic === null ? (
             <ScrollView key={`topics-${mode}`} style={styles.scrollArea} contentContainerStyle={styles.topicContent} showsVerticalScrollIndicator>
-              <Text style={styles.title} accessibilityRole="header">What would you like to learn?</Text>
+              <Text style={[styles.title, textStyle(styles.title)]} accessibilityRole="header">What would you like to learn?</Text>
               <View style={styles.topicGrid}>
               {tutorialTopics.map((topic) => (
                 <TouchableOpacity
                   key={topic.value}
-                  style={styles.topicButton}
+                  style={[styles.topicButton, fontSize * fontScale > 1 && { flexBasis: "100%" }]}
                   onPress={() => { setCurrentPage(0); setSelectedTopic(topic.value); }}
                   accessibilityRole="button"
                   accessibilityLabel={topic.label}
                   accessibilityHint={topic.description}
                 >
                   <View style={styles.topicIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                    <MaterialCommunityIcons name={topic.icon} size={36} color="#AC2B37" />
+                    <MaterialCommunityIcons name={topic.icon} size={36} color={presentation.topicIcon} />
                   </View>
-                  <Text style={styles.topicTitle}>{topic.label}</Text>
+                  <Text style={[styles.topicTitle, textStyle(styles.topicTitle), fontSize * fontScale > 1 && { alignSelf: "stretch" }]}>{topic.label}</Text>
                 </TouchableOpacity>
               ))}
               </View>
@@ -648,7 +654,7 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   bugReportSection: { gap: 12, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 20 },
   bugReportButton: { minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: "#AC2B37",
     flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8 },

@@ -116,6 +116,62 @@
     .increase-contrast .leaflet-control-attribution,
     .increase-contrast .leaflet-control-attribution a { color: #111; background: #fff; }
     .reduce-transparency .leaflet-control-attribution { background: #fff; }
+
+    /* Interface paint only: never target tiles, markers, paths or map rotation. */
+    .map-ui-dark {
+      --map-compass-idle: var(--map-ui-surface);
+      --map-compass-active: var(--map-ui-selected);
+    }
+    .map-ui-dark .leaflet-tile-pane {
+      filter:
+        invert(1)
+        hue-rotate(180deg)
+        grayscale(0.75)
+        contrast(0.85)
+        brightness(1.2);
+    }
+    html.map-ui-dark, .map-ui-dark body, .map-ui-dark #map {
+      background: var(--map-ui-background);
+    }
+    .map-ui-dark .settings-control,
+    .map-ui-dark .compass-control,
+    .map-ui-dark .mute-control {
+      background: var(--map-ui-surface);
+      border: 2px solid var(--map-ui-outline);
+      color: var(--map-ui-icon);
+    }
+    .map-ui-dark .compass-control[aria-pressed="true"],
+    .map-ui-dark .mute-control[aria-pressed="true"] { background: var(--map-ui-selected); }
+    .map-ui-dark .settings-control svg,
+    .map-ui-dark .mute-control svg { fill: currentColor; }
+    .map-ui-dark .mute-control[aria-pressed="true"] { color: var(--map-ui-danger); }
+    .map-ui-dark .compass-icon polygon:nth-child(1),
+    .map-ui-dark .compass-icon polygon:nth-child(2) { fill: var(--map-ui-compassNorth); }
+    .map-ui-dark .compass-icon polygon:nth-child(3),
+    .map-ui-dark .compass-icon polygon:nth-child(4) { fill: var(--map-ui-compassSouth); }
+    .map-ui-dark .settings-control:focus-visible,
+    .map-ui-dark .compass-control:focus-visible,
+    .map-ui-dark .mute-control:focus-visible {
+      outline: 3px solid var(--map-ui-focus);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 6px var(--map-ui-surface);
+    }
+    .map-ui-dark .leaflet-control-attribution {
+      color: var(--map-ui-text);
+      background: var(--map-ui-surface);
+      border: 1px solid var(--map-ui-outline);
+    }
+    .map-ui-dark .leaflet-control-attribution a {
+      color: var(--map-ui-icon);
+      background: var(--map-ui-surface);
+    }
+    /* Override the existing Light accessibility rules, including link ink. */
+    .map-ui-dark.increase-contrast .leaflet-control-attribution,
+    .map-ui-dark.increase-contrast .leaflet-control-attribution a,
+    .map-ui-dark.reduce-transparency .leaflet-control-attribution {
+      background: var(--map-ui-surface);
+      color: var(--map-ui-text);
+    }
   </style>
 </head>
 <body>
@@ -125,6 +181,8 @@
     var marker = null;
     var circle = null;
     var remainingPolyline = null;
+    var remainingOutline = null;
+    var routeColor = '#1d5962';
     var traversedPolyline = null;
     var destMarker = null;
     var isHeadingFocused = false;
@@ -132,6 +190,23 @@
     var currentCompassAngle = null;
     // Remain still until React Native supplies the device preference.
     window.reduceMotionEnabled = true;
+
+    window.setRouteColor = function(color) {
+      routeColor = color;
+      if (remainingPolyline) remainingPolyline.setStyle({ color: routeColor });
+    };
+
+    // Safe before initMap and repeatable after load. No control reconstruction,
+    // camera calls, navigation messages, or state changes beyond CSS paint.
+    window.setMapUIPresentation = function(presentation) {
+      var root = document.documentElement;
+      var colors = presentation.colors;
+      ['background', 'surface', 'raised', 'icon', 'disabledIcon', 'outline', 'selected',
+       'text', 'secondary', 'danger', 'focus', 'compassNorth', 'compassSouth'].forEach(function(role) {
+        root.style.setProperty('--map-ui-' + role, colors[role]);
+      });
+      root.classList.toggle('map-ui-dark', !!presentation.dark);
+    };
 
     window.setVisualAccessibility = function(bold, contrast, opaque) {
       document.documentElement.classList.toggle('bold-text', !!bold);
@@ -252,12 +327,25 @@
     }
 
     /**
+     * Adds a light border so the route stays visible over similar map colors.
+     */
+    function createRemainingOutline(geometry) {
+      return L.polyline(geometry, {
+        smoothFactor: 0,
+        color: '#ffffff',
+        weight: 10,
+        opacity: 1,
+        interactive: false
+      }).addTo(map);
+    }
+
+    /**
      * Creates a solid line for the remaining route.
      */
     function createRemainingPolyline(geometry) {
       return L.polyline(geometry, {
         smoothFactor: 0,
-        color: '#1d5962',
+        color: routeColor,
         weight: 6,
         opacity: 0.9
       }).addTo(map);
@@ -296,6 +384,7 @@
         rData.geometry
       );
 
+      remainingOutline = createRemainingOutline(split.remaining);
       traversedPolyline = createTraversedPolyline(
         split.traversed
       );
@@ -331,8 +420,8 @@
       isHeadingFocused = false;
       var compass = document.querySelector('.compass-control');
       if (compass) {
-        compass.style.backgroundColor = 'white';
         compass.setAttribute('aria-pressed', 'false');
+        compass.style.backgroundColor = 'var(--map-compass-idle, white)';
       }
       window.ReactNativeWebView.postMessage('USER_DRAGGED');
     }
@@ -567,7 +656,7 @@
             );
 
             if (isHeadingFocused) {
-              container.style.backgroundColor = '#d3e3fd';
+              container.style.backgroundColor = 'var(--map-compass-active, #d3e3fd)';
 
               window.ReactNativeWebView.postMessage(
                 'HEADING_LOCKED'
@@ -577,7 +666,7 @@
                 animate: !window.reduceMotionEnabled
               });
             } else {
-              container.style.backgroundColor = 'white';
+              container.style.backgroundColor = 'var(--map-compass-idle, white)';
 
               window.ReactNativeWebView.postMessage(
                 'HEADING_UNLOCKED'
@@ -767,8 +856,8 @@
 
       if (compass) {
         compass.style.backgroundColor = focused
-          ? '#d3e3fd'
-          : 'white';
+          ? 'var(--map-compass-active, #d3e3fd)'
+          : 'var(--map-compass-idle, white)';
 
         compass.setAttribute(
           'aria-pressed',
@@ -963,6 +1052,12 @@
           map.removeLayer(remainingPolyline);
         }
 
+        if (remainingOutline) {
+          map.removeLayer(remainingOutline);
+        }
+
+        remainingOutline = createRemainingOutline(split.remaining);
+
         traversedPolyline = createTraversedPolyline(
           split.traversed
         );
@@ -998,6 +1093,11 @@
         if (remainingPolyline) {
           map.removeLayer(remainingPolyline);
           remainingPolyline = null;
+        }
+
+        if (remainingOutline) {
+          map.removeLayer(remainingOutline);
+          remainingOutline = null;
         }
 
         if (destMarker) {
