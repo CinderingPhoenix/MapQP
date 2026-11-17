@@ -182,9 +182,11 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert, 
       return plan;
     } },
     './navigation-speech': speechModule,
+    './navigation-directions': compile('utils/navigation-directions.ts', {}),
     './background-navigation': {
       syncBackgroundNavigation: async () => {},
       stopBackgroundNavigation: async () => {},
+      getSavedBackgroundRoute: async () => null,
     },
     '../../modules/navigation-notification': {
       addNavigationExitListener: () => ({ remove() {} }),

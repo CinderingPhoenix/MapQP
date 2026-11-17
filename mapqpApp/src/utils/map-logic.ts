@@ -1,3 +1,5 @@
+import { generateDirections, formatDirectionInstruction } from "./navigation-directions";
+export { generateDirections, formatDirectionInstruction } from "./navigation-directions";
 import type { NavigationStartupSession } from "../hooks/use-navigation-start-focus";
 import { useSettings } from "@/context/settings-context";
 import * as SecureStore from "expo-secure-store";
@@ -6,11 +8,11 @@ import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, AppState, Platform, Vibration } from "react-native";
-import { getRelaxedRoutingPreferences, getRoutingPreferences, NavigationPoint, routeBetween, WalkingRoute, RoutingPreferences } from "./routing";
+import { getMotionHeading, getRelaxedRoutingPreferences, getRoutingPreferences, routeBetween, WalkingRoute, RoutingPreferences } from "./routing";
 import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
-import { syncBackgroundNavigation, stopBackgroundNavigation } from "./background-navigation";
+import { syncBackgroundNavigation, stopBackgroundNavigation, getSavedBackgroundRoute } from "./background-navigation";
 import { addNavigationExitListener, consumeNavigationExit } from "../../modules/navigation-notification";
 
 export type Point = {
@@ -20,6 +22,9 @@ export type Point = {
 };
 
 export type RoutePlan = WalkingRoute & {
+  previewKey?: string;
+  navigationId?: string;
+  backgroundRevision?: number;
   arrivalTime: number;
   origin: Point;
   destination: Point;
@@ -184,62 +189,6 @@ export function formatInstructionWithDistance(instruction: string, distMeters: n
   return isCurrentStep && distMeters <= 5 ? `${message} now` : `${message} in ${formatDistance(distMeters, units)}`;
 }
 
-function closestGeometryIndex(geometry: [number, number][], point: [number, number]): number {
-  let closestIndex = 0;
-  let closestDistance = Number.POSITIVE_INFINITY;
-  for (let index = 0; index < geometry.length; index++) {
-    const distance = getDistanceFromLatLonInMeters(geometry[index][0], geometry[index][1], point[0], point[1]);
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closestIndex = index;
-    }
-  }
-  return closestIndex;
-}
-
-export function formatDirectionInstruction(step: DirectionStep, style: "natural" | "degrees"): string {
-  if (style === "natural" || step.turnDegrees === undefined || step.instruction === "Arrive at destination") {
-    return step.instruction;
-  }
-  const degrees = Math.round(Math.abs(step.turnDegrees));
-  if (degrees <= 15) return "Continue straight";
-  if (step.turnDegrees > 0) return `Turn right ${degrees}°`;
-  return `Turn left ${degrees}°`;
-}
-
-export function generateDirections(geometry: [number, number][], navigationPath: NavigationPoint[] = []): DirectionStep[] {
-  const steps: DirectionStep[] = [];
-  if (!geometry || geometry.length < 2) return steps;
-
-  for (let index = 1; index < navigationPath.length - 1; index++) {
-    const decisionPoint = navigationPath[index];
-    if (decisionPoint.connectionCount <= 2) continue;
-
-    const previousPoint = navigationPath[index - 1].coordinate;
-    const currentPoint = decisionPoint.coordinate;
-    const nextPoint = navigationPath[index + 1].coordinate;
-    const incomingBearing = getBearing(...previousPoint, ...currentPoint);
-    const outgoingBearing = getBearing(...currentPoint, ...nextPoint);
-    let diff = outgoingBearing - incomingBearing;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    // Small changes in mapped path geometry are bends, not maneuvers.
-    // Do not add a straight-ahead instruction for these junctions.
-    if (Math.abs(diff) <= 30) continue;
-    const instruction = diff > 45 ? "Turn right" : diff > 0 ? "Slight right" : diff < -45 ? "Turn left" : "Slight left";
-    const pointIndex = closestGeometryIndex(geometry, currentPoint);
-    const lastStep = steps[steps.length - 1];
-    // Smoothed geometry can have many vertices within a few meters. Merge
-    // repeated instructions by walking distance rather than vertex count.
-    if (lastStep && pointIndex <= lastStep.pointIndex) continue;
-    if (lastStep && lastStep.instruction === instruction &&
-        getSegmentDistance(geometry, lastStep.pointIndex, pointIndex) <= 10) continue;
-    steps.push({ instruction, pointIndex, turnDegrees: diff });
-  }
-  steps.push({ instruction: "Arrive at destination", pointIndex: geometry.length - 1 });
-  return steps;
-}
-
 export function getDistanceToStepPoint(geometry: [number, number][], currentIndex: number, targetIndex: number, userLat?: number, userLng?: number): number {
   if (!geometry || currentIndex >= targetIndex) return 0;
   let totalMeters = 0;
@@ -323,7 +272,7 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
 }
 
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
-  return routes.reduce((fastest, candidate) => (candidate.duration < fastest.duration ? candidate : fastest));
+  return routes.reduce((fastest, candidate) => ((candidate.routingCost ?? candidate.distance) < (fastest.routingCost ?? fastest.distance) ? candidate : fastest));
 }
 
 export function useMapNavigation(buildings: Building[]) {
@@ -422,6 +371,8 @@ export function useMapNavigation(buildings: Building[]) {
   const destinationBuildingRef = useRef(destinationBuilding);
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
+  const motionFixRef = useRef<Coordinates | null>(null);
+  const motionHeadingRef = useRef<number | undefined>(undefined);
   const showRecenterRef = useRef(showRecenter);
   const {
     navigationMode,
@@ -573,7 +524,7 @@ export function useMapNavigation(buildings: Building[]) {
         };
         try {
           return {
-            ...(await routeBetween(origin, destination, options)),
+            ...(await routeBetween(origin, destination, options, newRoute ? undefined : motionHeadingRef.current)),
             origin,
             destination,
           };
@@ -619,6 +570,8 @@ export function useMapNavigation(buildings: Building[]) {
       const fastest = fastestRoute(availableRoutes);
       const selectedRoute = {
         ...fastest,
+        previewKey: targetBuilding,
+        navigationId: `${Date.now()}-${requestId}`,
         arrivalTime: Date.now() + fastest.duration * 1000,
       };
       setRoute(selectedRoute);
@@ -626,8 +579,8 @@ export function useMapNavigation(buildings: Building[]) {
       const steps = generateDirections(selectedRoute.geometry, selectedRoute.navigationPath);
       setRouteSteps(steps);
       setCurrentRouteIndex(0);
-      startRoutePreviewCountdown();
       const newNavigation = spokenDestinationRef.current !== targetBuilding;
+      if (newRoute || newNavigation) startRoutePreviewCountdown();
       const previousGeometry = speechGeometryRef.current;
       const geometryChanged = !previousGeometry || previousGeometry.length !== selectedRoute.geometry.length ||
         selectedRoute.geometry.some((point, index) =>
@@ -682,6 +635,10 @@ export function useMapNavigation(buildings: Building[]) {
         if (!isMounted) return;
         const processed = processAdvancedCoordinates({ ...location.coords, accuracy: location.coords.accuracy || 0, timestamp: location.timestamp } as Coordinates, kalmanStateRef);
         if (!processed) return;
+        const motionFix = { ...location.coords, timestamp: location.timestamp } as Coordinates;
+        motionHeadingRef.current = getMotionHeading(motionFix, motionFixRef.current);
+        if (!motionFixRef.current || motionFix.timestamp - motionFixRef.current.timestamp > 30000 ||
+            motionHeadingRef.current !== undefined) motionFixRef.current = motionFix;
         let displayLat = processed.latitude;
         let displayLng = processed.longitude;
         let newRouteIndex = currentRouteIndexRef.current;
@@ -775,6 +732,12 @@ export function useMapNavigation(buildings: Building[]) {
     ? formatDirectionInstruction(nextStep, directionStyle)
     : null;
   useEffect(() => {
+    // Settings can enable battery saver while this screen is unfocused.
+    // Stop the service and dismiss its notifications before any route checks.
+    if (batterySaverEnabled) {
+      void stopBackgroundNavigation().catch(error => console.warn("Unable to stop background navigation", error));
+      return;
+    }
     if (!route || !routeSteps.length || !isFocused) return;
     void syncBackgroundNavigation({
       geometry: route.geometry,
@@ -782,12 +745,42 @@ export function useMapNavigation(buildings: Building[]) {
       destination: route.destination.label,
       units: distanceUnits,
       duration: route.duration,
+      navigationId: route.navigationId,
+      revision: route.backgroundRevision ?? 0,
+      destinationPoint: route.destination,
+      directionStyle,
+      preferences: {
+        avoidStairs: routePolicyRef.current?.accessibleOnly ?? avoidStairs,
+        avoidIndoorRoutes: routePolicyRef.current?.avoidIndoorRoutes ?? avoidIndoorRoutes,
+        avoidInaccessibleCrosswalks: routePolicyRef.current?.avoidInaccessibleCrosswalks ?? avoidInaccessibleCrosswalks,
+      },
       expiresAt: Date.now() + Math.max(route.duration * 3000, 2 * 60 * 60 * 1000),
-    }).catch(error => {
+    }, batterySaverEnabled).catch(error => {
       console.warn("Background navigation unavailable", error);
       Alert.alert("Background directions unavailable", "Navigation will continue while the app is open. Background guidance could not be started on this device.");
     });
-  }, [route, routeSteps, distanceUnits, directionStyle, isFocused]);
+  }, [route, routeSteps, distanceUnits, directionStyle, isFocused, batterySaverEnabled]);
+  const activeRouteRef = useRef(route);
+  activeRouteRef.current = route;
+  useEffect(() => {
+    if (!foreground || !isFocused) return;
+    let active = true;
+    void getSavedBackgroundRoute().then(saved => {
+      const current = activeRouteRef.current;
+      if (!active || !current || !saved?.reroutePlan || !saved.navigationId ||
+          saved.navigationId !== current.navigationId ||
+          (saved.revision ?? 0) <= (current.backgroundRevision ?? 0)) return;
+      navigationSpeech.clearGuidance();
+      setRoute({ ...current, ...saved.reroutePlan,
+        backgroundRevision: saved.revision,
+        arrivalTime: Date.now() + saved.reroutePlan.duration * 1000 });
+      setRouteSteps(saved.steps);
+      setCurrentRouteIndex(0);
+      spokenStagesRef.current = {};
+      offRouteCountRef.current = 0;
+    }).catch(error => console.warn("Unable to restore background reroute", error));
+    return () => { active = false; };
+  }, [foreground, isFocused, navigationSpeech]);
   const distToNextStepMeters = route && nextStep && coordinates ? getDistanceToStepPoint(route.geometry, currentRouteIndex, nextStep.pointIndex, coordinates.latitude, coordinates.longitude) : 0;
 
   const currentGuidanceRef = useRef({ route, nextStep });

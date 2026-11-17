@@ -55,6 +55,7 @@ type BuildingPickerProps = {
   accessibilityControls?: boolean;
   onOpenSettings?: () => void;
   onPickerTransition?: (dismissed: boolean) => void;
+  dismissSignal?: number;
   onVoiceMapCommand?: (command: VoiceMapCommand) => Promise<string>;
   navigationSpeech: NavigationSpeech;
   onVoiceListeningChange: (listening: boolean) => Promise<void>;
@@ -69,6 +70,7 @@ export default React.memo(function BuildingPicker({
   accessibilityControls = false,
   onOpenSettings,
   onPickerTransition,
+  dismissSignal = 0,
   onVoiceMapCommand,
   navigationSpeech,
   onVoiceListeningChange,
@@ -127,6 +129,13 @@ export default React.memo(function BuildingPicker({
   const blurTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingModalSelection = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dismissSignal) return;
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    setIsOpen(false);
+    setIsInputFocused(false);
+    setShowSavedOnly(false);
+  }, [dismissSignal]);
   useEffect(() => {
     // Android does not deliver Modal.onDismiss.
     if (Platform.OS !== "ios" && !isBuildingSelectorOpen) onPickerTransition?.(true);

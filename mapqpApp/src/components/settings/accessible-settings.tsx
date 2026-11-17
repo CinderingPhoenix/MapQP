@@ -379,16 +379,18 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
   };
   return <SafeAreaView style={s.container}>
     <SettingsStatusBar />
+    <View style={{ paddingHorizontal: gutter, paddingTop: 12 }} accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"}>
+      <Action label="? Back To Map" back onPress={onBack} />
+    </View>
     <ScrollView accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"} contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
       <View style={s.header}>
-        <Action label="‹ Back To Map" back onPress={onBack} />
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
         <Section title="Battery">
           <ToggleRow compact label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
             onChange={settings.setBatterySaverEnabled}
-            description="Uses fewer location updates, less compass activity, and fewer animations. Your screen can sleep; navigation may pause while locked or in the background. Turn guidance stays on." />
+            description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
         </Section>
         <Section title="Navigation mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}

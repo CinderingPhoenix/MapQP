@@ -1,4 +1,7 @@
+import type { MotionFix, RoutePoint, RoutingPreferences, WalkingRoute } from "./routing";
+
 export type BackgroundRoute = {
+  motionFix?: MotionFix;
   geometry: [number, number][];
   steps: { instruction: string; pointIndex: number }[];
   destination: string;
@@ -6,6 +9,16 @@ export type BackgroundRoute = {
   expiresAt: number;
   duration?: number;
   lastNotice?: string;
+  navigationId?: string;
+  destinationPoint?: RoutePoint;
+  preferences?: RoutingPreferences;
+  directionStyle?: "natural" | "degrees";
+  revision?: number;
+  reroutePlan?: WalkingRoute & { origin: RoutePoint };
+  offRouteSamples?: number;
+  lastOffRouteFix?: number;
+  lastRerouteAttempt?: number;
+  rerouteFailed?: boolean;
 };
 
 function distance(a: [number, number], b: [number, number]) {
@@ -40,7 +53,9 @@ export function getBackgroundGuidance(route: BackgroundRoute, lat: number, lng: 
     progress,
     arrivalTime: Date.now() + (route.duration ?? total / 1.4) * (1 - progress / 100) * 1000,
   };
-  if (nearest > 30) return { ...presentation, maneuver: "off-route", key: "off-route", body: "You are off route. Open mapQP to update your route.", arrived: false };
+  if (nearest > 30) return { ...presentation, maneuver: "off-route", key: "off-route",
+    body: route.rerouteFailed ? "Unable to find a route with your routing preferences. Retrying automatically."
+      : "Recalculating your route…", arrived: false };
   const end = route.geometry[route.geometry.length - 1];
   if (distance(point, end) <= 8) return { ...presentation, progress: 100, maneuver: "arrive", key: "arrival", body: `You have arrived at ${route.destination}.`, arrived: true };
   const step = route.steps.find(s => s.pointIndex > segment);

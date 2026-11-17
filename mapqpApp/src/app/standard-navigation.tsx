@@ -141,6 +141,7 @@ export default function Home() {
 
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [pickerDismissSignal, setPickerDismissSignal] = useState(0);
   const keyboardTranslateY = useRef(new Animated.Value(0)).current;
 
   const { distanceUnits, directionStyle, fontSize } = useSettings();
@@ -372,6 +373,7 @@ export default function Home() {
       <View
         style={styles.mapCanvas}
         onStartShouldSetResponderCapture={() => {
+          setPickerDismissSignal(previous => previous + 1);
           Keyboard.dismiss();
           if (directionsExpanded) setDirectionsExpanded(false);
           return false;
@@ -438,6 +440,7 @@ export default function Home() {
           </TouchableOpacity>
         </RecenterOverlay>
         <BuildingPicker
+          dismissSignal={pickerDismissSignal}
           onPickerTransition={onPickerTransition}
           navigationSpeech={navigationSpeech} onVoiceListeningChange={onVoiceListeningChange}
           buildings={buildings}

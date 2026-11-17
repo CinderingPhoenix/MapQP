@@ -11,6 +11,55 @@ vm.runInNewContext(ts.transpileModule(source, { compilerOptions: {
 } }).outputText, context);
 const { initRoutingGraph, routeBetween } = context.exports;
 
+test('travel direction favors the forward loop and has a separate cache entry and physical ETA', async () => {
+  initRoutingGraph({ nodes: [['a', 0, 0], ['b', 0, 0.0002], ['c', 0.0002, 0.0002], ['d', 0.0002, 0]],
+    connections: { a: ['b', 'd'], b: ['c'], c: ['d'] } }, []);
+  const origin = { latitude: 0, longitude: 0.0001, label: 'Walker' };
+  const destination = { latitude: 0.0002, longitude: 0, label: 'Destination' };
+  const west = await routeBetween(origin, destination, {}, 270);
+  const east = await routeBetween(origin, destination, {}, 90);
+  assert.equal(west.geometry[1][1], 0);
+  assert.equal(east.geometry[1][1], 0.0002);
+  assert.ok(east.distance > west.distance);
+  assert.equal(east.duration, east.distance / 1.4);
+});
+
+test('motion heading ignores stationary phone direction and noisy or stale movement', () => {
+  const { getMotionHeading } = context.exports;
+  const start = { latitude: 0, longitude: 0, accuracy: 3, timestamp: 1000 };
+  const end = { ...start, longitude: 0.0001, timestamp: 11000, heading: 270, speed: 0 };
+  assert.equal(getMotionHeading(end, start), 90);
+  assert.equal(getMotionHeading({ ...end, speed: 1 }), 270);
+  assert.equal(getMotionHeading({ ...end, accuracy: 30 }, start), undefined);
+  assert.equal(getMotionHeading({ ...end, timestamp: 40000 }, start), undefined);
+  assert.equal(getMotionHeading({ ...start, heading: 270, speed: 0 }, start), undefined);
+});
+
+test('a left turn followed by backward travel loses to a longer forward route, even at a graph vertex', async () => {
+  initRoutingGraph({ nodes: [
+    ['s', 0, 0], ['left', 0.0001, 0], ['back', 0.00015, -0.0001], ['dest', 0.001, 0],
+    ['forward', 0, 0.0008], ['bend', 0.001, 0.0008],
+  ], connections: { s: ['left', 'forward'], left: ['back'], back: ['dest'],
+    forward: ['bend'], bend: ['dest'] } }, []);
+  const origin = { latitude: 0, longitude: 0, label: 'Walker' };
+  const destination = { latitude: 0.001, longitude: 0, label: 'Destination' };
+  const shortest = await routeBetween(origin, destination);
+  const forward = await routeBetween(origin, destination, {}, 90);
+  assert.ok(shortest.geometry.some(p => p[0] === 0.0001 && p[1] === 0));
+  assert.ok(forward.geometry.some(p => p[0] === 0 && p[1] === 0.0008));
+  assert.ok(!forward.geometry.some(p => p[0] === 0.00015 && p[1] === -0.0001));
+  assert.ok(forward.distance > shortest.distance);
+  assert.equal(forward.duration, forward.distance / 1.4);
+});
+
+test('a required reversal still finds a permitted route at a dead end', async () => {
+  initRoutingGraph({ nodes: [['s', 0, 0], ['end', 0, -0.001]], connections: { s: ['end'] } }, []);
+  const route = await routeBetween({ latitude: 0, longitude: 0, label: 'Walker' },
+    { latitude: 0, longitude: -0.001, label: 'End' }, {}, 90);
+  assert.equal(route.geometry.at(-1)[1], -0.001);
+  assert.ok(route.routingCost > route.distance);
+});
+
 test('routing accepts saved object nodes alongside bundled tuple nodes', async () => {
   initRoutingGraph({ nodes: [
     { id: 'start', latitude: 42, longitude: -71 },
@@ -53,3 +102,5 @@ test('object nodes produce the same route geometry as tuple nodes', async () => 
   assert.equal(JSON.stringify(objectRoute.geometry), JSON.stringify(tupleRoute.geometry));
   assert.equal(objectRoute.distance, tupleRoute.distance);
 });
+
+
