@@ -11,6 +11,25 @@ vm.runInNewContext(ts.transpileModule(source, { compilerOptions: {
 } }).outputText, context);
 const { initRoutingGraph, routeBetween } = context.exports;
 
+test('near Unity the route can use the indoor connection without phantom map nodes', async () => {
+  const points = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/route-points.json'), 'utf8'));
+  const buildings = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/wpi-buildings.json'), 'utf8'));
+  initRoutingGraph(points, buildings);
+  const unity = buildings.find(b => b.name === 'Unity Hall').entrances;
+  const boynton = buildings.find(b => b.name === 'Boynton Hall').entrances[0];
+  const origin = { latitude: 42.2741, longitude: -71.8055, label: 'Near Unity' };
+  const destination = { ...boynton, label: 'Boynton' };
+  const indoor = await routeBetween(origin, destination);
+  const outdoor = await routeBetween(origin, destination, { avoidIndoorRoutes: true });
+  const usesUnity = route => unity.slice(0, 2).every(entrance => route.geometry.some(
+    ([lat, lng]) => lat === entrance.latitude && lng === entrance.longitude));
+  assert.ok(usesUnity(indoor));
+  assert.ok(!usesUnity(outdoor));
+  assert.ok(indoor.distance - outdoor.distance < 5);
+  assert.equal(indoor.duration, indoor.distance / 1.4);
+  assert.ok(context.exports.getWalkwayDebugOverlay().nodes.every(([lat, lng]) => lat !== 0 || lng !== 0));
+});
+
 test('travel direction favors the forward loop and has a separate cache entry and physical ETA', async () => {
   initRoutingGraph({ nodes: [['a', 0, 0], ['b', 0, 0.0002], ['c', 0.0002, 0.0002], ['d', 0.0002, 0]],
     connections: { a: ['b', 'd'], b: ['c'], c: ['d'] } }, []);

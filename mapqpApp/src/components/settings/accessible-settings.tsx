@@ -227,6 +227,7 @@ function Action({ label, description, onPress, danger = false, back = false, tar
     style={[s.action, back && s.back, back && increasedContrast && s.strongBoundary,
       danger && { minHeight: 56, paddingVertical: 8, paddingHorizontal: 12, flexWrap: "wrap", borderRadius: 12, borderWidth: 2, borderColor: vision.color(increasedContrast ? COLORS.contrastOutline : (pressed ? "#8F1C28" : "#B42332"), "borderColor"),
         backgroundColor: vision.dark ? (pressed ? vision.tokens.dangerPressed : vision.tokens.dangerSurface) : vision.color(pressed ? "#8F1C28" : "#B42332", "backgroundColor") }]}>
+    {back && <MaterialCommunityIcons name="chevron-left" size={28} color={vision.color(COLORS.ink, "iconColor")} accessible={false} allowFontScaling={false} />}
     {danger && <MaterialCommunityIcons name="trash-can-outline" size={24} color={vision.dark ? vision.tokens.dangerText : vision.color("#FFFFFF", "iconColor")} accessible={false}
       accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />}
     <View style={s.actionCopy} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -380,18 +381,13 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
   return <SafeAreaView style={s.container}>
     <SettingsStatusBar />
     <View style={{ paddingHorizontal: gutter, paddingTop: 12 }} accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"}>
-      <Action label="? Back To Map" back onPress={onBack} />
+      <Action label="Back To Map" back onPress={onBack} />
     </View>
     <ScrollView accessibilityElementsHidden={colorVision.visible} aria-hidden={colorVision.visible} importantForAccessibility={colorVision.visible ? "no-hide-descendants" : "auto"} contentContainerStyle={[s.content, { paddingHorizontal: gutter }]} showsVerticalScrollIndicator>
       <View style={s.header}>
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
-        <Section title="Battery">
-          <ToggleRow compact label="Battery Saver" value={settings.batterySaverEnabled} disabled={disabled}
-            onChange={settings.setBatterySaverEnabled}
-            description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
-        </Section>
         <Section title="Navigation mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}
             disabled={disabled} onPress={() => onNavigationModeChange("standard")} />
@@ -469,7 +465,13 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             <Choice label="Degrees" selected={settings.directionStyle === "degrees"} disabled={disabled} onPress={() => settings.setDirectionStyle("degrees")} />
           </Choices></View>
       </Accordion>
-      <Accordion title="Accessibility" icon={HEADER_ICONS.accessibility}><AccessibilityPanel controls={accessibilityControls} /></Accordion>
+      <Accordion title="Accessibility" icon={HEADER_ICONS.accessibility}>
+        <AccessibilityPanel controls={accessibilityControls} />
+        <Divider />
+        <ToggleRow label="Battery Saver" icon="battery-heart-outline" value={settings.batterySaverEnabled} disabled={disabled}
+          onChange={settings.setBatterySaverEnabled}
+          description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
+      </Accordion>
       <Accordion title="Routing & Spoken Guidance" icon={HEADER_ICONS.routing}>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>

@@ -181,6 +181,8 @@
     var marker = null;
     var circle = null;
     var remainingPolyline = null;
+    var remainingOutline = null;
+    var routeColor = '#1d5962';
     var traversedPolyline = null;
     var destMarker = null;
     var isHeadingFocused = false;
@@ -188,6 +190,11 @@
     var currentCompassAngle = null;
     // Remain still until React Native supplies the device preference.
     window.reduceMotionEnabled = true;
+
+    window.setRouteColor = function(color) {
+      routeColor = color;
+      if (remainingPolyline) remainingPolyline.setStyle({ color: routeColor });
+    };
 
     // Safe before initMap and repeatable after load. No control reconstruction,
     // camera calls, navigation messages, or state changes beyond CSS paint.
@@ -320,12 +327,25 @@
     }
 
     /**
+     * Adds a light border so the route stays visible over similar map colors.
+     */
+    function createRemainingOutline(geometry) {
+      return L.polyline(geometry, {
+        smoothFactor: 0,
+        color: '#ffffff',
+        weight: 10,
+        opacity: 1,
+        interactive: false
+      }).addTo(map);
+    }
+
+    /**
      * Creates a solid line for the remaining route.
      */
     function createRemainingPolyline(geometry) {
       return L.polyline(geometry, {
         smoothFactor: 0,
-        color: '#1d5962',
+        color: routeColor,
         weight: 6,
         opacity: 0.9
       }).addTo(map);
@@ -364,6 +384,7 @@
         rData.geometry
       );
 
+      remainingOutline = createRemainingOutline(split.remaining);
       traversedPolyline = createTraversedPolyline(
         split.traversed
       );
@@ -1031,6 +1052,12 @@
           map.removeLayer(remainingPolyline);
         }
 
+        if (remainingOutline) {
+          map.removeLayer(remainingOutline);
+        }
+
+        remainingOutline = createRemainingOutline(split.remaining);
+
         traversedPolyline = createTraversedPolyline(
           split.traversed
         );
@@ -1066,6 +1093,11 @@
         if (remainingPolyline) {
           map.removeLayer(remainingPolyline);
           remainingPolyline = null;
+        }
+
+        if (remainingOutline) {
+          map.removeLayer(remainingOutline);
+          remainingOutline = null;
         }
 
         if (destMarker) {

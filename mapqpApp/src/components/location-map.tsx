@@ -5,6 +5,7 @@ import { Asset } from "expo-asset";
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { useAppTheme } from "../hooks/use-app-theme";
 import { navigationPresentation } from "../theme/navigation-theme";
+import { COLOR_VISION_PALETTES } from "../theme/color-vision-palettes";
 import type { VoiceMapCommand } from "../utils/voice-map-command";
 import { AppState, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -155,6 +156,9 @@ export default function LocationMap({
   } = useAccessibilityPreferences();
   const increasedContrast = darkerSystemColorsEnabled || highTextContrastEnabled;
   const visualPreferencesScript = `
+    if (window.setRouteColor) {
+      window.setRouteColor(${JSON.stringify(theme.preset === "default" ? "#1d5962" : COLOR_VISION_PALETTES[theme.preset].primary)});
+    }
     if (window.setMapUIPresentation) {
       window.setMapUIPresentation(${JSON.stringify(presentation.mapUI)});
     }

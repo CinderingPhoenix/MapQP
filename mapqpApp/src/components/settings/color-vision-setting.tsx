@@ -10,7 +10,7 @@ import { THEME_OPTIONS } from "../../theme/settings-theme";
 import { COLOR_VISION_OPTIONS, colorVisionDialogSize } from "../../theme/color-vision-palettes";
 
 type Trigger = ComponentRef<typeof TouchableOpacity>;
-const SCOPE = "Changes Settings and navigation controls, not the map.";
+const SCOPE = "Changes Settings, navigation controls, and the route color.";
 
 export function useColorVisionDialog() {
   const [visible, setVisible] = useState(false);

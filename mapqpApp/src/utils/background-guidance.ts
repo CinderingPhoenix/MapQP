@@ -1,4 +1,7 @@
-import type { MotionFix, RoutePoint, RoutingPreferences, WalkingRoute } from "./routing";
+import type { RoutePoint, RoutingPreferences, WalkingRoute } from "./routing";
+
+export type MotionFix = { latitude: number; longitude: number; timestamp: number;
+  accuracy: number | null; heading?: number | null; speed?: number | null };
 
 export type BackgroundRoute = {
   motionFix?: MotionFix;
