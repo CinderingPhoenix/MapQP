@@ -1,6 +1,7 @@
-import type { RoutePoint, RoutingPreferences, WalkingRoute } from "./routing";
+import type { MotionFix, RoutePoint, RoutingPreferences, WalkingRoute } from "./routing";
 
 export type BackgroundRoute = {
+  motionFix?: MotionFix;
   geometry: [number, number][];
   steps: { instruction: string; pointIndex: number }[];
   destination: string;

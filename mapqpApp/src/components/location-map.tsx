@@ -201,6 +201,8 @@ export default function LocationMap({
   }, []);
 
   const hasRoute = !!route;
+  // Geometry and navigation IDs change on reroutes; the chosen destination does not.
+  const routePreviewKey = route ? (route.previewKey ?? "active-route") : null;
   const summaryClearance = hasRoute ? controlsTop : 0;
   const controlPositionScript = `
     if (window.updateDirectionsExpanded) {
@@ -261,7 +263,7 @@ export default function LocationMap({
   latestPosition.current = { currentMarkerLat, currentMarkerLng, accuracy, route };
 
   /**
-   * Show the complete route facing North, then switch to
+   * Preview a newly selected destination, then switch to
    * heading-focused navigation and zoom into the user after 4 seconds.
    */
   useEffect(() => {
@@ -329,7 +331,7 @@ export default function LocationMap({
       }, 4000);
     }
     return cancelPreview;
-  }, [route, camera.ready]);
+  }, [routePreviewKey, camera.ready]);
 
   useEffect(() => {
     if (!isHeadingFocused || heading === null || heading === undefined) return;

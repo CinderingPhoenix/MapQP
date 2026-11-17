@@ -8,7 +8,7 @@ import * as Location from "expo-location";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, AppState, Platform, Vibration } from "react-native";
-import { getRelaxedRoutingPreferences, getRoutingPreferences, routeBetween, WalkingRoute, RoutingPreferences } from "./routing";
+import { getMotionHeading, getRelaxedRoutingPreferences, getRoutingPreferences, routeBetween, WalkingRoute, RoutingPreferences } from "./routing";
 import { useFocusEffect } from "expo-router";
 
 import { NavigationSpeech, initialSpeechStages, type StepSpeechStage } from "./navigation-speech";
@@ -22,6 +22,7 @@ export type Point = {
 };
 
 export type RoutePlan = WalkingRoute & {
+  previewKey?: string;
   navigationId?: string;
   backgroundRevision?: number;
   arrivalTime: number;
@@ -271,7 +272,7 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
 }
 
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
-  return routes.reduce((fastest, candidate) => (candidate.duration < fastest.duration ? candidate : fastest));
+  return routes.reduce((fastest, candidate) => ((candidate.routingCost ?? candidate.distance) < (fastest.routingCost ?? fastest.distance) ? candidate : fastest));
 }
 
 export function useMapNavigation(buildings: Building[]) {
@@ -370,6 +371,8 @@ export function useMapNavigation(buildings: Building[]) {
   const destinationBuildingRef = useRef(destinationBuilding);
   const isRouteCancelledRef = useRef(false);
   const offRouteCountRef = useRef(0);
+  const motionFixRef = useRef<Coordinates | null>(null);
+  const motionHeadingRef = useRef<number | undefined>(undefined);
   const showRecenterRef = useRef(showRecenter);
   const {
     navigationMode,
@@ -521,7 +524,7 @@ export function useMapNavigation(buildings: Building[]) {
         };
         try {
           return {
-            ...(await routeBetween(origin, destination, options)),
+            ...(await routeBetween(origin, destination, options, newRoute ? undefined : motionHeadingRef.current)),
             origin,
             destination,
           };
@@ -567,6 +570,7 @@ export function useMapNavigation(buildings: Building[]) {
       const fastest = fastestRoute(availableRoutes);
       const selectedRoute = {
         ...fastest,
+        previewKey: targetBuilding,
         navigationId: `${Date.now()}-${requestId}`,
         arrivalTime: Date.now() + fastest.duration * 1000,
       };
@@ -575,8 +579,8 @@ export function useMapNavigation(buildings: Building[]) {
       const steps = generateDirections(selectedRoute.geometry, selectedRoute.navigationPath);
       setRouteSteps(steps);
       setCurrentRouteIndex(0);
-      startRoutePreviewCountdown();
       const newNavigation = spokenDestinationRef.current !== targetBuilding;
+      if (newRoute || newNavigation) startRoutePreviewCountdown();
       const previousGeometry = speechGeometryRef.current;
       const geometryChanged = !previousGeometry || previousGeometry.length !== selectedRoute.geometry.length ||
         selectedRoute.geometry.some((point, index) =>
@@ -631,6 +635,10 @@ export function useMapNavigation(buildings: Building[]) {
         if (!isMounted) return;
         const processed = processAdvancedCoordinates({ ...location.coords, accuracy: location.coords.accuracy || 0, timestamp: location.timestamp } as Coordinates, kalmanStateRef);
         if (!processed) return;
+        const motionFix = { ...location.coords, timestamp: location.timestamp } as Coordinates;
+        motionHeadingRef.current = getMotionHeading(motionFix, motionFixRef.current);
+        if (!motionFixRef.current || motionFix.timestamp - motionFixRef.current.timestamp > 30000 ||
+            motionHeadingRef.current !== undefined) motionFixRef.current = motionFix;
         let displayLat = processed.latitude;
         let displayLng = processed.longitude;
         let newRouteIndex = currentRouteIndexRef.current;

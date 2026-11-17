@@ -42,6 +42,7 @@ export function formatDirectionInstruction(step: DirectionStep, style: "natural"
     return step.instruction;
   }
   const degrees = Math.round(Math.abs(step.turnDegrees));
+  if (degrees >= 150) return "Turn around";
   if (degrees <= 15) return "Continue straight";
   if (step.turnDegrees > 0) return `Turn right ${degrees}°`;
   return `Turn left ${degrees}°`;
@@ -66,7 +67,7 @@ export function generateDirections(geometry: [number, number][], navigationPath:
     // Small changes in mapped path geometry are bends, not maneuvers.
     // Do not add a straight-ahead instruction for these junctions.
     if (Math.abs(diff) <= 30) continue;
-    const instruction = diff > 45 ? "Turn right" : diff > 0 ? "Slight right" : diff < -45 ? "Turn left" : "Slight left";
+    const instruction = Math.abs(diff) >= 150 ? "Turn around" : diff > 45 ? "Turn right" : diff > 0 ? "Slight right" : diff < -45 ? "Turn left" : "Slight left";
     const pointIndex = closestGeometryIndex(geometry, currentPoint);
     const lastStep = steps[steps.length - 1];
     // Smoothed geometry can have many vertices within a few meters. Merge
