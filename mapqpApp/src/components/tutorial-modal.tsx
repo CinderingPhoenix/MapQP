@@ -494,7 +494,7 @@ export function TutorialModal({ visible, onClose, onDismiss, onReportBug }: Tuto
               accessible accessibilityRole="button"
               accessibilityLabel={selectedTopic === null ? "Skip Tutorial" : "Back to tutorial topics"}
               accessibilityHint={selectedTopic === null ? "Closes the tutorial." : "Returns to the main tutorial screen."}>
-              <Text style={[styles.skipText, textStyle(styles.skipText)]}>{selectedTopic === null ? "Skip Tutorial" : "Back"}</Text>
+              <Text style={[styles.skipText, textStyle(styles.skipText)]}>{selectedTopic === null ? "Skip Tutorial" : "Return"}</Text>
             </TouchableOpacity>
           </View>
 

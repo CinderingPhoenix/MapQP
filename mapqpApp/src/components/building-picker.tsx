@@ -796,7 +796,7 @@ export default React.memo(function BuildingPicker({
                 }}
                 onSubmitEditing={() => setIsOpen(false)}
                 accessibilityLabel={placeholder}
-                placeholderTextColor={theme.dark ? presentation.colors.secondary : undefined}
+                placeholderTextColor={theme.dark ? presentation.colors.secondary : "#4B5563"}
                 selectionColor={theme.dark ? presentation.colors.accent : undefined}
                 keyboardAppearance={theme.dark ? "dark" : undefined}
                 placeholder={stackedSearchActions ? "Search destinations" : placeholder}
