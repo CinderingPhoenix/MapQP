@@ -17,7 +17,7 @@ test('near Unity the route can use the indoor connection without phantom map nod
   initRoutingGraph(points, buildings);
   const unity = buildings.find(b => b.name === 'Unity Hall').entrances;
   const boynton = buildings.find(b => b.name === 'Boynton Hall').entrances[0];
-  const origin = { latitude: 42.2741, longitude: -71.8055, label: 'Near Unity' };
+  const origin = { ...unity[1], label: 'Unity floor 1 entrance' };
   const destination = { ...boynton, label: 'Boynton' };
   const indoor = await routeBetween(origin, destination);
   const outdoor = await routeBetween(origin, destination, { avoidIndoorRoutes: true });
@@ -25,7 +25,7 @@ test('near Unity the route can use the indoor connection without phantom map nod
     ([lat, lng]) => lat === entrance.latitude && lng === entrance.longitude));
   assert.ok(usesUnity(indoor));
   assert.ok(!usesUnity(outdoor));
-  assert.ok(indoor.distance - outdoor.distance < 5);
+  assert.ok(indoor.distance < outdoor.distance);
   assert.equal(indoor.duration, indoor.distance / 1.4);
   assert.ok(context.exports.getWalkwayDebugOverlay().nodes.every(([lat, lng]) => lat !== 0 || lng !== 0));
 });

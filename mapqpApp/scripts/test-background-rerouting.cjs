@@ -78,6 +78,16 @@ test('noisy, repeated and isolated off-route fixes do not recalculate', async ()
   assert.equal(h.requests.length, 0);
 });
 
+test('background rerouting passes the moving GPS heading to the router', async () => {
+  const h = harness();
+  await h.api.saveBackgroundRoutingGraph();
+  await h.api.updateBackgroundRoute(h.route, h.fix({ speed: 1, heading: 90 }));
+  h.tick();
+  await h.api.updateBackgroundRoute(h.route, h.fix({ speed: 1, heading: 90 }));
+  assert.equal(h.requests.length, 1);
+  assert.equal(h.requests[0][3], 90);
+});
+
 test('failure keeps the old route and restrictions, backs off, and retries automatically', async () => {
   const h = harness();
   await h.api.saveBackgroundRoutingGraph();
