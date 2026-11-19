@@ -152,12 +152,13 @@ test('already granted permissions do not prompt again on new routes', async () =
   assert.equal(h.prompts.length, 0);
 });
 
-test('notification denial is remembered across routes and cold starts', async () => {
+test('missing notification permission does not prompt or start background navigation on routes', async () => {
   const storage = new Map();
   const h = harness({ storage, running: false, notificationsGranted: false, decline: true });
   await h.api.syncBackgroundNavigation(h.route);
   await h.api.syncBackgroundNavigation(h.route);
-  assert.deepEqual(h.prompts, ['notifications']);
+  assert.deepEqual(h.prompts, []);
+  assert.equal(h.started.length, 0);
   const restarted = harness({ storage, running: false, notificationsGranted: false, decline: true });
   await restarted.api.syncBackgroundNavigation(restarted.route);
   assert.equal(restarted.prompts.length, 0);

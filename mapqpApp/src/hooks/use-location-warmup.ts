@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import * as Location from "expo-location";
 import * as SecureStore from "expo-secure-store";
+import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
@@ -12,7 +15,7 @@ try {
   console.warn("expo-speech-recognition is not available in this environment.");
 }
 
-export function useLocationWarmup(): void {
+export function useLocationWarmup(requestNotifications = false): void {
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
@@ -48,6 +51,23 @@ export function useLocationWarmup(): void {
             console.warn("Unable to request microphone permission during startup:", error);
           }
         }
+        if (requestNotifications && Platform.OS !== "web") {
+          try {
+            if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("navigation-directions-silent-v2", {
+              name: "Navigation directions", importance: Notifications.AndroidImportance.LOW,
+              sound: null, enableVibrate: false, vibrationPattern: [],
+              lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+            });
+            const permission = await Notifications.getPermissionsAsync();
+            const key = "mapqp-notification-permission-prompted-v1";
+            if (!permission.granted && permission.canAskAgain && !await AsyncStorage.getItem(key)) {
+              await AsyncStorage.setItem(key, "true");
+              await Notifications.requestPermissionsAsync();
+            }
+          } catch (error) {
+            console.warn("Unable to request notification permission during startup:", error);
+          }
+        }
       }
     };
 
@@ -59,5 +79,5 @@ export function useLocationWarmup(): void {
       isMounted = false;
       subscription?.remove();
     };
-  }, []);
+  }, [requestNotifications]);
 }

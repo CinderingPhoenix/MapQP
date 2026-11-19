@@ -12,7 +12,6 @@ const KEY = "mapqp-background-route-v1";
 // New ID: Android retains the sound/vibration settings of existing channels.
 const CHANNEL = "navigation-directions-silent-v2";
 const NOTICE = "mapqp-current-direction";
-const NOTIFICATION_PROMPT = "mapqp-notification-permission-prompted-v1";
 const BACKGROUND_PROMPT = "mapqp-background-permission-prompted-v1";
 // Serialize setup, cancellation, and headless updates to avoid reviving a cancelled route.
 let pending: Promise<unknown> = Promise.resolve();
@@ -129,11 +128,7 @@ export function syncBackgroundNavigation(route: BackgroundRoute, batterySaverEna
         sound: null, enableVibrate: false, vibrationPattern: [],
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
-      let notifications = await Notifications.getPermissionsAsync();
-      if (!notifications.granted && notifications.canAskAgain && !await AsyncStorage.getItem(NOTIFICATION_PROMPT)) {
-        await AsyncStorage.setItem(NOTIFICATION_PROMPT, "true");
-        notifications = await Notifications.requestPermissionsAsync();
-      }
+      const notifications = await Notifications.getPermissionsAsync();
       if (!notifications.granted) return;
       let permission = await Location.getBackgroundPermissionsAsync();
       if (!permission.granted) {

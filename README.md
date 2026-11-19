@@ -36,11 +36,6 @@ cd android
 ```
 Optional step to clean out the android folder for compiling new versions
 
-```
-cd android
-./gradlew assembleRelease
-```
-Compiles the code into an apk
 
 ```
 npm run build:android:phone

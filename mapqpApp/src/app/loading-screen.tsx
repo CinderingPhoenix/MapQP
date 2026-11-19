@@ -125,7 +125,7 @@ export default function LoadingScreen({
   onFinish,
   showSpinner = true,
 }: MapQPProps) {
-  useLocationWarmup();
+  useLocationWarmup(true);
   const { reduceMotionEnabled, loaded: accessibilityLoaded } = useAccessibilityPreferences();
   const { hasSelectedMode, navigationMode, settingsLoaded } = useSettings();
   const {
