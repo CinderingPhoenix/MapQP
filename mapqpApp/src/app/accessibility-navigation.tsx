@@ -39,6 +39,7 @@ import {
   formatInstructionWithDistance,
   getDistanceToStepPoint,
   useMapNavigation,
+  findNearestEntrance
 } from "../utils/map-logic";
 import { initRoutingGraph } from "../utils/routing";
 

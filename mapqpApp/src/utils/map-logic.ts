@@ -18,22 +18,26 @@ export type Point = {
   label: string;
 };
 
+export type OutdoorEntrance = {
+  latitude: number;
+  longitude: number;
+  name: string;
+  floor?: number;
+  accessibility: boolean;
+  indoorNodeId?: string;
+};
+
 export type RoutePlan = WalkingRoute & {
   arrivalTime: number;
   origin: Point;
   destination: Point;
+  selectedEntrance: OutdoorEntrance;
 };
 
 export type Building = {
   id: string;
   name: string;
-  entrances: readonly {
-    latitude: number;
-    longitude: number;
-    name: string;
-    floor?: number;
-    accessibility: boolean;
-  }[];
+  entrances: readonly OutdoorEntrance[];
 };
 
 export type Coordinates = {
@@ -69,6 +73,7 @@ type OrientationPrompt = {
 type RouteCandidate = WalkingRoute & {
   origin: Point;
   destination: Point;
+  selectedEntrance: OutdoorEntrance;
 };
 
 const BASE_MAX_SAMPLE_AGE_MS = 20_000;
@@ -78,17 +83,26 @@ const LAST_LOCATION_STORAGE_KEY = "wpi_map_last_location";
 
 export function parseBuildingData(rawBuildings: any[]): Building[] {
   if (!Array.isArray(rawBuildings)) {
-    console.error("Expected an array for rawBuildings, but received:", typeof rawBuildings);
+    console.error(
+      "Expected an array for rawBuildings, but received:",
+      typeof rawBuildings,
+    );
     return [];
   }
 
   return rawBuildings.map((building) => {
-    const name = building.name || (Array.isArray(building) ? building[0] : "");
-    const rawEntrances = building.entrances || (Array.isArray(building) ? building[1] : []);
+    const name =
+      building.name ||
+      (Array.isArray(building) ? building[0] : "");
 
-    const entrances = (Array.isArray(rawEntrances) ? rawEntrances : []).map((entrance: any) => {
+    const rawEntrances =
+      building.entrances ||
+      (Array.isArray(building) ? building[1] : []);
+
+    const entrances = (
+      Array.isArray(rawEntrances) ? rawEntrances : []
+    ).map((entrance: any) => {
       if (Array.isArray(entrance)) {
-        // Tuple format support: [latitude, longitude, name, floor, accessibility]
         return {
           latitude: entrance[0],
           longitude: entrance[1],
@@ -96,20 +110,22 @@ export function parseBuildingData(rawBuildings: any[]): Building[] {
           floor: entrance[3],
           accessibility: entrance[4],
         };
-      } else {
-        // Object format support from wpi-buildings.json
-        return {
-          latitude: entrance.latitude,
-          longitude: entrance.longitude,
-          name: entrance.name || "Main Entrance",
-          floor: entrance.floor,
-          accessibility: !!entrance.accessibility,
-        };
       }
+
+      return {
+        latitude: entrance.latitude,
+        longitude: entrance.longitude,
+        name: entrance.name || "Main Entrance",
+        floor: entrance.floor,
+        accessibility: !!entrance.accessibility,
+      };
     });
 
     return {
-      id: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      id: name
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, ""),
       name,
       entrances,
     };
@@ -323,6 +339,70 @@ function processAdvancedCoordinates(incomingSample: Coordinates, previousStateRe
 
 function fastestRoute(routes: RouteCandidate[]): RouteCandidate {
   return routes.reduce((fastest, candidate) => (candidate.duration < fastest.duration ? candidate : fastest));
+}
+
+type BuildingEntrance = {
+  latitude: number;
+  longitude: number;
+  name: string;
+  floor: number;
+  accessibility: boolean;
+};
+
+type LocationCoordinate = {
+  latitude: number;
+  longitude: number;
+};
+
+export function distanceMeters(
+  from: LocationCoordinate,
+  to: LocationCoordinate,
+): number {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const earthRadiusMeters = 6_371_000;
+
+  const latitudeDifference = radians(to.latitude - from.latitude);
+  const longitudeDifference = radians(to.longitude - from.longitude);
+
+  const a =
+    Math.sin(latitudeDifference / 2) ** 2 +
+    Math.cos(radians(from.latitude)) *
+      Math.cos(radians(to.latitude)) *
+      Math.sin(longitudeDifference / 2) ** 2;
+
+  const clampedA = Math.min(1, Math.max(0, a));
+
+  return (
+    2 *
+    earthRadiusMeters *
+    Math.atan2(
+      Math.sqrt(clampedA),
+      Math.sqrt(1 - clampedA),
+    )
+  );
+}
+
+export function findNearestEntrance(
+  location: LocationCoordinate,
+  entrances: BuildingEntrance[],
+): { entrance: BuildingEntrance; distanceMeters: number } | null {
+  let nearest: {
+    entrance: BuildingEntrance;
+    distanceMeters: number;
+  } | null = null;
+
+  for (const entrance of entrances) {
+    const distance = distanceMeters(location, entrance);
+
+    if (nearest === null || distance < nearest.distanceMeters) {
+      nearest = {
+        entrance,
+        distanceMeters: distance,
+      };
+    }
+  }
+
+  return nearest;
 }
 
 export function useMapNavigation(buildings: Building[]) {

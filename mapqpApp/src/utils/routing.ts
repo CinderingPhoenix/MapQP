@@ -105,7 +105,7 @@ export type BuildingInput = BuildingObject | BuildingTuple;
 
 // --- Constants & Graph Initialization ---
 
-const WALKING_SPEED_METERS_PER_SECOND = 1.4;
+export const WALKING_SPEED_METERS_PER_SECOND = 1.4;
 const routeCache = new Map<string, WalkingRoute>();
 
 // Mutable graph state

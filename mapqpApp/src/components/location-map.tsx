@@ -1,10 +1,12 @@
 import { Asset } from "expo-asset";
-import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState, useCallback} from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 import MapControls, { MAP_CONTROLS_HEIGHT, MAP_CONTROLS_WIDTH, MAP_ZOOM_CONTROLS_WIDTH, type CameraAction, type CameraState } from "./map-controls";
 import { useAccessibilityPreferences } from "../hooks/use-accessibility-preferences";
+import { COLOR_VISION_PALETTES } from "../theme/color-vision-palettes";
+import { useSettings } from "../context/settings-context";
 
 type LocationMapProps = {
   latitude: number;
@@ -25,6 +27,8 @@ type LocationMapProps = {
   controlsTop?: number;
   controlsBottom?: number;
 };
+
+const [mapUri, setMapUri] = useState<string>("");
 
 export default function LocationMap({
   latitude,
@@ -289,6 +293,28 @@ export default function LocationMap({
     `);
   }, [currentMarkerLat, currentMarkerLng, accuracy, route]);
 
+  const { colorVisionPreset } = useSettings();
+
+  const palette = COLOR_VISION_PALETTES[colorVisionPreset];
+
+  const sendMapPalette = useCallback(() => {
+    const mapPalette = {
+      primary: palette.primary,
+      secondaryText: palette.secondaryText
+    };
+
+    webViewRef.current?.injectJavaScript(`
+      if (typeof window.applyMapPalette === "function") {
+        window.applyMapPalette(${JSON.stringify(mapPalette)});
+        }
+        true;
+      `);
+  }, [palette.primary, palette.secondaryText]);
+
+  useEffect(() => {
+    sendMapPalette();
+  }, [sendMapPalette]);
+
   if (!mapUri) {
     return <View style={styles.container} />;
   }
@@ -311,7 +337,10 @@ export default function LocationMap({
           cancelPreview();
           setCamera((previous) => ({ ...previous, ready: false }));
         }}
-        onLoadEnd={handleLoadEnd}
+        onLoadEnd={(event) => {
+          handleLoadEnd();
+          sendMapPalette();
+        }}
         onMessage={(event: WebViewMessageEvent) => {
           const data = event.nativeEvent.data;
           if (data.startsWith("{")) {

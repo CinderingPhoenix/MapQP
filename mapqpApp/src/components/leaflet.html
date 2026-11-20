@@ -233,18 +233,51 @@
       };
     }
 
+    // Fall back colors:
+    let routeColors = {
+      remaining: '#1d5962',
+      completed: '#888888'
+    };
+
+    const themedRouteLayers = new Map();
+
+    window.applyMapPalette = function (palette) {
+      routeColors = {
+        remaining: palette.primary,
+        completed: palette.secondaryText
+      };
+
+      themedRouteLayers.forEach((kind, layer) => {
+        layer.setStyle({
+          color: routeColors[kind]
+        });
+      });
+    };
+
+    function registerRouteLayer(layer, kind) {
+      themedRouteLayers.set(layer, kind);
+
+      layer.on('remove', function() {
+        themedRouteLayers.delete(layer);
+      });
+
+      return layer;
+    }
+
     /**
      * Creates a dashed line for the completed route.
      */
     function createTraversedPolyline(geometry) {
       return L.polyline(geometry, {
         smoothFactor: 0,
-        color: '#888888',
+        color: routeColors.completed,
         weight: 6,
         opacity: 0.8,
         dashArray: '6, 10',
         lineCap: 'butt'
       }).addTo(map);
+
+      return registerRouteLayer(layer, 'completed');
     }
 
     /**
@@ -253,10 +286,12 @@
     function createRemainingPolyline(geometry) {
       return L.polyline(geometry, {
         smoothFactor: 0,
-        color: '#1d5962',
+        color: routeColors.remaining,
         weight: 6,
         opacity: 0.9
       }).addTo(map);
+
+      return registerRouteLayer(layer, 'remaining');
     }
 
     /**

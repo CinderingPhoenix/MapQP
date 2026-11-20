@@ -16,7 +16,7 @@ export const COLOR_VISION_PALETTES: Record<ColorVisionPresets, AppPalette> = {
     default: {
         background: "#F3F5F8",
         surface: "#FFFFFF",
-        text: "#1F2937",
+        text: "#171A1F",
         secondaryText: "#425466",
         primary: "#AC2837",
         onPrimary: "#FFFFFF",
@@ -26,7 +26,7 @@ export const COLOR_VISION_PALETTES: Record<ColorVisionPresets, AppPalette> = {
     protanopia: {
         background: "#F2F5F8",
         surface: "#FFFFFF",
-        text: "#192A37",
+        text: "#171A1F",
         secondaryText: "#546269",
         primary: "#293FAE",
         onPrimary: "#FFFFFF",
@@ -36,7 +36,7 @@ export const COLOR_VISION_PALETTES: Record<ColorVisionPresets, AppPalette> = {
     deuteranopia: {
         background: "#F2F6F8",
         surface: "#FFFFFF",
-        text: "#1A2B37",
+        text: "#171A1F",
         secondaryText: "#556269",
         primary: "#1D43AE",
         onPrimary: "#FFFFFF",
@@ -46,11 +46,11 @@ export const COLOR_VISION_PALETTES: Record<ColorVisionPresets, AppPalette> = {
     tritanopia: {
         background: "#F3F5FA",
         surface: "#FFFFFF",
-        text: "#222840",
-        secondaryText: "#5A606F",
-        primary: "#00A400",
+        text: "#171A1F",
+        secondaryText: "#5D606A",
+        primary: "#AC2A30",
         onPrimary: "#FFFFFF",
-        border: "#D900FF"
+        border: "#022AFF"
     },
 
     achromatopsia: {

@@ -727,18 +727,6 @@ export default function SettingsPage() {
                     const selected = colorVisionPreset === option.value;
                     const disabled = !settingsLoaded || !settingsReadSucceeded;
 
-                    const previewPalette = COLOR_VISION_PALETTES[option.value];
-
-                    const previewColors = [
-                      previewPalette.background,
-                      previewPalette.surface,
-                      previewPalette.text,
-                      previewPalette.secondaryText,
-                      previewPalette.primary,
-                      previewPalette.onPrimary,
-                      previewPalette.border
-                    ]
-
                     const palette = COLOR_VISION_PALETTES[colorVisionPreset];
 
                     return (
@@ -776,18 +764,6 @@ export default function SettingsPage() {
                                 justifyContent: "center",
                                 gap: 6,
                                 marginTop: 12, }}>
-                                  {previewColors.map((color, index) => (
-                                    <View key={index} style={{
-                                      flex: 1,
-                                      minWidth: 0,
-                                      alignItems: "center",
-                                      height: 34,
-                                      borderRadius: 5,
-                                      backgroundColor: color,
-                                      borderWidth: 1,
-                                      borderColor: selected ? palette.onPrimary : palette.text,
-                                    }}/>
-                                  ))}
                                 </View>
                       </TouchableOpacity>
                     );

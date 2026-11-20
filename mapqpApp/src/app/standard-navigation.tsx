@@ -122,14 +122,29 @@ export default function Home() {
     setShowRecenter,
   } = useMapNavigation(buildings);
 
-  function handleRoomSelect(room: IndoorRoom) {
-  router.push({
-    pathname: "/indoor-navigation",
-    params: {
-      roomNum: room.roomNum,
-    },
-  });
-}
+  const handleIndoorTransition = (roomNum: string) => {
+    const entrance = route?.selectedEntrance;
+
+    if (
+      !roomNum.trim() ||
+      !entrance?.indoorNodeId ||
+      entrance.floor === undefined
+    ) {
+      console.warn(
+        "Cannot start indoor navigation: missing room or entrance mapping.",
+      );
+      return;
+    }
+
+    router.push({
+      pathname: "/indoor-navigation",
+      params: {
+        roomNum,
+        entranceNodeId: entrance.indoorNodeId,
+        entryFloor: String(entrance.floor),
+      },
+    });
+  };
 
   const [directionsExpanded, setDirectionsExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -205,8 +220,41 @@ export default function Home() {
     );
   }
 
+  const handleRoomSelect = (room: IndoorRoom) => {
+    console.log("Selected room:", room);
+  };
+
   return (
     <SafeAreaView style={styles.container} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
+
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 8,
+          left: 8,
+          right: 8,
+          zIndex: 999,
+          elevation: 999,
+          backgroundColor: "#fff",
+          borderColor: "#b00020",
+          borderWidth: 1,
+          padding: 8,
+        }}
+      >
+        <Text style={{ color: "#b00020", fontSize: 13 }}>
+          {JSON.stringify({
+            error: error || "(none)",
+            buildings: buildings.length,
+            latitude: showRecenter
+              ? mapCenter.latitude
+              : (coordinates?.latitude ?? mapCenter.latitude),
+            longitude: showRecenter
+              ? mapCenter.longitude
+              : (coordinates?.longitude ?? mapCenter.longitude),
+          })}
+        </Text>
+      </View>
       {route && (
         <View
           onLayout={(event) => setSummaryBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
