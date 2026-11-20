@@ -24,10 +24,10 @@ const neutral = { surface: "#FFFFFF", onPrimary: "#FFFFFF", off: "#514B48", disa
 // Default is intentionally NOT used to recolor existing surfaces. Their own
 // burgundy/teal palettes remain authoritative. Accent swatches are not borders.
 export const COLOR_VISION_PALETTES: Record<ColorVisionPreset, ColorVisionPalette> = {
-  default: { ...neutral, background: "#F7F6F2", text: "#000000", secondaryText: "#3D3733", primary: "#741B2B", outline: "#686868", tint: "#F5ECEE" },
-  protanopia: { ...neutral, background: "#F2F5F8", text: "#192A37", secondaryText: "#546269", primary: "#293FAE", outline: "#52606E", tint: "#EDF0FB" },
-  deuteranopia: { ...neutral, background: "#F2F6F8", text: "#1A2B37", secondaryText: "#556269", primary: "#1D43AE", outline: "#52606E", tint: "#EDF1FB" },
-  tritanopia: { ...neutral, background: "#F3F5FA", text: "#222840", secondaryText: "#5A606F", primary: "#007A00", outline: "#58616D", tint: "#EEF5EE" },
+  default: { ...neutral, background: "#F3F5F8", text: "#171A1F", secondaryText: "#425466", primary: "#AC2837", outline: "#686868", tint: "#F5ECEE" },
+  protanopia: { ...neutral, background: "#F2F5F8", text: "#171A1F", secondaryText: "#546269", primary: "#293FAE", outline: "#52606E", tint: "#EDF0FB" },
+  deuteranopia: { ...neutral, background: "#F2F6F8", text: "#171A1F", secondaryText: "#556269", primary: "#1D43AE", outline: "#52606E", tint: "#EDF1FB" },
+  tritanopia: { ...neutral, background: "#F3F5FA", text: "#171A1F", secondaryText: "#5A606F", primary: "#AC2A30", outline: "#58616D", tint: "#EEF5EE" },
   achromatopsia: { ...neutral, background: "#F2F5F8", text: "#111111", secondaryText: "#444444", primary: "#222222", outline: "#595959", tint: "#EEEEEE", off: "#595959", disabledSurface: "#EEEEEE", danger: "#222222" },
 };
 
