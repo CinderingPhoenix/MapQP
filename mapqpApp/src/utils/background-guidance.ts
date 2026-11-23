@@ -9,6 +9,7 @@ export type BackgroundRoute = {
   steps: { instruction: string; pointIndex: number }[];
   destination: string;
   units: "metric" | "imperial";
+  guidanceDistance?: number;
   expiresAt: number;
   duration?: number;
   lastNotice?: string;
@@ -65,7 +66,7 @@ export function getBackgroundGuidance(route: BackgroundRoute, lat: number, lng: 
   if (!step) return { ...presentation, maneuver: "straight", key: "continue", body: "Continue towards your destination.", arrived: false };
   let meters = distance(route.geometry[segment], route.geometry[segment + 1]) * (1 - fraction);
   for (let i = segment + 1; i < step.pointIndex; i++) meters += distance(route.geometry[i], route.geometry[i + 1]);
-  const stage = meters <= 10 ? "now" : meters <= 30 ? "near" : "ahead";
+  const stage = meters <= 10 ? "now" : meters <= (route.guidanceDistance ?? 30) ? "near" : "ahead";
   const amount = route.units === "imperial" ? `${Math.round(meters * 3.28084)} ft` : `${Math.round(meters)} m`;
   const instruction = step.instruction.toLowerCase();
   const maneuver = /around|u.turn/.test(instruction) ? "uturn"

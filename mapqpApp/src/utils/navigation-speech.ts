@@ -27,6 +27,13 @@ export class NavigationSpeech {
   private static stopBarrier: Promise<void> = Promise.resolve();
   private static stopFailed = false;
   private lastAnnouncementAt = -Infinity;
+  private rate = 1;
+  private volume = 1;
+
+  setVoiceSettings(rate: number, volume: number) {
+    this.rate = rate;
+    this.volume = volume;
+  }
 
   constructor(
     private readonly engine: SpeechEngine,
@@ -180,7 +187,7 @@ export class NavigationSpeech {
           finish();
         } else {
           this.engine.speak(prompt.text, {
-            language: "en-US", rate: 1,
+            language: "en-US", rate: this.rate, volume: this.volume,
             ...(Platform.OS === "ios" ? { useApplicationAudioSession: true } : {}),
             onDone: finish, onStopped: finish, onError: finish,
           });
@@ -198,6 +205,6 @@ export type StepSpeechStage = StageFlags & { haptics?: StageFlags };
 
 // Startup already conveys the first maneuver at its current distance. Consume
 // that range (and earlier ranges), while preserving later approach thresholds.
-export function initialSpeechStages(distance: number): StepSpeechStage {
-  return { m25: distance <= 25, m5: distance <= 5, turn: distance <= 2 };
+export function initialSpeechStages(distance: number, warningDistance = 25): StepSpeechStage {
+  return { m25: distance <= warningDistance, m5: distance <= 5, turn: distance <= 2 };
 }

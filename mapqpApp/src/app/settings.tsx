@@ -219,7 +219,7 @@ export default function SettingsPage() {
     onFontSizeAccessibilityAction={handleFontSizeAccessibilityAction}
   />;
 
-  return <AccessibleSettings mapVersion={mapVersion}
+  return <AccessibleSettings activeTab={activeTab} onTabChange={setActiveTab} mapVersion={mapVersion}
     onBack={handleBackFromSettings} onHome={returnToLandingPage}
     onDelete={deleteLocalStorage} onNavigationModeChange={changeNavigationMode}
     onFontSizeAccessibilityAction={handleFontSizeAccessibilityAction}
@@ -267,7 +267,6 @@ function useSignalStyles() {
     preferenceBlock: { ...signalStyles.preferenceBlock, borderBottomColor: "#272423", borderBottomWidth: 2 },
     // These are grouping separators, not interactive control outlines.
     switchRow: { ...signalStyles.switchRow, borderBottomColor: "#B9B1AA" },
-    routeInfo: { ...signalStyles.routeInfo, borderLeftColor: "#70655F" },
     deviceBadge: { ...signalStyles.deviceBadge, backgroundColor: "#DAD6D0", borderWidth: 2, borderColor: "#272423" },
     switchTrack: { ...signalStyles.switchTrack, borderWidth: 2, borderColor: "#272423", padding: 2 },
     switchOff: { ...signalStyles.switchOff, backgroundColor: "#454545" },
@@ -471,10 +470,30 @@ function SignalGuidanceSettings({ titleRef }: { titleRef?: React.Ref<React.Eleme
   const SIGNAL = useSettingsColors(BASE_SIGNAL);
   const signalStyles = useSignalStyles();
   const { repeatGuidanceEnabled, repeatGuidanceSeconds, setRepeatGuidanceEnabled, setRepeatGuidanceSeconds,
+    guidanceDistance, setGuidanceDistance, guidanceRate, setGuidanceRate, guidanceVolume, setGuidanceVolume,
     settingsLoaded, settingsReadSucceeded } = useSettings();
   const stacked = useSignalStacked();
   const disabled = !settingsLoaded || !settingsReadSucceeded;
-  return <SignalSection title="Spoken guidance" description="During accessibility navigation." titleRef={titleRef}>
+  return <SignalSection title="Spoken guidance" titleRef={titleRef}>
+    {([
+      { label: "First turn warning", value: guidanceDistance, values: [15, 25, 50], format: (n: number) => `${n} m`, set: setGuidanceDistance },
+    ]).map(({ label, value, values, format, set }) => <View key={label} style={signalStyles.frequencyGroup}>
+      <SignalText weight="500">{label}</SignalText>
+      <View style={[signalStyles.frequencyOptions, stacked && signalStyles.stackedChoices]}>
+        {values.map((option) => <SignalChoice key={option} label={format(option)} accessibilityLabel={`${label}: ${format(option)}`}
+          hint={`Set ${label.toLowerCase()} to ${format(option)}.`} selected={value === option} disabled={disabled} onPress={() => set(option)} />)}
+      </View>
+    </View>)}
+    {([
+      { label: "Speech speed", value: guidanceRate, min: 0.5, max: 2, set: setGuidanceRate },
+      { label: "Speech volume", value: guidanceVolume, min: 0, max: 1, set: setGuidanceVolume },
+    ]).map(({ label, value, min, max, set }) => <View key={label} style={signalStyles.sliderGroup}>
+      <View style={signalStyles.textSizeHeading}><SignalText weight="500">{label}</SignalText>
+        <SignalText color={SIGNAL.accent}>{Math.round(value * 100)}%</SignalText></View>
+      <Slider style={signalStyles.sliderInput} minimumValue={min} maximumValue={max} step={0.05} value={value} disabled={disabled}
+        onValueChange={set} accessibilityLabel={label} accessibilityValue={{ min: min * 100, max: max * 100, now: Math.round(value * 100), text: `${Math.round(value * 100)} percent` }}
+        minimumTrackTintColor={SIGNAL.accent} maximumTrackTintColor={SIGNAL.outline} thumbTintColor={SIGNAL.accent} />
+    </View>)}
     <SignalSwitchRow label="Repeat instructions">
       <SignalSwitch value={repeatGuidanceEnabled} disabled={disabled} onValueChange={setRepeatGuidanceEnabled}
         accessibilityLabel="Repeat spoken instruction"
@@ -486,7 +505,7 @@ function SignalGuidanceSettings({ titleRef }: { titleRef?: React.Ref<React.Eleme
         <SignalText size={15} weight="600" color={SIGNAL.accent}>{repeatGuidanceSeconds} seconds</SignalText>
       </View>
       <View style={[signalStyles.frequencyOptions, stacked && signalStyles.stackedChoices]}>
-        {[5, 9, 15, 30, 60].map((seconds) => <SignalChoice key={seconds} label={String(seconds)}
+        {[5, 10, 15, 30, 60].map((seconds) => <SignalChoice key={seconds} label={String(seconds)}
           accessibilityLabel={`Repeat every ${seconds} seconds`} hint={`Repeats the current instruction every ${seconds} seconds.`}
           selected={repeatGuidanceSeconds === seconds} disabled={disabled || !repeatGuidanceEnabled}
           onPress={() => setRepeatGuidanceSeconds(seconds)} />)}
@@ -495,9 +514,6 @@ function SignalGuidanceSettings({ titleRef }: { titleRef?: React.Ref<React.Eleme
         Enable repetition to change its frequency. Your selected frequency is saved.
       </SignalText>}
     </View>
-    <SignalText size={14} color={SIGNAL.muted}>
-      Turning repetition off keeps new direction announcements on.
-    </SignalText>
   </SignalSection>;
 }
 
@@ -791,14 +807,11 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           }}>
             <SignalGuidanceSettings titleRef={guidanceHeading} />
           </View>
-          <View style={signalStyles.routeInfo}>
-            <SignalText size={17} weight="600" color={SIGNAL.heading} accessibilityRole="header">About your route</SignalText>
-            <SignalText size={14} color={SIGNAL.muted}>Accessibility is based on campus map data, not live conditions. Check your surroundings as you travel.</SignalText>
-          </View>
         </>}
       </View>
       <View style={signalStyles.footer}>
-        <SignalText size={13} color={SIGNAL.status} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
+        <SignalText size={14} color={increased ? SIGNAL.ink : vision.dark ? vision.tokens.text : "#666666"} style={signalStyles.centered}>Accessibility is based on campus map data, not live conditions. Check your surroundings as you travel.</SignalText>
+        <SignalText size={13} color={increased ? SIGNAL.ink : vision.dark ? vision.tokens.text : "#666666"} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
       </View>
     </ScrollView>
     <ColorVisionDialog visible={colorVision.visible} onClose={colorVision.close} triggerRef={colorVision.triggerRef} />
@@ -861,8 +874,7 @@ const baseSignalStyles = StyleSheet.create({
   homeActionContrast: { borderWidth: 2, borderColor: "#272423" },
   deleteSection: { gap: 4 },
   deleteAction: { minHeight: 48, borderWidth: 2, borderBottomWidth: 2, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
-  routeInfo: { gap: 8, borderLeftWidth: 2, borderLeftColor: BASE_SIGNAL.divider, paddingLeft: 16, paddingVertical: 8 },
-  footer: { alignItems: "center", paddingTop: 20, paddingBottom: 12 },
+  footer: { alignItems: "center", gap: 20, paddingTop: 20, paddingBottom: 12 },
   // Disabled choices/rows keep full text contrast; the fill, neutral value and
   // locked selected indicator distinguish them without changing their geometry.
   disabled: { backgroundColor: BASE_SIGNAL.disabled },

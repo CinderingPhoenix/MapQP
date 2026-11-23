@@ -21,6 +21,8 @@ type Preference = {
   icon: IconName; description: string;
 };
 type Props = {
+  activeTab: "general" | "routing";
+  onTabChange: (tab: "general" | "routing") => void;
   mapVersion: string;
   onBack: () => void;
   onHome: () => void;
@@ -72,11 +74,11 @@ function focusControl(target: ComponentRef<typeof TouchableOpacity> | ComponentR
 }
 
 // Each disclosure owns only its open state. Preferences remain in SettingsProvider.
-function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon; children: ReactNode }) {
+function Accordion({ title, icon, children, initiallyExpanded = false }: { title: string; icon: HeaderIcon; children: ReactNode; initiallyExpanded?: boolean }) {
   const s = useSettingsStyles(baseStyles);
   const COLORS = useSettingsColors(BASE_COLORS);
   const vision = useSettingsPalette();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
   const { screenReaderEnabled } = useAccessibilityPreferences();
   const increasedContrast = useIncreasedContrast();
   const { width, scale, gutter } = useLayout();
@@ -334,7 +336,7 @@ function AccessibilityPanel({ controls }: { controls: readonly Preference[] }) {
   </Panel>;
 }
 
-export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNavigationModeChange,
+export function AccessibleSettings({ activeTab, onTabChange, mapVersion, onBack, onHome, onDelete, onNavigationModeChange,
   onFontSizeAccessibilityAction, accessibilityControls }: Props) {
   const vision = useSettingsPalette();
   const s = useSettingsStyles(baseStyles);
@@ -388,13 +390,21 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
         <BoldText textRef={heading} size={28} weight="800" accessibilityRole="header"
           onLayout={focusInitialHeading}>Settings</BoldText>
       </View>
-        <Section title="Navigation mode"><Choices>
+      <View style={s.tabs} accessibilityRole="tablist">
+        {(["general", "routing"] as const).map((tab) => <TouchableOpacity key={tab} accessibilityRole="tab"
+          accessibilityLabel={tab === "general" ? "General" : "Routing"} accessibilityState={{ selected: activeTab === tab }}
+          onPress={() => onTabChange(tab)} style={[s.tab, activeTab === tab && s.tabSelected]}>
+          <BoldText accessible={false} color={activeTab === tab ? COLORS.accent : COLORS.secondary}>{tab === "general" ? "General" : "Routing"}</BoldText>
+        </TouchableOpacity>)}
+      </View>
+      {activeTab === "general" && <Section title="Navigation mode"><Choices>
           <Choice mode label="Standard" accessibilityLabel="Standard navigation mode" selected={settings.navigationMode === "standard"}
             disabled={disabled} onPress={() => onNavigationModeChange("standard")} />
           <Choice mode label="Accessibility" accessibilityLabel="Accessible navigation mode" selected={settings.navigationMode === "accessibility"}
             disabled={disabled} onPress={() => onNavigationModeChange("accessibility")} />
-        </Choices></Section>
+        </Choices></Section>}
       <View style={s.accordions}>
+      {activeTab === "general" && <>
       <Accordion title="Appearance" icon={HEADER_ICONS.display}>
           <BoldText style={s.label}>Settings layout</BoldText>
           <View style={s.choiceInset}><Choices>
@@ -472,28 +482,44 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           onChange={settings.setBatterySaverEnabled}
           description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
       </Accordion>
-      <Accordion title="Routing & Spoken Guidance" icon={HEADER_ICONS.routing}>
+      </>}
+      {activeTab === "routing" && <Accordion title="Routing & Spoken Guidance" icon={HEADER_ICONS.routing} initiallyExpanded>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>
           <ToggleRow label="Avoid stairs" description="Avoid stairs." icon="stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
           <ToggleRow label="Avoid routes through buildings" description="Don?t use buildings as a way to reach another destination." icon="office-building" value={settings.avoidIndoorRoutes} disabled={disabled} onChange={(value) => saveRoute("avoidIndoorRoutes", value)} /><Divider />
           <ToggleRow label="Accessible road crossings only" description="Avoid crosswalks that don't have audible signals for visually impaired people." icon="walk" value={settings.avoidInaccessibleCrosswalks} disabled={disabled} onChange={(value) => saveRoute("avoidInaccessibleCrosswalks", value)} />
           <Divider important /><BoldText style={s.label}>Spoken guidance</BoldText>
-          <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>For accessibility navigation.</BoldText>
+          {([
+            { label: "First turn warning", value: settings.guidanceDistance, values: [15, 25, 50], format: (n: number) => `${n} m`, set: settings.setGuidanceDistance },
+          ]).map(({ label, value, values, format, set }) => <View key={label}>
+            <Divider /><BoldText style={s.label}>{label}</BoldText>
+            <View style={s.intervalGrid}>{values.map((option) => <View key={option} style={{ width: columns === 3 ? "31%" : columns === 2 ? "48%" : "100%" }}>
+              <Choice label={format(option)} accessibilityLabel={`${label}: ${format(option)}`} selected={value === option} disabled={disabled} onPress={() => set(option)} />
+            </View>)}</View>
+          </View>)}
+          {([
+            { label: "Speech speed", value: settings.guidanceRate, min: 0.5, max: 2, set: settings.setGuidanceRate },
+            { label: "Speech volume", value: settings.guidanceVolume, min: 0, max: 1, set: settings.setGuidanceVolume },
+          ]).map(({ label, value, min, max, set }) => <View key={label} style={s.sliderGroup}>
+            <Divider /><BoldText style={s.label}>{label}: {Math.round(value * 100)}%</BoldText>
+            <Slider style={s.sliderInput} minimumValue={min} maximumValue={max} step={0.05} value={value} disabled={disabled}
+              onValueChange={set} accessibilityLabel={label} accessibilityValue={{ min: min * 100, max: max * 100, now: Math.round(value * 100), text: `${Math.round(value * 100)} percent` }}
+              minimumTrackTintColor={COLORS.accent} maximumTrackTintColor={COLORS.outline} thumbTintColor={COLORS.accent} />
+          </View>)}
           <ToggleRow label="Repeat spoken instructions" value={settings.repeatGuidanceEnabled} disabled={disabled} onChange={settings.setRepeatGuidanceEnabled} /><Divider />
           <BoldText style={s.label}>Repetition interval</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Repeat the current instruction every:</BoldText>
           <View style={s.intervalGrid}>
-            {[5, 9, 15, 30, 60].map((seconds) => <View key={seconds} style={{ width: columns === 3 ? "31%" : columns === 2 ? "48%" : "100%" }}>
+            {[5, 10, 15, 30, 60].map((seconds) => <View key={seconds} style={{ width: columns === 3 ? "31%" : columns === 2 ? "48%" : "100%" }}>
               <Choice label={`${seconds} s`} accessibilityLabel={`Repeat every ${seconds} seconds`}
                 selected={settings.repeatGuidanceSeconds === seconds} disabled={disabled || !settings.repeatGuidanceEnabled}
                 onPress={() => settings.setRepeatGuidanceSeconds(seconds)} />
             </View>)}
           </View>
           {!settings.repeatGuidanceEnabled && <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Enable repetition to change the interval. Your interval is saved.</BoldText>}
-          <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>New directions are still spoken when repetition is off.</BoldText>
-      </Accordion>
-      <Accordion title="App & Support" icon={HEADER_ICONS.support}>
+      </Accordion>}
+      {activeTab === "general" && <Accordion title="App & Support" icon={HEADER_ICONS.support}>
           <BoldText style={s.label}>Support</BoldText>
           <Action label="Report a bug" onPress={() => router.push("/report-bug")} /><Divider />
           <View style={[s.infoRow, stacked && s.stackedRow]}><BoldText style={s.flex}>Route data version</BoldText><BoldText size={18} color={COLORS.secondary}>v{mapVersion}</BoldText></View>
@@ -501,7 +527,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           <View style={s.collapseFooter}>
             <Action label="Delete all local data" description="Confirmation required." danger onPress={onDelete} />
           </View>
-      </Accordion>
+      </Accordion>}
       </View>
       <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
         accessibilityHint="Returns to the MapQP landing page." onPress={onHome}
@@ -514,6 +540,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
         <MaterialCommunityIcons name="chevron-right" size={28} color={vision.color(COLORS.accent, "iconColor")} accessible={false}
           accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
       </TouchableOpacity>
+      <BoldText size={17} weight="600" color={COLORS.secondary}>Accessibility is based on campus map data, not live conditions. Check your surroundings as you travel.</BoldText>
     </ScrollView>
     <ColorVisionDialog accessibleAppearance visible={colorVision.visible} onClose={colorVision.close} triggerRef={colorVision.triggerRef} />
   </SafeAreaView>;
@@ -522,6 +549,9 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
 const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BASE_COLORS.background },
   content: { paddingTop: 12, paddingBottom: 28, gap: 16 },
+  tabs: { flexDirection: "row", gap: 12 },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: BASE_COLORS.outline, borderRadius: 8 },
+  tabSelected: { borderColor: BASE_COLORS.accent, borderWidth: 3 },
   header: { gap: 12 }, section: { gap: 12 }, accordions: { gap: 12 },
   homeAction: { width: "100%", minHeight: 72, padding: 16, flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: BASE_COLORS.panel, borderWidth: 1, borderColor: "#94877F", borderRadius: 12 },
