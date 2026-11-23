@@ -128,6 +128,7 @@ export default React.memo(function BuildingPicker({
 
   const blurTimeoutRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
   const pendingModalSelection = useRef<string | null>(null);
   useEffect(() => {
     if (!dismissSignal) return;
@@ -754,6 +755,7 @@ export default React.memo(function BuildingPicker({
           ) : (
             <>
               <TextInput
+                ref={searchInputRef}
                 key={`picker-input-${fontSize}-${systemFontScale}`}
                 maxFontSizeMultiplier={2.5}
                 multiline={false}
@@ -779,7 +781,8 @@ export default React.memo(function BuildingPicker({
                 editable={!value}
                 onChangeText={(text) => {
                   setQuery(text);
-                  onChange("");
+                  // Editing an unselected query must not cancel navigation.
+                  if (value) onChange("");
                   setShowSavedOnly(false);
                   setIsOpen(
                     text.trim() === ""
@@ -788,10 +791,14 @@ export default React.memo(function BuildingPicker({
                   );
                 }}
                 onFocus={() => {
+                  if (!accessibilityControls && blurTimeoutRef.current) {
+                    clearTimeout(blurTimeoutRef.current);
+                    blurTimeoutRef.current = null;
+                  }
                   setIsInputFocused(true);
                   if (!value) {
                     setIsOpen(
-                      query.trim() !== "" ||
+                      (open) => (!accessibilityControls && open) || query.trim() !== "" ||
                         recentBuildings.length > 0 ||
                         showSavedOnly
                     );
@@ -881,6 +888,21 @@ export default React.memo(function BuildingPicker({
                     accessibilityRole="button"
                     accessibilityLabel="Clear destination"
                     onPress={() => {
+                      if (!value) {
+                        if (blurTimeoutRef.current) {
+                          clearTimeout(blurTimeoutRef.current);
+                          blurTimeoutRef.current = null;
+                        }
+                        setQuery("");
+                        setShowSavedOnly(false);
+                        setIsOpen(true);
+                        setIsInputFocused(true);
+                        // Preserve the keyboard if already editing; otherwise
+                        // return to the native input without a dismiss/refocus cycle.
+                        if (!searchInputRef.current?.isFocused()) searchInputRef.current?.focus();
+                        return;
+                      }
+                      // A selected destination keeps its existing cancel behavior.
                       setQuery("");
                       setIsOpen(false);
                       setShowSavedOnly(false);
