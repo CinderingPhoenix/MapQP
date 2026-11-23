@@ -106,7 +106,7 @@ test('a new route waits for native stop completion and cannot be canceled by an 
 
 // Execute the real map hook and formatting/direction-generation code. Inject
 // processed GPS state at the speech boundary; filtering and routing are separate.
-function navigationHarness({ mode = 'standard', reader = false, routing, alert, saver = false } = {}) {
+function navigationHarness({ mode = 'standard', reader = false, routing, alert, saver = false, preferences = {} } = {}) {
   const h = engineHarness();
   const slots = [];
   const stateSlots = new Map();
@@ -114,7 +114,7 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert, 
   let stateCursor = 0;
   let dirty = true;
   let result;
-  const positions = [], headings = [];
+  const positions = [], headings = [], haptics = [];
   let now = 100000;
   const effects = [];
   const intervals = new Map();
@@ -158,16 +158,16 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert, 
   const module = compile('utils/map-logic.ts', {
     react,
     'expo-router': { useFocusEffect: (callback) => react.useEffect(callback, [callback]) },
-    '@/context/settings-context': { useSettings: () => ({ batterySaverEnabled: saver, repeatGuidanceEnabled: true, repeatGuidanceSeconds: 9, distanceUnits: 'metric', directionStyle: 'natural', navigationMode: mode, deviceAccessibility: { screenReaderEnabled: reader, detectionStatus: { screenReaderEnabled: "available" } } }) },
+    '@/context/settings-context': { useSettings: () => ({ batterySaverEnabled: saver, repeatGuidanceEnabled: true, repeatGuidanceSeconds: 9, guidanceDistance: 25, guidanceRate: 1, guidanceVolume: 1, arrivalSpeech: true, arrivalVibration: true, turnVibration: true, rerouteVibration: false, ...preferences, distanceUnits: 'metric', directionStyle: 'natural', navigationMode: mode, deviceAccessibility: { screenReaderEnabled: reader, detectionStatus: { screenReaderEnabled: "available" } } }) },
     // Kept as a trap if a VoiceOver-specific speech branch is reintroduced.
     '@/hooks/use-device-accessibility': { useDeviceAccessibility: () => ({ screenReaderEnabled: reader }) },
     'expo-speech': h.engine,
     'expo-secure-store': { getItemAsync: async () => null, setItemAsync: async () => {} },
-    'expo-haptics': { impactAsync: async () => {}, ImpactFeedbackStyle: { Medium: 'Medium' } },
+    'expo-haptics': { impactAsync: async () => { haptics.push('vibrate'); }, ImpactFeedbackStyle: { Medium: 'Medium' } },
     'expo-location': {
       Accuracy: { BestForNavigation: 1, High: 2, Balanced: 3 }, requestForegroundPermissionsAsync: async () => ({ status: 'granted' }),
-      watchPositionAsync: async (options) => {
-        const watch = { options, removed: false, remove() { this.removed = true; } };
+      watchPositionAsync: async (options, callback) => {
+        const watch = { options, callback, removed: false, remove() { this.removed = true; } };
         positions.push(watch); return watch;
       }, watchHeadingAsync: async () => {
         const watch = { removed: false, remove() { this.removed = true; } };
@@ -213,7 +213,7 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert, 
   function inject(name, value) { slots[stateSlots.get(name)].value = value; dirty = true; }
   render();
   return {
-    h, module, intervals, flush, positions, headings,
+    h, module, intervals, flush, positions, headings, haptics,
     async setSaver(value) { saver = value; dirty = true; await flush(); },
     async setForeground(value) { inject("foreground", value); await flush(); },
     get result() { return result; },
@@ -227,6 +227,13 @@ function navigationHarness({ mode = 'standard', reader = false, routing, alert, 
     async position(latitude, longitude, index = 0) {
       inject('coordinates', { latitude, longitude, accuracy: 2, heading: 90 });
       inject('currentRouteIndex', index);
+      await flush();
+    },
+    async location(latitude, longitude) {
+      now += 1000;
+      const watch = positions.filter(item => !item.removed).at(-1);
+      assert.ok(watch, 'active location watcher');
+      watch.callback({ coords: { latitude, longitude, accuracy: 2, heading: 90, speed: 1 }, timestamp: now });
       await flush();
     },
     async heading(degrees) { inject('currentHeading', degrees); now += 9000; await flush(); },
@@ -407,4 +414,41 @@ test('battery saver retains compass guidance during accessible navigation', asyn
   n.result.handleCancelRoute();
   await n.flush();
   assert.equal(n.headings[0].removed, true);
+});
+
+for (const [label, speech, vibration] of [['Speech', true, false], ['Vibrate', false, true], ['Both', true, true]]) {
+  test(`personalization arrival ${label} respects the selected channels once`, async () => {
+    const n = navigationHarness({ preferences: { arrivalSpeech: speech, arrivalVibration: vibration, turnVibration: false } });
+    await n.start();
+    const before = n.h.spoken.length;
+    if (before) await n.finish();
+    await n.position(0.0009, 0.0009, 2);
+    await n.position(0.0009, 0.0009, 2);
+    assert.equal(n.haptics.length, vibration ? 1 : 0);
+    assert.equal(n.h.spoken.filter(item => /^You have arrived/.test(item.text)).length, speech ? 1 : 0);
+  });
+}
+
+for (const turn of [false, true]) test(`personalization turn vibration ${turn ? 'enabled' : 'disabled'}`, async () => {
+  const n = navigationHarness({ preferences: { turnVibration: turn, arrivalVibration: false } });
+  await n.start();
+  if (n.h.spoken.length) await n.finish();
+  await n.position(0, 0.00072, 0);
+  await n.position(0, 0.00072, 0);
+  assert.equal(n.haptics.length, turn ? 1 : 0);
+});
+for (const reroute of [false, true]) test(`personalization reroute vibration ${reroute ? 'enabled' : 'disabled'}`, async () => {
+  const n = navigationHarness({ preferences: { rerouteVibration: reroute, turnVibration: false } });
+  await n.start();
+  await n.location(0.002, 0.002);
+  await n.location(0.002, 0.002);
+  assert.equal(n.haptics.length, reroute ? 1 : 0);
+});
+
+test('personalization both alerts vibrate once when navigation starts at the destination', async () => {
+  const n = navigationHarness({ preferences: { arrivalSpeech: true, arrivalVibration: true, turnVibration: false } });
+  await n.start(0.0009, 0.0009);
+  await n.position(0.0009, 0.0009, 2);
+  await n.position(0.0009, 0.0009, 2);
+  assert.equal(n.haptics.length, 1);
 });

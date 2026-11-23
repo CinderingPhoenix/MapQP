@@ -1,3 +1,4 @@
+import { PersonalizationSettings } from "./personalization-settings";
 import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "./color-vision-setting";
 import { useSettingsPalette, useSettingsColors, useSettingsStyles } from "../../hooks/use-settings-theme";
 import { ThemeChoices, SettingsStatusBar } from "./theme-setting";
@@ -482,6 +483,7 @@ export function AccessibleSettings({ activeTab, onTabChange, mapVersion, onBack,
           onChange={settings.setBatterySaverEnabled}
           description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
       </Accordion>
+      <Accordion title="Personalization" icon={HEADER_ICONS.display}><PersonalizationSettings /></Accordion>
       </>}
       {activeTab === "routing" && <Accordion title="Routing & Spoken Guidance" icon={HEADER_ICONS.routing} initiallyExpanded>
           <BoldText style={s.label}>Route preferences</BoldText>

@@ -29,10 +29,14 @@ export class NavigationSpeech {
   private lastAnnouncementAt = -Infinity;
   private rate = 1;
   private volume = 1;
+  private voice = "";
+  private manageAudio = false;
 
-  setVoiceSettings(rate: number, volume: number) {
+  setVoiceSettings(rate: number, volume: number, voice = "", manageAudio = false) {
     this.rate = rate;
     this.volume = volume;
+    this.voice = voice;
+    this.manageAudio = manageAudio;
   }
 
   constructor(
@@ -187,8 +191,9 @@ export class NavigationSpeech {
           finish();
         } else {
           this.engine.speak(prompt.text, {
-            language: "en-US", rate: this.rate, volume: this.volume,
-            ...(Platform.OS === "ios" ? { useApplicationAudioSession: true } : {}),
+            rate: this.rate, volume: this.volume,
+            ...(this.voice ? { voice: this.voice } : { language: "en-US" }),
+            ...(Platform.OS === "ios" ? { useApplicationAudioSession: !this.manageAudio } : {}),
             onDone: finish, onStopped: finish, onError: finish,
           });
         }

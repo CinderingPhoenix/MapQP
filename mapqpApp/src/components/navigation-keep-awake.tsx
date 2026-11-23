@@ -14,6 +14,6 @@ export function NavigationKeepAwake() {
     setFocused(true);
     return () => setFocused(false);
   }, []));
-  const { batterySaverEnabled } = useSettings();
-  return focused && !batterySaverEnabled ? <Awake /> : null;
+  const { batterySaverEnabled, keepScreenAwake } = useSettings();
+  return focused && !batterySaverEnabled && keepScreenAwake ? <Awake /> : null;
 }

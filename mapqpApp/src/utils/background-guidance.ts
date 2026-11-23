@@ -10,6 +10,7 @@ export type BackgroundRoute = {
   destination: string;
   units: "metric" | "imperial";
   guidanceDistance?: number;
+  arrivalVibration?: boolean;
   expiresAt: number;
   duration?: number;
   lastNotice?: string;

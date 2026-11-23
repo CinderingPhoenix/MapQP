@@ -377,7 +377,7 @@ export function useMapNavigation(buildings: Building[]) {
   const {
     navigationMode,
     repeatGuidanceEnabled,
-    repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume,
+    repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume, guidanceVoice, manageSpeechAudio, arrivalSpeech, arrivalVibration, turnVibration, rerouteVibration,
     distanceUnits,
     directionStyle,
     avoidIndoorRoutes,
@@ -386,7 +386,9 @@ export function useMapNavigation(buildings: Building[]) {
     deviceAccessibility,
     batterySaverEnabled = false,
   } = useSettings();
-  navigationSpeech.setVoiceSettings(guidanceRate, guidanceVolume);
+  navigationSpeech.setVoiceSettings(guidanceRate, guidanceVolume, guidanceVoice, manageSpeechAudio);
+  const rerouteVibrationRef = useRef(rerouteVibration);
+  rerouteVibrationRef.current = rerouteVibration;
   const trackingEnabled = isFocused && foreground;
   const hasActiveRoute = route !== null;
   const needsPreciseLocation = hasActiveRoute || coordinates === null;
@@ -661,7 +663,14 @@ export function useMapNavigation(buildings: Building[]) {
         if (routeGeometryRef.current && !isReroutingRef.current && destinationBuildingRef.current) {
           if (isUserOffRoute(processed.latitude, processed.longitude, routeGeometryRef.current)) {
             offRouteCountRef.current += 1;
-            if (offRouteCountRef.current >= 2) { isReroutingRef.current = true; offRouteCountRef.current = 0; void planRouteRef.current(processed); }
+            if (offRouteCountRef.current >= 2) {
+              isReroutingRef.current = true;
+              offRouteCountRef.current = 0;
+              if (rerouteVibrationRef.current && Platform.OS !== "web") {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => Vibration.vibrate(150));
+              }
+              void planRouteRef.current(processed);
+            }
           } else offRouteCountRef.current = 0;
         }
         setError("");
@@ -745,7 +754,7 @@ export function useMapNavigation(buildings: Building[]) {
       steps: routeSteps.map(step => ({ ...step, instruction: formatDirectionInstruction(step, directionStyle) })),
       destination: route.destination.label,
       units: distanceUnits,
-      guidanceDistance,
+      guidanceDistance, arrivalVibration,
       duration: route.duration,
       navigationId: route.navigationId,
       revision: route.backgroundRevision ?? 0,
@@ -761,7 +770,7 @@ export function useMapNavigation(buildings: Building[]) {
       console.warn("Background navigation unavailable", error);
       Alert.alert("Background directions unavailable", "Navigation will continue while the app is open. Background guidance could not be started on this device.");
     });
-  }, [route, routeSteps, distanceUnits, directionStyle, guidanceDistance, isFocused, batterySaverEnabled]);
+  }, [route, routeSteps, distanceUnits, directionStyle, guidanceDistance, arrivalVibration, isFocused, batterySaverEnabled]);
   const activeRouteRef = useRef(route);
   activeRouteRef.current = route;
   useEffect(() => {
@@ -818,12 +827,12 @@ export function useMapNavigation(buildings: Building[]) {
       const previous = spokenStagesRef.current[nextStep.pointIndex];
       const stages = initialSpeechStages(distToNextStepMeters, guidanceDistance);
       stages.haptics = previous?.haptics;
-      if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+      if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = arrivalSpeech || !arrivalVibration;
       spokenStagesRef.current[nextStep.pointIndex] = stages;
     }
     navigationSpeech.noteFocusGuidance();
     return true;
-  }, [startupReady, startupSession, routeDestinationBuilding, route, nextStep, distToNextStepMeters, guidanceDistance, navigationSpeech]);
+  }, [startupReady, startupSession, routeDestinationBuilding, route, nextStep, distToNextStepMeters, guidanceDistance, arrivalSpeech, arrivalVibration, navigationSpeech]);
 
   // Recompute startup from current location once detection/recognition is ready.
   // No captured startup string waits through asynchronous detection or recording.
@@ -838,7 +847,7 @@ export function useMapNavigation(buildings: Building[]) {
         if (nextStep) {
           const stages = initialSpeechStages(distToNextStepMeters, guidanceDistance);
           stages.haptics = spokenStagesRef.current[nextStep.pointIndex]?.haptics;
-          if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+          if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = arrivalSpeech || !arrivalVibration;
           spokenStagesRef.current[nextStep.pointIndex] = stages;
         }
       }
@@ -848,7 +857,7 @@ export function useMapNavigation(buildings: Building[]) {
       ? `${formatDirectionInstruction(nextStep, directionStyle)} in ${formatDistance(distToNextStepMeters, distanceUnits)}`
       : `Route distance ${formatDistance(route.distance, distanceUnits)}`;
     const name = buildings.find((building) => building.id === routeDestinationBuilding)?.name ?? "your destination";
-    const accepted = isAudioMuted || navigationSpeech.request(`Navigating to ${name}. ${instruction}.`,
+    const accepted = isAudioMuted || (nextStep?.instruction === "Arrive at destination" && distToNextStepMeters <= 5 && !arrivalSpeech) || navigationSpeech.request(`Navigating to ${name}. ${instruction}.`,
       nextStep && distToNextStepMeters <= 5
         ? nextStep.instruction === "Arrive at destination" ? "arrival" : "urgent" : "startup",
       () => currentGuidanceRef.current.route === route && currentGuidanceRef.current.nextStep === nextStep);
@@ -857,12 +866,13 @@ export function useMapNavigation(buildings: Building[]) {
       spokenDestinationRef.current = routeDestinationBuilding;
       if (nextStep && !isAudioMuted) {
         const stages = initialSpeechStages(distToNextStepMeters, guidanceDistance);
-        if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = true;
+        stages.haptics = spokenStagesRef.current[nextStep.pointIndex]?.haptics;
+        if (nextStep.instruction === "Arrive at destination" && distToNextStepMeters <= 5) stages.turn = arrivalSpeech || !arrivalVibration;
         spokenStagesRef.current[nextStep.pointIndex] = stages;
       }
     }
   }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, routeDestinationBuilding,
-    nextStep, distToNextStepMeters, directionStyle, distanceUnits, buildings, isAudioMuted, navigationSpeech, startupSession, guidanceDistance]);
+    nextStep, distToNextStepMeters, directionStyle, distanceUnits, buildings, isAudioMuted, navigationSpeech, startupSession, guidanceDistance, arrivalSpeech, arrivalVibration]);
 
   useEffect(() => {
     if (!isFocused || !foreground || speechListening || isReroutingRef.current || navigationMode !== "accessibility") {
@@ -951,15 +961,12 @@ export function useMapNavigation(buildings: Building[]) {
     const speakPrompt = (text: string, stage: "m25" | "m5" | "turn") => {
       if (!isFocused) return;
       const haptics = stages.haptics ??= {};
-      if (!haptics[stage] && Platform.OS !== "web") {
+      if (!haptics[stage] && Platform.OS !== "web" && (nextStep.instruction === "Arrive at destination" ? arrivalVibration : turnVibration)) {
         haptics[stage] = true;
-        try { 
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
-        } catch { 
-          Vibration.vibrate(150); 
-        } 
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => Vibration.vibrate(150));
       }
       if (isRouteCancelledRef.current) return;
+      if (nextStep.instruction === "Arrive at destination" && !arrivalSpeech) return true;
       // Still consume each haptic stage once while muted, as before. Muting
       // must not make every subsequent GPS sample vibrate/retry the same stage.
       if (audioMutedRef.current) return true;
@@ -973,6 +980,15 @@ export function useMapNavigation(buildings: Building[]) {
     };
 
     if (nextStep.instruction === "Arrive at destination") {
+      // Startup guidance can consume the speech stage; arrival vibration still
+      // needs its own once-per-step marker, including when audio is muted.
+      if (distToNextStepMeters <= 5 && arrivalVibration && Platform.OS !== "web") {
+        const haptics = stages.haptics ??= {};
+        if (!haptics.turn) {
+          haptics.turn = true;
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => Vibration.vibrate(150));
+        }
+      }
       if (distToNextStepMeters <= 5 && !stages.turn) {
         const destinationName = route.destination?.label || "your destination";
         if (speakPrompt(`You have arrived at ${destinationName}`, "turn")) stages.turn = true;
@@ -989,7 +1005,7 @@ export function useMapNavigation(buildings: Building[]) {
     } else if (distToNextStepMeters <= 2 && !stages.turn) {
       if (speakPrompt(`${nextStepInstruction} now`, "turn")) stages.turn = true;
     }
-  }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, guidanceDistance, navigationSpeech, startupSession]);
+  }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, guidanceDistance, arrivalSpeech, arrivalVibration, turnVibration, navigationSpeech, startupSession]);
 
   return { 
     navigationSpeech, onVoiceListeningChange, politeAnnouncement,

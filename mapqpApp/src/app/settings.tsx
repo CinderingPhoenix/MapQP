@@ -2,6 +2,7 @@ import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "../
 import { useSettingsPalette, useSettingsColors, useSettingsStyles } from "../hooks/use-settings-theme";
 import { ThemeSetting, SettingsThemeDialog, SettingsStatusBar } from "../components/settings/theme-setting";
 import { PreferenceIcon } from "../components/settings/preference-icon";
+import { PersonalizationSettings } from "../components/settings/personalization-settings";
 import { AccessibleSettings } from "../components/settings/accessible-settings";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Slider from "@react-native-community/slider";
@@ -71,6 +72,9 @@ export default function SettingsPage() {
     setColorVisionPreset,
     setThemePreference,
     setBatterySaverEnabled,
+    setGuidanceVoice, setKeepScreenAwake, setArrivalSpeech, setArrivalVibration,
+    setTurnVibration, setRerouteVibration, setManageSpeechAudio,
+    setRepeatGuidanceEnabled, setRepeatGuidanceSeconds, setGuidanceDistance, setGuidanceRate, setGuidanceVolume,
     navigationMode,
     setNavigationMode,
     setHasSelectedMode,
@@ -185,6 +189,18 @@ export default function SettingsPage() {
                 setColorVisionPreset("default");
                 setThemePreference("light");
                 setBatterySaverEnabled(false);
+                setGuidanceVoice("");
+                setKeepScreenAwake(true);
+                setArrivalSpeech(true);
+                setArrivalVibration(true);
+                setTurnVibration(true);
+                setRerouteVibration(false);
+                setManageSpeechAudio(false);
+                setRepeatGuidanceEnabled(true);
+                setRepeatGuidanceSeconds(10);
+                setGuidanceDistance(25);
+                setGuidanceRate(1);
+                setGuidanceVolume(1);
                 resetAccessibilitySettings();
 
                 Alert.alert(
@@ -757,6 +773,7 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                 accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
             </SignalSwitchRow>
           </SignalSection>
+          <SignalSection title="Personalization"><PersonalizationSettings /></SignalSection>
           <SignalSection title="App & support">
             <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
               description="Send a bug report to the mapQP team."

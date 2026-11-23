@@ -11,6 +11,7 @@ const TASK = "mapqp-navigation-location";
 const KEY = "mapqp-background-route-v1";
 // New ID: Android retains the sound/vibration settings of existing channels.
 const CHANNEL = "navigation-directions-silent-v2";
+const ARRIVAL_VIBRATE_CHANNEL = "navigation-arrival-vibrate-v1";
 const NOTICE = "mapqp-current-direction";
 const BACKGROUND_PROMPT = "mapqp-background-permission-prompted-v1";
 // Serialize setup, cancellation, and headless updates to avoid reviving a cancelled route.
@@ -73,7 +74,7 @@ if (Platform.OS !== "web") {
           sound: false,
           sticky: Platform.OS === "android" && !guidance.arrived,
           autoDismiss: guidance.arrived, data: { navigation: true } },
-        trigger: Platform.OS === "android" ? { channelId: CHANNEL } : null,
+        trigger: Platform.OS === "android" ? { channelId: guidance.arrived && route.arrivalVibration ? ARRIVAL_VIBRATE_CHANNEL : CHANNEL } : null,
       });
       route.lastNotice = noticeKey;
     }
@@ -117,8 +118,13 @@ export function syncBackgroundNavigation(route: BackgroundRoute, batterySaverEna
     // has had a chance to adopt it.
     if (saved?.navigationId && saved.navigationId === route.navigationId &&
         (saved.revision ?? 0) > (route.revision ?? 0)) {
-      route = { ...route, ...saved, units: route.units, directionStyle: route.directionStyle };
+      route = { ...route, ...saved, units: route.units, directionStyle: route.directionStyle, arrivalVibration: route.arrivalVibration };
     }
+    if (Platform.OS === "android" && route.arrivalVibration) await Notifications.setNotificationChannelAsync(ARRIVAL_VIBRATE_CHANNEL, {
+      name: "Arrival alerts", importance: Notifications.AndroidImportance.HIGH,
+      sound: null, enableVibrate: true, vibrationPattern: [0, 300, 150, 300],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
     const running = await Location.hasStartedLocationUpdatesAsync(TASK);
     const initial = getBackgroundGuidance(route, ...route.geometry[0]);
     const title = `Directions to ${route.destination}`;

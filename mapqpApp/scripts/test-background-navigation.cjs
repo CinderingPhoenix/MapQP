@@ -186,6 +186,21 @@ test('arrival replaces the service with an arrival notification and stops tracki
   assert.equal(h.saved, undefined);
 });
 
+test('background arrival vibrates only when enabled and never repeats', async () => {
+  for (const enabled of [false, true]) {
+    const h = harness();
+    await h.api.syncBackgroundNavigation({ ...h.route, arrivalVibration: enabled });
+    await h.fix(42.001, -70.999);
+    await h.fix(42.001, -70.999);
+    assert.equal(h.notifications.length, 1);
+    assert.equal(h.notifications[0].trigger.channelId,
+      enabled ? 'navigation-arrival-vibrate-v1' : 'navigation-directions-silent-v2');
+    const channel = h.channels.find(([id]) => id === 'navigation-arrival-vibrate-v1');
+    assert.equal(!!channel, enabled);
+    if (channel) assert.equal(channel[1].enableVibrate, true);
+  }
+});
+
 test('cancelled routes cannot update the notification on subsequent fixes', async () => {
   const h = harness();
   await h.api.syncBackgroundNavigation(h.route);

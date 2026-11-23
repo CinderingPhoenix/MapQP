@@ -2,6 +2,8 @@ import { restoreColorVisionPreset, type ColorVisionPreset } from "../theme/color
 import { restoreThemePreference, type ThemePreference } from "../theme/settings-theme";
 import type { RoutingPreferences } from "../utils/routing";
 import * as SecureStore from "expo-secure-store";
+import * as Speech from "expo-speech";
+import { defaultGuidanceVoice } from "../utils/default-guidance-voice";
 import {
   createContext,
   ReactNode,
@@ -93,6 +95,13 @@ type AppSettings = AccessibilitySettings & RoutingPreferences & {
   guidanceDistance: number;
   guidanceRate: number;
   guidanceVolume: number;
+  guidanceVoice: string;
+  keepScreenAwake: boolean;
+  arrivalSpeech: boolean;
+  arrivalVibration: boolean;
+  turnVibration: boolean;
+  rerouteVibration: boolean;
+  manageSpeechAudio: boolean;
   accessibilitySettingsVersion: 5;
 };
 
@@ -112,6 +121,13 @@ type SettingsContextType = AppSettings & {
   setGuidanceDistance: (distance: number) => void;
   setGuidanceRate: (rate: number) => void;
   setGuidanceVolume: (volume: number) => void;
+  setGuidanceVoice: (voice: string) => void;
+  setKeepScreenAwake: (enabled: boolean) => void;
+  setArrivalSpeech: (enabled: boolean) => void;
+  setArrivalVibration: (enabled: boolean) => void;
+  setTurnVibration: (enabled: boolean) => void;
+  setRerouteVibration: (enabled: boolean) => void;
+  setManageSpeechAudio: (enabled: boolean) => void;
   setAvoidStairs: (enabled: boolean) => void;
   settingsLoaded: boolean;
   settingsReadSucceeded: boolean;
@@ -144,6 +160,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   guidanceDistance: 25,
   guidanceRate: 1,
   guidanceVolume: 1,
+  guidanceVoice: "",
+  keepScreenAwake: true,
+  arrivalSpeech: true,
+  arrivalVibration: true,
+  turnVibration: true,
+  rerouteVibration: false,
+  manageSpeechAudio: false,
   accessibilitySettingsVersion: 5,
   customAccessibilityPreferences: DEFAULT_CUSTOM_ACCESSIBILITY,
 };
@@ -238,6 +261,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [guidanceDistance, setGuidanceDistance] = useState(DEFAULT_SETTINGS.guidanceDistance);
   const [guidanceRate, setGuidanceRate] = useState(DEFAULT_SETTINGS.guidanceRate);
   const [guidanceVolume, setGuidanceVolume] = useState(DEFAULT_SETTINGS.guidanceVolume);
+  const [guidanceVoice, setGuidanceVoice] = useState("");
+  const [keepScreenAwake, setKeepScreenAwake] = useState(true);
+  const [arrivalSpeech, setArrivalSpeech] = useState(true);
+  const [arrivalVibration, setArrivalVibration] = useState(true);
+  const [turnVibration, setTurnVibration] = useState(true);
+  const [rerouteVibration, setRerouteVibration] = useState(false);
+  const [manageSpeechAudio, setManageSpeechAudio] = useState(false);
   const [batterySaverEnabled, setBatterySaverEnabled] = useState(DEFAULT_SETTINGS.batterySaverEnabled);
   const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
 
@@ -271,6 +301,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if ([15, 25, 50].includes(parsedSettings.guidanceDistance ?? 0)) setGuidanceDistance(parsedSettings.guidanceDistance!);
           if (typeof parsedSettings.guidanceRate === "number" && Number.isFinite(parsedSettings.guidanceRate) && parsedSettings.guidanceRate >= 0.5 && parsedSettings.guidanceRate <= 2) setGuidanceRate(parsedSettings.guidanceRate!);
           if (typeof parsedSettings.guidanceVolume === "number" && Number.isFinite(parsedSettings.guidanceVolume) && parsedSettings.guidanceVolume >= 0 && parsedSettings.guidanceVolume <= 1) setGuidanceVolume(parsedSettings.guidanceVolume!);
+          if (typeof parsedSettings.guidanceVoice === "string") setGuidanceVoice(parsedSettings.guidanceVoice);
+          if (typeof parsedSettings.keepScreenAwake === "boolean") setKeepScreenAwake(parsedSettings.keepScreenAwake);
+          if (typeof parsedSettings.arrivalSpeech === "boolean") setArrivalSpeech(parsedSettings.arrivalSpeech);
+          if (typeof parsedSettings.arrivalVibration === "boolean") setArrivalVibration(parsedSettings.arrivalVibration);
+          // The arrival selector requires at least one alert method.
+          if (parsedSettings.arrivalSpeech === false && parsedSettings.arrivalVibration === false) {
+            setArrivalSpeech(true);
+            setArrivalVibration(true);
+          }
+          if (typeof parsedSettings.turnVibration === "boolean") setTurnVibration(parsedSettings.turnVibration);
+          if (typeof parsedSettings.rerouteVibration === "boolean") setRerouteVibration(parsedSettings.rerouteVibration);
+          if (typeof parsedSettings.manageSpeechAudio === "boolean") setManageSpeechAudio(parsedSettings.manageSpeechAudio);
           if (typeof parsedSettings.batterySaverEnabled === "boolean") setBatterySaverEnabled(parsedSettings.batterySaverEnabled);
           const accessibility = restoreAccessibilitySettings(parsedSettings);
           setAccessibilitySettings({
@@ -348,6 +390,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!settingsLoaded || !settingsReadSucceeded || guidanceVoice) return;
+    let active = true;
+    void Speech.getAvailableVoicesAsync().then((voices) => {
+      const fallback = defaultGuidanceVoice(voices);
+      if (active && fallback) setGuidanceVoice((current) => current || fallback);
+    }).catch((error) => console.warn("Unable to select a default navigation voice", error));
+    return () => { active = false; };
+  }, [settingsLoaded, settingsReadSucceeded, guidanceVoice]);
+
+  useEffect(() => {
     if (!settingsLoaded || !settingsReadSucceeded) {
       return;
     }
@@ -368,7 +420,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       fontSize,
       batterySaverEnabled,
       repeatGuidanceEnabled,
-      repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume,
+      repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume, guidanceVoice, keepScreenAwake, arrivalSpeech, arrivalVibration, turnVibration, rerouteVibration, manageSpeechAudio,
       accessibilitySettingsVersion: 5,
       ...accessibilitySettings,
     };
@@ -427,7 +479,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     fontSize,
     batterySaverEnabled,
     repeatGuidanceEnabled,
-    repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume,
+    repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume, guidanceVoice, keepScreenAwake, arrivalSpeech, arrivalVibration, turnVibration, rerouteVibration, manageSpeechAudio,
     settingsLoaded,
     settingsReadSucceeded,
     accessibilitySettings,
@@ -458,8 +510,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         fontSize,
         batterySaverEnabled,
         repeatGuidanceEnabled,
-        repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume,
+        repeatGuidanceSeconds, guidanceDistance, guidanceRate, guidanceVolume, guidanceVoice, keepScreenAwake, arrivalSpeech, arrivalVibration, turnVibration, rerouteVibration, manageSpeechAudio,
         setGuidanceDistance, setGuidanceRate, setGuidanceVolume,
+        setGuidanceVoice, setKeepScreenAwake, setArrivalSpeech, setArrivalVibration, setTurnVibration, setRerouteVibration, setManageSpeechAudio,
         setNavigationMode,
         setHasSelectedMode,
         setDistanceUnits,
