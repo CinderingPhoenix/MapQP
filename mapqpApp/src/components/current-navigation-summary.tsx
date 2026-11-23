@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode, type RefObject, type ElementRef } from "react";
+import type { View } from "react-native";
 import { Pressable } from "react-native";
 import {
   useNavigationStartFocus,
@@ -6,6 +7,7 @@ import {
 } from "../hooks/use-navigation-start-focus";
 
 type Props = {
+  returnFocusRef?: RefObject<ElementRef<typeof View> | null>;
   startupSession: NavigationStartupSession | null;
   startupReady: boolean;
   onStartupHandoff: () => boolean;
@@ -21,6 +23,7 @@ type Props = {
 // Keep the current direction/distance mounted above the upcoming list in both
 // modes. Group only this control; Cancel and list entries remain separate.
 export default function CurrentNavigationSummary({
+  returnFocusRef,
   startupSession,
   startupReady,
   onStartupHandoff,
@@ -41,10 +44,14 @@ export default function CurrentNavigationSummary({
     onStartupHandoff,
     startupAnnouncement ? startupMessage : undefined,
   );
+  const attachSummary = useCallback((node: ElementRef<typeof View> | null) => {
+    summaryRef(node);
+    if (returnFocusRef) returnFocusRef.current = node;
+  }, [summaryRef, returnFocusRef]);
 
   return (
     <Pressable
-      ref={summaryRef}
+      ref={attachSummary}
       onLayout={onSummaryLayout}
       accessible
       accessibilityRole="button"

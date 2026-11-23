@@ -2,6 +2,7 @@ import { useColorVisionPalette, useColorVisionStyles } from "../hooks/use-color-
 import { useAppTheme } from "../hooks/use-app-theme";
 import { navigationScreenPresentation } from "../theme/navigation-theme";
 import NavigationAnnouncements from "../components/navigation-announcements";
+import { PostNavigationSurvey } from "../components/post-navigation-survey";
 import { useFocusEffect, useIsFocused } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -48,6 +49,7 @@ import defaultRoutePoints from "../data/route-points.json";
 import defaultBuildings from "../data/wpi-buildings.json";
 
 export default function Home() {
+  const surveyReturnFocusRef = useRef<React.ElementRef<typeof View>>(null);
   const vision = useColorVisionPalette();
   const legacyStyles = useColorVisionStyles(baseStyles, { highlightedHeading: "highlightedHeading" });
   const theme = useAppTheme();
@@ -113,6 +115,7 @@ export default function Home() {
   }, []);
 
   const {
+    surveyVisible, dismissSurvey,
     coordinates,
     mapCenter,
     error,
@@ -229,6 +232,7 @@ export default function Home() {
           ]}
         >
           <CurrentNavigationSummary
+            returnFocusRef={surveyReturnFocusRef}
             startupAnnouncement
             startupSession={startupSession}
             startupReady={startupReady}
@@ -453,6 +457,7 @@ export default function Home() {
       </Animated.View>
       <NavigationKeepAwake />
       <NavigationAnnouncements message={politeAnnouncement} />
+      <PostNavigationSurvey visible={surveyVisible} onClose={dismissSurvey} returnFocusRef={surveyReturnFocusRef} />
       {routeAlternative && <RouteAlternativePrompt relaxed={routeAlternative} onAnswer={answerRouteAlternative} />}
     </SafeAreaView>
   );

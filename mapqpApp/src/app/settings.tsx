@@ -32,6 +32,7 @@ import type { DeviceAccessibilityPreference } from "../hooks/use-device-accessib
 import { useAccessibilityPreferences, accessibilityControlState } from "../hooks/use-accessibility-preferences";
 import { useAuthGuard } from "../hooks/use-auth-guard";
 import defaultRoutePoints from "../data/route-points.json";
+import { openUserStudySurvey } from "../utils/user-study-survey";
 import { useFocusEffect } from "expo-router";
 
 type SettingsIconName = keyof typeof MaterialCommunityIcons.glyphMap | "reduce-motion";
@@ -742,6 +743,11 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
             </SignalSwitchRow>
           </SignalSection>
           <SignalSection title="App & support">
+            <SignalActionRow label="Share Your Feedback"
+              description="Help improve MapQP by completing our user study survey."
+              accessibilityLabel="Share Your Feedback. Help improve MapQP by completing our user study survey."
+              accessibilityHint="Opens the survey in your browser."
+              onPress={() => { void openUserStudySurvey(); }} />
             <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
               description="Send a bug report to the mapQP team."
               accessibilityHint="Opens the form to submit a bug report."

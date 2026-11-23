@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings, type AccessibilityPreference } from "../../context/settings-context";
 import { accessibilityControlState, useAccessibilityPreferences } from "../../hooks/use-accessibility-preferences";
 import type { DeviceAccessibilityPreference } from "../../hooks/use-device-accessibility";
+import { openUserStudySurvey } from "../../utils/user-study-survey";
 
 import { PreferenceIcon, type PreferenceIconName as IconName } from "./preference-icon";
 type Preference = {
@@ -495,6 +496,8 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
       </Accordion>
       <Accordion title="App & Support" icon={HEADER_ICONS.support}>
           <BoldText style={s.label}>Support</BoldText>
+          <Action label="Share Your Feedback" description="Help improve MapQP by completing our user study survey. Opens in your browser."
+            onPress={() => { void openUserStudySurvey(); }} /><Divider />
           <Action label="Report a bug" onPress={() => router.push("/report-bug")} /><Divider />
           <View style={[s.infoRow, stacked && s.stackedRow]}><BoldText style={s.flex}>Route data version</BoldText><BoldText size={18} color={COLORS.secondary}>v{mapVersion}</BoldText></View>
           <Divider important /><BoldText style={s.label}>Data management</BoldText>

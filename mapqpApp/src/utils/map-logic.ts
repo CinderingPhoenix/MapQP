@@ -348,6 +348,11 @@ export function useMapNavigation(buildings: Building[]) {
   const [routeDestinationBuilding, setRouteDestinationBuilding] = useState<string | null>(null);
   const [, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
+  // A journey starts with an explicit destination selection, not each reroute.
+  const surveyJourneyRef = useRef<{ completed: boolean } | null>(null);
+  const surveyRouteJourneyRef = useRef<{ completed: boolean } | null>(null);
+  const [surveyVisible, setSurveyVisible] = useState(false);
+  const dismissSurvey = useCallback(() => setSurveyVisible(false), []);
   const [routeAlternative, setRouteAlternative] = useState<(keyof RoutingPreferences)[] | null>(null);
   const alternativeAnswerRef = useRef<((accepted: boolean) => void) | null>(null);
   const answerRouteAlternative = useCallback((accepted: boolean) => {
@@ -407,6 +412,9 @@ export function useMapNavigation(buildings: Building[]) {
   useEffect(() => { routeGeometryRef.current = route?.geometry ?? null; }, [route]);
 
   const handleCancelRoute = useCallback(() => {
+    surveyJourneyRef.current = null;
+    surveyRouteJourneyRef.current = null;
+    setSurveyVisible(false);
     void stopBackgroundNavigation().catch(error => console.warn("Unable to stop background navigation", error));
     answerRouteAlternative(false);
     isRouteCancelledRef.current = true;
@@ -574,6 +582,10 @@ export function useMapNavigation(buildings: Building[]) {
         navigationId: `${Date.now()}-${requestId}`,
         arrivalTime: Date.now() + fastest.duration * 1000,
       };
+      // Associate only an accepted route with its journey. A previous route
+      // remaining visible during planning must never complete the new journey.
+      surveyJourneyRef.current ??= { completed: false };
+      surveyRouteJourneyRef.current = surveyJourneyRef.current;
       setRoute(selectedRoute);
       setRouteDestinationBuilding(targetBuilding);
       const steps = generateDirections(selectedRoute.geometry, selectedRoute.navigationPath);
@@ -706,6 +718,9 @@ export function useMapNavigation(buildings: Building[]) {
 
   const handleDestinationChange = useCallback((buildingId: string) => {
     if (!buildingId) { handleCancelRoute(); return; }
+    surveyJourneyRef.current = { completed: false };
+    surveyRouteJourneyRef.current = null;
+    setSurveyVisible(false);
     routeRequestIdRef.current += 1;
     answerRouteAlternative(false);
     isRouteCancelledRef.current = false;
@@ -989,7 +1004,26 @@ export function useMapNavigation(buildings: Building[]) {
     }
   }, [isFocused, foreground, speechListening, readerStatus, readerEnabled, route, nextStep, nextStepInstruction, coordinates, distToNextStepMeters, isAudioMuted, distanceUnits, navigationSpeech, startupSession]);
 
-  return { 
+  // Additive foreground invitation: leave arrival speech, haptics, thresholds
+  // and route state above untouched. There is no speech-duration timeout.
+  useEffect(() => {
+    if (!isFocused || !foreground || speechListening || !pickerDismissed || routeAlternative) {
+      setSurveyVisible(false);
+      return;
+    }
+    const journey = surveyJourneyRef.current;
+    if (!journey || journey.completed || surveyRouteJourneyRef.current !== journey ||
+        !route || !coordinates || !nextStep || isRouteCancelledRef.current ||
+        isReroutingRef.current || routeDestinationBuilding !== destinationBuildingRef.current ||
+        nextStep.instruction !== "Arrive at destination" || !Number.isFinite(distToNextStepMeters) || distToNextStepMeters > 5) return;
+    journey.completed = true;
+    setSurveyVisible(true);
+  }, [isFocused, foreground, route, coordinates, nextStep, distToNextStepMeters,
+    routeDestinationBuilding, speechListening, pickerDismissed, routeAlternative]);
+
+  return {
+    surveyVisible: surveyVisible && isFocused && foreground && !speechListening && pickerDismissed && !routeAlternative,
+    dismissSurvey,
     navigationSpeech, onVoiceListeningChange, politeAnnouncement,
     startupSession, startupReady, onStartupHandoff, onPickerTransition,
     coordinates, 
