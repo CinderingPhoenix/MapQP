@@ -1,3 +1,4 @@
+import { Accordion as SettingsAccordion, HEADER_ICONS, SETTINGS_SECTION_TITLES, type HeaderIcon } from "./settings-accordion";
 import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "./color-vision-setting";
 import { useSettingsPalette, useSettingsColors, useSettingsStyles } from "../../hooks/use-settings-theme";
 import { ThemeChoices, SettingsStatusBar } from "./theme-setting";
@@ -36,14 +37,6 @@ const BASE_COLORS = {
   accent: "#741B2B", divider: "#BCB8B4", importantDivider: "#81756E", outline: "#70655F",
   contrastInk: "#000000", contrastOutline: "#272423", off: "#514B48", danger: "#8A211C",
 } as const;
-type HeaderIcon = { name: keyof typeof MaterialCommunityIcons.glyphMap; color: string; background: string };
-const HEADER_ICONS = {
-  display: { name: "tune-variant", color: "#245B8F", background: "#EAF1F8" },
-  text: { name: "format-size", color: "#245B8F", background: "#EAF1F8" },
-  accessibility: { name: "human", color: "#65418C", background: "#F1EBF7" },
-  routing: { name: "routes", color: "#286341", background: "#EAF3ED" },
-  support: { name: "cog-outline", color: "#741B2B", background: "#F5ECEE" },
-} as const satisfies Record<string, HeaderIcon>;
 
 function useIncreasedContrast() {
   const { darkerSystemColorsEnabled, highTextContrastEnabled } = useAccessibilityPreferences();
@@ -72,91 +65,12 @@ function focusControl(target: ComponentRef<typeof TouchableOpacity> | ComponentR
   else AccessibilityInfo.sendAccessibilityEvent(target, "focus");
 }
 
-// Each disclosure owns only its open state. Preferences remain in SettingsProvider.
-function Accordion({ title, icon, children }: { title: string; icon: HeaderIcon; children: ReactNode }) {
+// Keep Accessible's existing text and style mapping; only disclosure behavior is shared.
+function Accordion(props: { title: string; icon: HeaderIcon; children: ReactNode }) {
   const s = useSettingsStyles(baseStyles);
   const COLORS = useSettingsColors(BASE_COLORS);
-  const vision = useSettingsPalette();
-  const [expanded, setExpanded] = useState(false);
-  const { screenReaderEnabled } = useAccessibilityPreferences();
-  const increasedContrast = useIncreasedContrast();
-  const { width, scale, gutter } = useLayout();
-  const stackHeading = Math.max(...title.split(/\s+/).map((word) => word.length)) * 22 * scale * 0.58
-    > width - gutter * 2 - 32 - 40 - 48;
-  const header = useRef<ComponentRef<typeof TouchableOpacity>>(null);
-  const frame = useRef<number | null>(null);
-  const pendingBottomFocus = useRef(false);
-  const active = useRef(false);
-  const cancelCollapse = useCallback(() => {
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = null;
-    pendingBottomFocus.current = false;
-  }, []);
-  useFocusEffect(useCallback(() => {
-    active.current = true;
-    return () => { active.current = false; cancelCollapse(); };
-  }, [cancelCollapse]));
-  const collapse = () => {
-    cancelCollapse();
-    if (!expanded) return;
-    if (screenReaderEnabled) {
-      // Header activation already focuses it. Escape from a descendant must also
-      // return there BEFORE removing that descendant from the native tree.
-      focusControl(header.current);
-      frame.current = requestAnimationFrame(() => {
-        frame.current = null;
-        if (active.current) setExpanded(false);
-      });
-    } else setExpanded(false);
-  };
-  const collapseFromBottom = () => {
-    if (!active.current || !expanded || pendingBottomFocus.current) return;
-    cancelCollapse();
-    pendingBottomFocus.current = screenReaderEnabled || Platform.OS === "web";
-    setExpanded(false);
-  };
-  const focusCollapsedHeader = () => {
-    if (expanded || !active.current || !pendingBottomFocus.current || frame.current !== null) return;
-    // The panel has its collapsed native layout now. Request focus only once,
-    // letting VoiceOver/TalkBack reveal that target through native scrolling.
-    // Web focus also brings the header into view for keyboard activation.
-    frame.current = requestAnimationFrame(() => {
-      frame.current = null;
-      if (active.current && pendingBottomFocus.current) {
-        pendingBottomFocus.current = false;
-        focusControl(header.current);
-      }
-    });
-  };
-  return <View style={[s.panel, increasedContrast && s.strongPanel]} onLayout={focusCollapsedHeader}
-    onAccessibilityEscape={expanded ? collapse : undefined}>
-    <TouchableOpacity ref={header} accessible accessibilityRole="button" accessibilityLabel={title}
-      accessibilityState={{ expanded }} accessibilityHint={expanded ? "Collapses this section" : "Expands this section"}
-      onPress={() => { if (expanded) collapse(); else { cancelCollapse(); setExpanded(true); } }}
-      activeOpacity={1} style={[s.accordionHeader, expanded && s.expandedHeader, stackHeading && s.stackedRow]}>
-      <View style={[s.accordionHeading, stackHeading && s.wrappedIconLabel]}>
-        <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-          pointerEvents="none" style={[s.headerIcon, { backgroundColor: vision.iconColors(icon.background, icon.color).background }]}>
-          <MaterialCommunityIcons name={icon.name} size={24} color={vision.iconColors(icon.background, icon.color).foreground} accessible={false} allowFontScaling={false} />
-        </View>
-        <BoldText size={22} accessible={false} style={stackHeading ? s.fullWidth : s.flex}>{title}</BoldText>
-      </View>
-      <MaterialCommunityIcons name={expanded ? "chevron-up" : "chevron-down"} size={28}
-        color={vision.color(increasedContrast ? COLORS.contrastInk : COLORS.ink, "iconColor")} accessible={false} allowFontScaling={false} style={stackHeading ? s.chevronEnd : undefined} />
-    </TouchableOpacity>
-    {expanded && <View>
-      {children}
-      <View style={s.collapseFooter}>
-        <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={`Collapse ${title}`}
-          onPress={collapseFromBottom} activeOpacity={1}
-          style={[s.collapseButton, increasedContrast && s.strongBoundary]}>
-          <BoldText accessible={false} style={s.flex}>Collapse Section</BoldText>
-          <MaterialCommunityIcons name="chevron-up" size={24}
-            color={vision.color(increasedContrast ? COLORS.contrastInk : COLORS.ink, "iconColor")} accessible={false} allowFontScaling={false} />
-        </TouchableOpacity>
-      </View>
-    </View>}
-  </View>;
+  return <SettingsAccordion {...props} styles={s} ink={COLORS.ink} contrastInk={COLORS.contrastInk}
+    renderText={(textProps) => <BoldText {...textProps} />} />;
 }
 
 function BoldText({ size = 20, weight = "700", color = BASE_COLORS.ink, style, textRef, ...props }:
@@ -396,7 +310,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             disabled={disabled} onPress={() => onNavigationModeChange("accessibility")} />
         </Choices></Section>
       <View style={s.accordions}>
-      <Accordion title="Appearance" icon={HEADER_ICONS.display}>
+      <Accordion title={SETTINGS_SECTION_TITLES.appearance} icon={HEADER_ICONS.display}>
           <BoldText style={s.label}>Settings layout</BoldText>
           <View style={s.choiceInset}><Choices>
             <Choice label="Standard" accessibilityLabel="Standard Settings layout" selected={false} disabled={disabled}
@@ -411,7 +325,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           <Divider important />
           <ColorVisionSetting accessibleAppearance onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
       </Accordion>
-      <Accordion title="Text & Navigation Preferences" icon={HEADER_ICONS.text}>
+      <Accordion title={SETTINGS_SECTION_TITLES.text} icon={HEADER_ICONS.text}>
           <BoldText style={s.label}>Text size</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>80%–180%</BoldText>
           <View style={s.sliderGroup}>
@@ -466,14 +380,14 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
             <Choice label="Degrees" selected={settings.directionStyle === "degrees"} disabled={disabled} onPress={() => settings.setDirectionStyle("degrees")} />
           </Choices></View>
       </Accordion>
-      <Accordion title="Accessibility" icon={HEADER_ICONS.accessibility}>
+      <Accordion title={SETTINGS_SECTION_TITLES.accessibility} icon={HEADER_ICONS.accessibility}>
         <AccessibilityPanel controls={accessibilityControls} />
         <Divider />
         <ToggleRow label="Battery Saver" icon="battery-heart-outline" value={settings.batterySaverEnabled} disabled={disabled}
           onChange={settings.setBatterySaverEnabled}
           description="Uses fewer location updates, less compass activity, and fewer animations. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
       </Accordion>
-      <Accordion title="Routing & Spoken Guidance" icon={HEADER_ICONS.routing}>
+      <Accordion title={SETTINGS_SECTION_TITLES.routing} icon={HEADER_ICONS.routing}>
           <BoldText style={s.label}>Route preferences</BoldText>
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Applies when starting a new route.</BoldText>
           <ToggleRow label="Avoid stairs" description="Avoid stairs." icon="stairs" value={settings.avoidStairs} disabled={disabled} onChange={(value) => saveRoute("avoidStairs", value)} /><Divider />
@@ -494,7 +408,7 @@ export function AccessibleSettings({ mapVersion, onBack, onHome, onDelete, onNav
           {!settings.repeatGuidanceEnabled && <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>Enable repetition to change the interval. Your interval is saved.</BoldText>}
           <BoldText size={17} weight="600" color={COLORS.secondary} style={s.note}>New directions are still spoken when repetition is off.</BoldText>
       </Accordion>
-      <Accordion title="App & Support" icon={HEADER_ICONS.support}>
+      <Accordion title={SETTINGS_SECTION_TITLES.support} icon={HEADER_ICONS.support}>
           <BoldText style={s.label}>Support</BoldText>
           <Action label="Share Your Feedback" description="Help improve MapQP by completing our user study survey. Opens in your browser."
             onPress={() => { void openUserStudySurvey(); }} /><Divider />

@@ -10,6 +10,9 @@ type ColorRules = Readonly<Record<string, Partial<Record<"color" | "backgroundCo
 
 // Explicit style roles. No color inversion or changes to the legacy adapter.
 export const STANDARD_SETTINGS_ROLES: ColorRules = {
+  panel: { backgroundColor: "surface", borderColor: "outline" }, strongPanel: { borderColor: "outline" },
+  strongBoundary: { borderColor: "outline" }, expandedHeader: { backgroundColor: "tint", borderBottomColor: "accent" },
+  collapseButton: { backgroundColor: "surface", borderColor: "outline" },
   container: { backgroundColor: "background" }, tabs: { borderBottomColor: "separator" },
   tabSelected: { borderBottomColor: "accent" }, modeGroup: { backgroundColor: "surface" },
   choice: { backgroundColor: "raised", borderColor: "outline" },

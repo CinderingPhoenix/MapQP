@@ -1,3 +1,4 @@
+import { Accordion as SettingsAccordion, HEADER_ICONS, SETTINGS_SECTION_TITLES, type HeaderIcon } from "../components/settings/settings-accordion";
 import { ColorVisionSetting, ColorVisionDialog, useColorVisionDialog } from "../components/settings/color-vision-setting";
 import { useSettingsPalette, useSettingsColors, useSettingsStyles } from "../hooks/use-settings-theme";
 import { ThemeSetting, SettingsThemeDialog, SettingsStatusBar } from "../components/settings/theme-setting";
@@ -59,7 +60,6 @@ const KEYS_TO_DELETE = [
 export default function SettingsPage() {
   const navigation = useNavigation();
   useAuthGuard();
-  const [activeTab, setActiveTab] = useState<"general" | "routing">("general");
   useFocusEffect(
     useCallback(() => {
       Speech.stop();
@@ -214,7 +214,7 @@ export default function SettingsPage() {
 
   // Standard keeps its existing Signal presentation, state and handlers.
   if (!accessibleAppearance) return <SignalSettings
-    activeTab={activeTab} onTabChange={setActiveTab} from={from} mapVersion={mapVersion}
+    from={from} mapVersion={mapVersion}
     onBack={handleBackFromSettings} onHome={returnToLandingPage}
     onDelete={deleteLocalStorage} onNavigationModeChange={changeNavigationMode}
     onFontSizeAccessibilityAction={handleFontSizeAccessibilityAction}
@@ -262,8 +262,6 @@ function useSignalStyles() {
     choice: { ...signalStyles.choice, backgroundColor: "#FFFFFF", borderColor: "#272423", borderWidth: 2 },
     choiceSelected: { ...signalStyles.choiceSelected, borderColor: "#272423" },
     choiceLabel: { ...signalStyles.choiceLabel, fontWeight: "700" as const },
-    tabs: { ...signalStyles.tabs, borderBottomColor: "#70655F" },
-    tabSelected: { ...signalStyles.tabSelected, borderBottomWidth: 4 },
     preferenceRow: { ...signalStyles.preferenceRow, borderBottomColor: "#272423", borderBottomWidth: 2 },
     preferenceBlock: { ...signalStyles.preferenceBlock, borderBottomColor: "#272423", borderBottomWidth: 2 },
     // These are grouping separators, not interactive control outlines.
@@ -305,6 +303,16 @@ function SignalSection({ title, description, children, titleRef }: {
     {description && <SignalText size={14} color={SIGNAL.muted}>{description}</SignalText>}
     {children}
   </View>;
+}
+
+function SignalAccordion(props: { title: string; icon: HeaderIcon; children: ReactNode }) {
+  const signalStyles = useSignalStyles();
+  const SIGNAL = useSettingsColors(BASE_SIGNAL);
+  return <SettingsAccordion {...props} appearance="standard" styles={signalStyles}
+    ink={SIGNAL.ink} contrastInk={SIGNAL.ink}
+    renderText={(textProps) => <SignalText weight="600" {...textProps} />}>
+    <View style={signalStyles.accordionContent}>{props.children}</View>
+  </SettingsAccordion>;
 }
 
 function useSignalStacked() {
@@ -533,13 +541,12 @@ function SignalActionRow({ label, description, onPress, accessibilityLabel = lab
 }
 
 type SignalSettingsProps = {
-  activeTab: "general" | "routing"; onTabChange: (tab: "general" | "routing") => void;
   from?: string; mapVersion: string; onBack: () => void; onHome: () => void; onDelete: () => void;
   onNavigationModeChange: (mode: "standard" | "accessibility") => void;
   onFontSizeAccessibilityAction: (event: AccessibilityActionEvent) => void;
 };
 
-function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHome, onDelete,
+function SignalSettings({ from, mapVersion, onBack, onHome, onDelete,
   onNavigationModeChange, onFontSizeAccessibilityAction }: SignalSettingsProps) {
   const vision = useSettingsPalette();
   const SIGNAL = useSettingsColors(BASE_SIGNAL);
@@ -550,42 +557,9 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
     setAccessibilityPreference, avoidStairs, avoidIndoorRoutes, avoidInaccessibleCrosswalks,
     configureAvoidStairs, configureRoutingPreferences, batterySaverEnabled, setBatterySaverEnabled } = useSettings();
   const stacked = useSignalStacked();
-  const { screenReaderEnabled, reduceMotionEnabled } = useAccessibilityPreferences();
   const increased = useSignalContrast();
   const colorVision = useColorVisionDialog();
   const themeDialog = useColorVisionDialog();
-  const scroll = useRef<React.ElementRef<typeof ScrollView>>(null);
-  const guidanceHeading = useRef<React.ElementRef<typeof Text>>(null);
-  const pendingGuidance = useRef(false);
-  const sectionsY = useRef(0);
-  const guidanceY = useRef(0);
-  const guidanceLayout = useRef({ sections: false, guidance: false, content: false });
-  const guidanceFrame = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (guidanceFrame.current !== null) cancelAnimationFrame(guidanceFrame.current);
-  }, []);
-  // The Routing tab remounts its scroll view. Wait for its native layout before
-  // scrolling, and move assistive focus to the same section (never a stale tab).
-  const locateGuidance = () => {
-    if (!pendingGuidance.current || activeTab !== "routing" ||
-        !guidanceLayout.current.sections || !guidanceLayout.current.guidance || !guidanceLayout.current.content) return;
-    if (guidanceFrame.current !== null) cancelAnimationFrame(guidanceFrame.current);
-    guidanceFrame.current = requestAnimationFrame(() => {
-      guidanceFrame.current = null;
-      if (!pendingGuidance.current) return;
-      scroll.current?.scrollTo({ y: Math.max(0, sectionsY.current + guidanceY.current - 12), animated: !reduceMotionEnabled && !screenReaderEnabled });
-      if (screenReaderEnabled && guidanceHeading.current) {
-        if (Platform.OS === "web") guidanceHeading.current.focus();
-        else AccessibilityInfo.sendAccessibilityEvent(guidanceHeading.current, "focus");
-      }
-      pendingGuidance.current = false;
-    });
-  };
-  const changeTab = (tab: "general" | "routing") => {
-    pendingGuidance.current = false;
-    guidanceLayout.current = { sections: false, guidance: false, content: false };
-    onTabChange(tab);
-  };
   const disabled = !settingsLoaded || !settingsReadSucceeded;
   const deviceValue = (preference: DeviceAccessibilityPreference) => {
     const status = deviceAccessibility.detectionStatus[preference];
@@ -605,175 +579,128 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
           <SignalText size={16} weight="700">MapQP</SignalText>
         </View>
     </View>
-    <ScrollView accessibilityElementsHidden={colorVision.visible || themeDialog.visible} aria-hidden={colorVision.visible || themeDialog.visible} importantForAccessibility={colorVision.visible || themeDialog.visible ? "no-hide-descendants" : "auto"} ref={scroll} key={activeTab} showsVerticalScrollIndicator={false}
-      onContentSizeChange={() => { guidanceLayout.current.content = true; locateGuidance(); }} contentContainerStyle={signalStyles.content}>
+    <ScrollView accessibilityElementsHidden={colorVision.visible || themeDialog.visible} aria-hidden={colorVision.visible || themeDialog.visible} importantForAccessibility={colorVision.visible || themeDialog.visible ? "no-hide-descendants" : "auto"} showsVerticalScrollIndicator={false} contentContainerStyle={signalStyles.content}>
       <View style={signalStyles.header}>
         <View style={signalStyles.titleGroup}>
           <SignalText size={30} weight="700" color={SIGNAL.heading} accessibilityRole="header">Settings</SignalText>
         </View>
-        <View style={signalStyles.tabs} accessibilityRole="tablist">
-          {(["general", "routing"] as const).map((tab) => {
-            const selected = activeTab === tab;
-            const label = tab === "general" ? "General" : "Routing";
-            return <TouchableOpacity key={tab} accessible accessibilityRole="tab" accessibilityLabel={label}
-              accessibilityState={{ selected }} onPress={() => changeTab(tab)}
-              style={[signalStyles.tab, selected && signalStyles.tabSelected]}>
-              <SignalText accessible={false} weight={selected ? "600" : "500"}
-                color={selected ? SIGNAL.accent : SIGNAL.outline} style={[signalStyles.centered, selected && increased && { textDecorationLine: "underline", fontWeight: "700" }]}>{label}</SignalText>
-            </TouchableOpacity>;
-          })}
-        </View>
       </View>
-      <View onLayout={(event) => {
-        sectionsY.current = event.nativeEvent.layout.y; guidanceLayout.current.sections = true; locateGuidance();
-      }}
-        style={signalStyles.sections}>
-        {activeTab === "general" ? <>
-          <SignalSection title="Navigation">
-            <View style={signalStyles.modeGroup}>
-              <SignalText weight="600">Navigation mode</SignalText>
-              <View style={[signalStyles.choices, stacked && signalStyles.stackedChoices]}>
-                <SignalChoice label="Standard" accessibilityLabel="Standard navigation mode"
-                  hint="Uses standard navigation when you return to the map" selected={navigationMode === "standard"}
-                  onPress={() => onNavigationModeChange("standard")} />
-                <SignalChoice label="Accessibility" accessibilityLabel="Accessible navigation mode"
-                  hint="Uses accessible navigation when you return to the map" selected={navigationMode === "accessibility"}
-                  onPress={() => onNavigationModeChange("accessibility")} />
-              </View>
+      <View style={signalStyles.sections}>
+        <SignalSection title="Navigation">
+          <View style={signalStyles.modeGroup}>
+            <SignalText weight="600">Navigation mode</SignalText>
+            <View style={[signalStyles.choices, stacked && signalStyles.stackedChoices]}>
+              <SignalChoice label="Standard" accessibilityLabel="Standard navigation mode"
+                hint="Uses standard navigation when you return to the map" selected={navigationMode === "standard"}
+                onPress={() => onNavigationModeChange("standard")} />
+              <SignalChoice label="Accessibility" accessibilityLabel="Accessible navigation mode"
+                hint="Uses accessible navigation when you return to the map" selected={navigationMode === "accessibility"}
+                onPress={() => onNavigationModeChange("accessibility")} />
             </View>
-          </SignalSection>
-          <SignalSection title="Appearance">
-            <SignalPreferenceRow label="Settings layout" value={settingsAppearance === "standard" ? "Standard" : "Accessible"}
-              disabled={disabled}
-              options={(["standard", "accessible"] as const).map((appearance) => ({
-                label: appearance === "standard" ? "Standard" : "Accessible",
-                accessibilityLabel: `${appearance === "standard" ? "Standard" : "Accessible"} Settings layout`,
-                hint: `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`,
-                selected: settingsAppearance === appearance, onPress: () => setSettingsAppearance(appearance),
-              }))} />
-            <ThemeSetting onPress={themeDialog.show} triggerRef={themeDialog.triggerRef} />
-            <ColorVisionSetting onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
-          </SignalSection>
-          <SignalSection title="Text & navigation preferences">
-            <View style={signalStyles.sliderGroup}>
-              <View style={[signalStyles.textSizeHeading, stacked && signalStyles.stackedRow]}>
-                <SignalText weight="500">Text size</SignalText>
-                <SignalText size={15} weight="600" color={SIGNAL.accent} accessible={false}>{Math.round(fontSize * 100)}%</SignalText>
-              </View>
-              <View style={signalStyles.sliderRow}>
-                <SignalText size={15} color={SIGNAL.muted} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
-                <View style={signalStyles.slider} accessible accessibilityRole="adjustable" accessibilityLabel="Text size"
-                  accessibilityHint={Platform.OS === "ios"
-                    ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
-                    : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"}
-                  accessibilityValue={{ min: 80, max: 180, now: Math.round(fontSize * 100), text: `${Math.round(fontSize * 100)} percent` }}
-                  accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-                  onAccessibilityAction={onFontSizeAccessibilityAction}>
-                  <Slider style={signalStyles.sliderInput} minimumValue={0.8} maximumValue={1.8} step={0.1}
-                    value={fontSize} onValueChange={setFontSize} minimumTrackTintColor={vision.dark ? vision.tokens.accent : vision.color(SIGNAL.accent, "backgroundColor")}
-                    maximumTrackTintColor={vision.dark ? vision.tokens.outline : vision.monochrome ? vision.palette.outline : increased ? "#272423" : SIGNAL.outline} thumbTintColor={vision.dark ? vision.tokens.accent : vision.color(SIGNAL.accent, "backgroundColor")} accessible={false}
-                    accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-                </View>
-                <SignalText size={25} weight="600" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
-              </View>
-            </View>
-            <SignalPreferenceRow label="Distance units" value={distanceUnits === "imperial" ? "Feet / miles" : "Meters / km"}
-              options={[
-                { label: "Feet / miles", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
-                  selected: distanceUnits === "imperial", onPress: () => setDistanceUnits("imperial") },
-                { label: "Meters / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
-                  selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
-              ]} />
-            <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
-              description="Choose between natural (Turn Left/Right) or degrees (Turn Left/Right 90°)."
-              options={[
-                { label: "Natural", accessibilityLabel: "Natural directions", hint: "Uses directions such as turn left or turn right",
-                  selected: directionStyle === "natural", onPress: () => setDirectionStyle("natural") },
-                { label: "Degrees", accessibilityLabel: "Degree based directions", hint: "Uses turning angles in degrees",
-                  selected: directionStyle === "degrees", onPress: () => setDirectionStyle("degrees") },
-              ]} />
-          </SignalSection>
-          <SignalSection title="Accessibility" description="Device settings take priority. MapQP switches add preferences when device settings are off.">
-            <View accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceValue("screenReaderEnabled")}. Controlled by your device.`}
-              accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
-              style={signalStyles.switchRow}>
-              <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel, signalStyles.iconLabel]}>
-                  <PreferenceIcon name="account-voice" />
-                  <SignalText weight="500">Screen reader</SignalText>
-                </View>
-                <View style={signalStyles.deviceBadge}>
-                  {!vision.monochrome && !increased && <View pointerEvents="none" accessible={false}
-                    accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-                    style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0,
-                      borderRadius: 6, borderWidth: 1, borderColor: vision.readOnlyStatus.outline }} /> }
-                  <SignalText size={14} weight="600" color={SIGNAL.status}>{deviceValue("screenReaderEnabled")}</SignalText>
-                </View>
-              </View>
-              <SignalText size={14} color={SIGNAL.muted} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">VoiceOver or TalkBack reads screen content aloud.</SignalText>
-              <SignalText size={14} weight="500" color={SIGNAL.status} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Device {deviceValue("screenReaderEnabled").toLowerCase()} · Read only</SignalText>
-            </View>
-            {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, description, icon }) => {
-              const detectedPreference = preference === "increaseContrastEnabled" && Platform.OS === "android"
-                ? "highTextContrastEnabled" : devicePreference;
-              const control = accessibilityControlState(deviceAccessibility, detectedPreference, savedAccessibilityPreferences[preference], settingsLoaded);
-              const status = deviceAccessibility.detectionStatus[detectedPreference];
-              const deviceControlled = deviceAccessibility[detectedPreference];
-              const sourceDescription = !settingsLoaded || status === "loading" ? control.explanation
-                : deviceControlled ? (status === "unavailable" ? "Device status unavailable. Using the last detected device preference." : "Controlled by device settings.")
-                : status === "unavailable" ? "Device status unavailable. Saved MapQP preference." : "Saved MapQP preference.";
-              const summary = `Device ${deviceValue(detectedPreference).toLowerCase()} · MapQP ${settingsLoaded ? savedAccessibilityPreferences[preference] ? "on" : "off" : "loading"}`
-                + (control.disabled ? ` · ${deviceControlled ? "Read only" : "Loading"}` : "")
-                + (status === "unavailable" && deviceControlled ? " · Last detected on" : "");
-              return <SignalSwitchRow key={preference} label={label.charAt(0) + label.slice(1).toLowerCase()}
-                status={summary} icon={icon}>
-                <SignalSwitch value={control.enabled} disabled={control.disabled} accessibilityLabel={label}
-                  accessibilityValue={{ text: sourceDescription }} accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
-                  accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
-                    : control.disabled ? "This preference cannot be changed while settings are loading." : "Changes only your saved MapQP preference."}`}
-                  onValueChange={(enabled) => { if (!control.disabled) setAccessibilityPreference(preference, enabled); }} />
-              </SignalSwitchRow>;
-            })}
-            <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline">
-              <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
-                accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
-            </SignalSwitchRow>
-          </SignalSection>
-          <SignalSection title="App & support">
-            <SignalActionRow label="Share Your Feedback"
-              description="Help improve MapQP by completing our user study survey."
-              accessibilityLabel="Share Your Feedback. Help improve MapQP by completing our user study survey."
-              accessibilityHint="Opens the survey in your browser."
-              onPress={() => { void openUserStudySurvey(); }} />
-            <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
-              description="Send a bug report to the mapQP team."
-              accessibilityHint="Opens the form to submit a bug report."
-              onPress={() => router.push("/report-bug")} />
-            <View style={[signalStyles.preferenceRow, stacked && signalStyles.stackedRow]}>
-              <SignalText size={15} color={SIGNAL.status}>Route data version</SignalText>
-              <SignalText size={15} color={SIGNAL.status}>v{mapVersion}</SignalText>
-            </View>
-            <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
-              accessibilityHint="Return to the MapQP home screen" onPress={onHome}
-              style={[signalStyles.homeAction, increased && signalStyles.homeActionContrast]}>
-              <MaterialCommunityIcons name="home-outline" size={24} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
-              <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <SignalText weight="600">Return to Home</SignalText>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
-                accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
-            </TouchableOpacity>
-          </SignalSection>
-          <View style={signalStyles.deleteSection}>
-            <SignalActionRow label="Delete all local data" accessibilityHint="Opens a confirmation dialog before deleting saved data"
-              onPress={onDelete} chevron={false} />
-            <SignalText size={14} color={SIGNAL.muted}>Removes saved app data from this device. Confirmation required.</SignalText>
           </View>
-        </> : <>
+        </SignalSection>
+        <SignalAccordion title={SETTINGS_SECTION_TITLES.appearance} icon={HEADER_ICONS.display}>
+          <SignalPreferenceRow label="Settings layout" value={settingsAppearance === "standard" ? "Standard" : "Accessible"}
+            disabled={disabled}
+            options={(["standard", "accessible"] as const).map((appearance) => ({
+              label: appearance === "standard" ? "Standard" : "Accessible",
+              accessibilityLabel: `${appearance === "standard" ? "Standard" : "Accessible"} Settings layout`,
+              hint: `Displays Settings with ${appearance === "accessible" ? "larger text, stronger contrast, and more spacing" : "standard styling"}. Does not change navigation mode.`,
+              selected: settingsAppearance === appearance, onPress: () => setSettingsAppearance(appearance),
+            }))} />
+          <ThemeSetting onPress={themeDialog.show} triggerRef={themeDialog.triggerRef} />
+          <ColorVisionSetting onPress={colorVision.show} triggerRef={colorVision.triggerRef} />
+        </SignalAccordion>
+        <SignalAccordion title={SETTINGS_SECTION_TITLES.text} icon={HEADER_ICONS.text}>
+          <View style={signalStyles.sliderGroup}>
+            <View style={[signalStyles.textSizeHeading, stacked && signalStyles.stackedRow]}>
+              <SignalText weight="500">Text size</SignalText>
+              <SignalText size={15} weight="600" color={SIGNAL.accent} accessible={false}>{Math.round(fontSize * 100)}%</SignalText>
+            </View>
+            <View style={signalStyles.sliderRow}>
+              <SignalText size={15} color={SIGNAL.muted} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
+              <View style={signalStyles.slider} accessible accessibilityRole="adjustable" accessibilityLabel="Text size"
+                accessibilityHint={Platform.OS === "ios"
+                  ? "Adjusts the size of text displayed in MapQP. Swipe up or down to adjust text size"
+                  : "Adjusts the size of text displayed in MapQP. Use the increase or decrease accessibility action to adjust text size"}
+                accessibilityValue={{ min: 80, max: 180, now: Math.round(fontSize * 100), text: `${Math.round(fontSize * 100)} percent` }}
+                accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+                onAccessibilityAction={onFontSizeAccessibilityAction}>
+                <Slider style={signalStyles.sliderInput} minimumValue={0.8} maximumValue={1.8} step={0.1}
+                  value={fontSize} onValueChange={setFontSize} minimumTrackTintColor={vision.dark ? vision.tokens.accent : vision.color(SIGNAL.accent, "backgroundColor")}
+                  maximumTrackTintColor={vision.dark ? vision.tokens.outline : vision.monochrome ? vision.palette.outline : increased ? "#272423" : SIGNAL.outline} thumbTintColor={vision.dark ? vision.tokens.accent : vision.color(SIGNAL.accent, "backgroundColor")} accessible={false}
+                  accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+              </View>
+              <SignalText size={25} weight="600" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">A</SignalText>
+            </View>
+          </View>
+          <SignalPreferenceRow label="Distance units" value={distanceUnits === "imperial" ? "Feet / miles" : "Meters / km"}
+            options={[
+              { label: "Feet / miles", accessibilityLabel: "Feet and miles", hint: "Displays distances in feet and miles",
+                selected: distanceUnits === "imperial", onPress: () => setDistanceUnits("imperial") },
+              { label: "Meters / km", accessibilityLabel: "Meters and kilometers", hint: "Displays distances in meters and kilometers",
+                selected: distanceUnits === "metric", onPress: () => setDistanceUnits("metric") },
+            ]} />
+          <SignalPreferenceRow label="Direction style" value={directionStyle === "natural" ? "Natural" : "Degrees"}
+            description="Choose between natural (Turn Left/Right) or degrees (Turn Left/Right 90°)."
+            options={[
+              { label: "Natural", accessibilityLabel: "Natural directions", hint: "Uses directions such as turn left or turn right",
+                selected: directionStyle === "natural", onPress: () => setDirectionStyle("natural") },
+              { label: "Degrees", accessibilityLabel: "Degree based directions", hint: "Uses turning angles in degrees",
+                selected: directionStyle === "degrees", onPress: () => setDirectionStyle("degrees") },
+            ]} />
+        </SignalAccordion>
+        <SignalAccordion title={SETTINGS_SECTION_TITLES.accessibility} icon={HEADER_ICONS.accessibility}>
+          <SignalText size={14} color={SIGNAL.muted}>Device settings take priority. MapQP switches add preferences when device settings are off.</SignalText>
+          <View accessible accessibilityRole="text" accessibilityLabel={`Screen reader, ${deviceValue("screenReaderEnabled")}. Controlled by your device.`}
+            accessibilityHint="Provides spoken descriptions of interface elements to help you navigate without relying on sight. VoiceOver and TalkBack are controlled in device settings."
+            style={signalStyles.switchRow}>
+            <View style={[signalStyles.preferenceHeading, stacked && signalStyles.stackedRow]} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View style={[signalStyles.rowLabel, stacked && signalStyles.stackedLabel, signalStyles.iconLabel]}>
+                <PreferenceIcon name="account-voice" />
+                <SignalText weight="500">Screen reader</SignalText>
+              </View>
+              <View style={signalStyles.deviceBadge}>
+                {!vision.monochrome && !increased && <View pointerEvents="none" accessible={false}
+                  accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+                  style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0,
+                    borderRadius: 6, borderWidth: 1, borderColor: vision.readOnlyStatus.outline }} /> }
+                <SignalText size={14} weight="600" color={SIGNAL.status}>{deviceValue("screenReaderEnabled")}</SignalText>
+              </View>
+            </View>
+            <SignalText size={14} color={SIGNAL.muted} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants">VoiceOver or TalkBack reads screen content aloud.</SignalText>
+            <SignalText size={14} weight="500" color={SIGNAL.status} accessible={false}
+              accessibilityElementsHidden importantForAccessibility="no-hide-descendants">Device {deviceValue("screenReaderEnabled").toLowerCase()} · Read only</SignalText>
+          </View>
+          {ACCESSIBILITY_CONTROLS.map(({ label, preference, devicePreference, description, icon }) => {
+            const detectedPreference = preference === "increaseContrastEnabled" && Platform.OS === "android"
+              ? "highTextContrastEnabled" : devicePreference;
+            const control = accessibilityControlState(deviceAccessibility, detectedPreference, savedAccessibilityPreferences[preference], settingsLoaded);
+            const status = deviceAccessibility.detectionStatus[detectedPreference];
+            const deviceControlled = deviceAccessibility[detectedPreference];
+            const sourceDescription = !settingsLoaded || status === "loading" ? control.explanation
+              : deviceControlled ? (status === "unavailable" ? "Device status unavailable. Using the last detected device preference." : "Controlled by device settings.")
+              : status === "unavailable" ? "Device status unavailable. Saved MapQP preference." : "Saved MapQP preference.";
+            const summary = `Device ${deviceValue(detectedPreference).toLowerCase()} · MapQP ${settingsLoaded ? savedAccessibilityPreferences[preference] ? "on" : "off" : "loading"}`
+              + (control.disabled ? ` · ${deviceControlled ? "Read only" : "Loading"}` : "")
+              + (status === "unavailable" && deviceControlled ? " · Last detected on" : "");
+            return <SignalSwitchRow key={preference} label={label.charAt(0) + label.slice(1).toLowerCase()}
+              status={summary} icon={icon}>
+              <SignalSwitch value={control.enabled} disabled={control.disabled} accessibilityLabel={label}
+                accessibilityValue={{ text: sourceDescription }} accessibilityState={{ checked: control.enabled, disabled: control.disabled }}
+                accessibilityHint={`${description} ${deviceControlled ? "Change this preference in your device settings."
+                  : control.disabled ? "This preference cannot be changed while settings are loading." : "Changes only your saved MapQP preference."}`}
+                onValueChange={(enabled) => { if (!control.disabled) setAccessibilityPreference(preference, enabled); }} />
+            </SignalSwitchRow>;
+          })}
+          <SignalSwitchRow label="Battery Saver" icon="battery-heart-outline">
+            <SignalSwitch value={batterySaverEnabled} onValueChange={setBatterySaverEnabled} disabled={disabled}
+              accessibilityLabel="Battery Saver" accessibilityHint="Reduces power use. Location updates may be slower. Background GPS and navigation notifications are off. Turn guidance stays on while navigation is open." />
+          </SignalSwitchRow>
+        </SignalAccordion>
+        <SignalAccordion title={SETTINGS_SECTION_TITLES.routing} icon={HEADER_ICONS.routing}>
           <SignalSection title="Route preferences" description="Changes apply when you start a new route.">
             <SignalSwitchRow label="Avoid stairs" icon="stairs" description="Avoid stairs and inaccessible building entrances.">
               <SignalSwitch value={avoidStairs} disabled={disabled} accessibilityLabel="Avoid stairs"
@@ -792,17 +719,45 @@ function SignalSettings({ activeTab, onTabChange, from, mapVersion, onBack, onHo
                   Alert.alert("Could not save preference", "Please try changing the switch again.")); }} />
             </SignalSwitchRow>)}
           </SignalSection>
-          <View onLayout={(event) => {
-            guidanceY.current = event.nativeEvent.layout.y; guidanceLayout.current.guidance = true; locateGuidance();
-          }}>
-            <SignalGuidanceSettings titleRef={guidanceHeading} />
-          </View>
+          <SignalGuidanceSettings />
           <View style={signalStyles.routeInfo}>
             <SignalText size={17} weight="600" color={SIGNAL.heading} accessibilityRole="header">About your route</SignalText>
             <SignalText size={14} color={SIGNAL.muted}>Accessibility is based on campus map data, not live conditions. Check your surroundings as you travel.</SignalText>
           </View>
-        </>}
+        </SignalAccordion>
+        <SignalAccordion title={SETTINGS_SECTION_TITLES.support} icon={HEADER_ICONS.support}>
+          <SignalActionRow label="Share Your Feedback"
+            description="Help improve MapQP by completing our user study survey."
+            accessibilityLabel="Share Your Feedback. Help improve MapQP by completing our user study survey."
+            accessibilityHint="Opens the survey in your browser."
+            onPress={() => { void openUserStudySurvey(); }} />
+          <SignalActionRow label="Report a bug" accessibilityLabel="Report a Bug"
+            description="Send a bug report to the mapQP team."
+            accessibilityHint="Opens the form to submit a bug report."
+            onPress={() => router.push("/report-bug")} />
+          <View style={[signalStyles.preferenceRow, stacked && signalStyles.stackedRow]}>
+            <SignalText size={15} color={SIGNAL.status}>Route data version</SignalText>
+            <SignalText size={15} color={SIGNAL.status}>v{mapVersion}</SignalText>
+          </View>
+
+          <View style={signalStyles.deleteSection}>
+            <SignalActionRow label="Delete all local data" accessibilityHint="Opens a confirmation dialog before deleting saved data"
+              onPress={onDelete} chevron={false} />
+            <SignalText size={14} color={SIGNAL.muted}>Removes saved app data from this device. Confirmation required.</SignalText>
+          </View>
+        </SignalAccordion>
       </View>
+      <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel="Return to Home"
+        accessibilityHint="Return to the MapQP home screen" onPress={onHome}
+        style={[signalStyles.homeAction, increased && signalStyles.homeActionContrast]}>
+        <MaterialCommunityIcons name="home-outline" size={24} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
+          accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+        <View style={signalStyles.rowLabel} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <SignalText weight="600">Return to Home</SignalText>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={vision.color(SIGNAL.accent, "iconColor")} accessible={false}
+          accessibilityElementsHidden importantForAccessibility="no-hide-descendants" allowFontScaling={false} />
+      </TouchableOpacity>
       <View style={signalStyles.footer}>
         <SignalText size={13} color={SIGNAL.status} style={signalStyles.centered}>MapQP · WPI campus navigation</SignalText>
       </View>
@@ -820,13 +775,24 @@ const baseSignalStyles = StyleSheet.create({
   topRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   backButton: { minHeight: 44, flexDirection: "row", alignItems: "center", flexShrink: 1 },
   titleGroup: { paddingVertical: 4 },
-  tabs: { flexDirection: "row", gap: 8, borderBottomWidth: 1, borderBottomColor: BASE_SIGNAL.divider },
-  tab: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 10, paddingHorizontal: 4,
-    alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
-  tabSelected: { borderBottomColor: BASE_SIGNAL.accent },
   centered: { textAlign: "center" },
-  sections: { gap: 24, paddingTop: 20, paddingBottom: 12 },
+  sections: { gap: 12, paddingTop: 16, paddingBottom: 12 },
   section: { gap: 4 },
+  panel: { backgroundColor: BASE_SIGNAL.background, borderRadius: 12, borderWidth: 1, borderColor: BASE_SIGNAL.outline, overflow: "hidden" },
+  strongPanel: { borderWidth: 2, borderColor: "#272423" },
+  strongBoundary: { borderColor: "#272423" },
+  accordionHeader: { minHeight: 56, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8,
+    borderBottomWidth: 2, borderBottomColor: "transparent" },
+  expandedHeader: { backgroundColor: "#EEECE5", borderBottomColor: BASE_SIGNAL.accent },
+  accordionHeading: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 },
+  headerIcon: { width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  wrappedIconLabel: { flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 0 },
+  fullWidth: { width: "100%", flexGrow: 0, flexShrink: 1, flexBasis: "auto" },
+  flex: { flex: 1, minWidth: 0 }, chevronEnd: { alignSelf: "flex-end" },
+  accordionContent: { paddingHorizontal: 12, paddingTop: 8, gap: 8 },
+  collapseFooter: { padding: 12 },
+  collapseButton: { minWidth: 48, minHeight: 48, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderColor: BASE_SIGNAL.outline, borderRadius: 8, backgroundColor: BASE_SIGNAL.background },
   modeGroup: { gap: 10, padding: 12, borderRadius: 12, backgroundColor: "#EEECE5" },
   choices: { flexDirection: "row", gap: 4 },
   stackedChoices: { flexDirection: "column", alignItems: "stretch" },
